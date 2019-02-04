@@ -23,6 +23,9 @@ read_ip xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter.xci
 read_ip xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio.xci
 read_ip xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi.xci
 read_ip xilinx/xlnx_clk_gen/ip/xlnx_clk_gen.xci
+read_ip xilinx/xlnx_ila_1/ip/xlnx_ila_1.xci
+read_ip xilinx/xlnx_ila_2/ip/xlnx_ila_2.xci
+read_ip xilinx/xlnx_ila_3/ip/xlnx_ila_3.xci
 
 source scripts/add_sources.tcl
 
