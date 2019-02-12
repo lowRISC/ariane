@@ -8,6 +8,7 @@ ip-dir := xilinx
 ips := xlnx_axi_clock_converter.xci  \
        xlnx_axi_dwidth_converter.xci \
        xlnx_axi_quad_spi.xci         \
+       xlnx_axi_xip_spi.xci          \
        xlnx_axi_gpio.xci             \
        xlnx_clk_gen.xci              \
        xlnx_mig_7_ddr3.xci
@@ -37,8 +38,23 @@ mcs: $(mcs)
 program:
 	$(VIVADO) $(VIVADOFLAGS) -source scripts/program.tcl
 
+ELF=src/bootrom/bootrom.elf
+
+new: work-fpga/ariane_xilinx.bit search-ramb.log 
+	riscv64-unknown-elf-objcopy -I elf64-little -O verilog $(ELF) cnvmem.mem
+	iverilog scripts/cnvmem.v -o cnvmem
+	./cnvmem
+	data2mem -bm boot.mem -bd boot.mem -bt $< -o b work-fpga/ariane_xilinx.new.bit
+
+search-ramb.log: scripts/search_ramb.tcl
+	vivado -mode batch -source $< -tclargs work-fpga/ariane_xilinx_routed > $@
+
+boot.bmm: search-ramb.log
+	python scripts/bmm_gen.py $< $@ 128 65536
+
 clean:
 	rm -rf *.log *.jou *.str *.mif *.xpr $(work-dir) ariane.cache ariane.hw ariane.ip_user_files
 
 .PHONY:
 	clean
+

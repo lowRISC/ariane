@@ -82,6 +82,11 @@ set_property -dict {PACKAGE_PIN R29 IOSTANDARD LVCMOS33} [get_ports spi_mosi]
 
 # Genesys 2 has a quad SPI flash
 set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
+set_property -dict { PACKAGE_PIN U19   IOSTANDARD LVCMOS33 } [get_ports { flash_ss    }]; #IO_L6P_T0_FCS_B_14 Sch=qspi_csn
+set_property -dict { PACKAGE_PIN P24   IOSTANDARD LVCMOS33 } [get_ports { flash_io[0] }]; #IO_L1P_T0_D00_MOSI_14 Sch=qspi_d[0]
+set_property -dict { PACKAGE_PIN R25   IOSTANDARD LVCMOS33 } [get_ports { flash_io[1] }]; #IO_L1N_T0_D01_DIN_14 Sch=qspi_d[1]
+set_property -dict { PACKAGE_PIN R20   IOSTANDARD LVCMOS33 } [get_ports { flash_io[2] }]; #IO_L2P_T0_D02_14 Sch=qspi_d[2]
+set_property -dict { PACKAGE_PIN R21   IOSTANDARD LVCMOS33 } [get_ports { flash_io[3] }]; #IO_L2N_T0_D03_14 Sch=qspi_d[3]
 
 ## JTAG
 # minimize routing delay

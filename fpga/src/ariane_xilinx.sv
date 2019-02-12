@@ -138,10 +138,10 @@ assign cpu_reset  = ~cpu_resetn;
 logic pll_locked;
 
 // ROM
-logic                    rom_req;
+logic                    rom_req, rom_we;
 logic [AxiAddrWidth-1:0] rom_addr;
-logic [AxiDataWidth-1:0] rom_rdata;
-
+logic [AxiDataWidth-1:0] rom_rdata, rom_wdata;
+logic [AxiDataWidth/8-1:0] rom_be;
 // Debug
 logic          debug_req_valid;
 logic          debug_req_ready;
@@ -338,17 +338,20 @@ axi2mem #(
     .rst_ni ( ndmreset_n              ),
     .slave  ( master[ariane_soc::ROM] ),
     .req_o  ( rom_req                 ),
-    .we_o   (                         ),
+    .we_o   ( rom_we                  ),
     .addr_o ( rom_addr                ),
-    .be_o   (                         ),
-    .data_o (                         ),
+    .be_o   ( rom_be                  ),
+    .data_o ( rom_wdata               ),
     .data_i ( rom_rdata               )
 );
 
-bootrom i_bootrom (
+bootram i_bootram (
     .clk_i   ( clk       ),
     .req_i   ( rom_req   ),
+    .we_i    ( rom_we    ),
     .addr_i  ( rom_addr  ),
+    .be_i    ( rom_be    ),
+    .wdata_i ( rom_wdata ),
     .rdata_o ( rom_rdata )
 );
 
