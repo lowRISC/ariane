@@ -1,4 +1,4 @@
-`define vstrt 32'h80000000
+`define vstrt 32'h87FF0000
 `define vsiz 32'h2000000
 `define vstop (`vstrt+`vsiz)
 

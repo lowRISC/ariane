@@ -26,6 +26,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <string.h>
 #include <unistd.h>
 #include "eth.h"
+#include "uart.h"
+#include "ariane.h"
+#include "hash-md5.h"
 
 #define CMD_RRQ (int16_t)1
 #define CMD_WRQ (int16_t)2
@@ -73,7 +76,7 @@ Error Codes
 */
 
 /* hack in a document_root */
-char *conf_document_root = "";
+const char *const conf_document_root = "";
 
 /* poor man's atoi that only does natural numbers (including zero in case some pedantic insists zero is unnatural) */
 
@@ -101,19 +104,40 @@ int myatoi(const char *nptr)
   return rslt;
 }
 
+void myputn(int wid, unsigned n)
+{
+  if ((wid > 0) || (n > 9)) myputn(wid-1, n / 10);
+  write_serial(n % 10 + '0');
+}
+
+enum {verbose=0, md5sum = 0};
+static char *file_ptr, *strt_ptr;
+
 void file_open(const char *path)
 {
-
+  strt_ptr = (char *)DRAMBase;
+  file_ptr = strt_ptr;
 }
 
 void file_write(void *data, int siz)
 {
-
+  memcpy(file_ptr, data, siz);
+  file_ptr += siz;
 }
 
 void file_close(void)
 {
-
+  uint8_t *hash_value;
+  int siz = file_ptr - strt_ptr;
+  void (*fun_ptr)(void) = (void*)strt_ptr;
+  printf("File length = %d\n", siz);
+  if (md5sum)
+    {
+      hash_value = hash_buf(strt_ptr, siz);
+      printf("md5(%p,%d) = %s\n", strt_ptr, siz, hash_value);
+    }
+  asm volatile ("fence.i");
+  fun_ptr();
 }
 
 // Send an ACK packet. Return bytes sent.
@@ -133,9 +157,9 @@ int myrecv(int sock, struct tftpx_packet *rcv_packet, int siz)
 
 static ushort block;
 static int blocksize;
+static struct tftpx_packet ack_packet;
 
 void handle_wrq(int sock, struct tftpx_request *request) {
-	struct tftpx_packet ack_packet;
 	char fullpath[256];
 	char *r_path = request->packet.filename;	// request file
 	char *mode = r_path + strlen(r_path) + 1;
@@ -175,17 +199,24 @@ void handle_wrq(int sock, struct tftpx_request *request) {
 }
 
 void handle_data_packet(int sock, struct tftpx_packet *rcv_packet, int r_size) {
-  struct tftpx_packet ack_packet;
   if(r_size >= 4 && rcv_packet->cmd == htons(CMD_DATA) && rcv_packet->block == htons(block))
     {
-      printf("DATA: block=%d, data_size=%d\n", ntohs(rcv_packet->block), r_size - 4);
+      if (verbose)
+        printf("DATA: block=%d, data_size=%d\n", ntohs(rcv_packet->block), r_size - 4);
       // Valid DATA
       file_write(rcv_packet->data, r_size - 4);
       ack_packet.cmd = htons(CMD_ACK);
       ack_packet.block = htons(block);
       send_ack(sock, &ack_packet, 4);
-      printf("Send ACK=%d\n", block);
-      block ++;
+      if (verbose)
+        printf("Send ACK=%d\n", block);
+      else
+        {
+          write_serial('\r');
+          myputn(5, block);
+          write_serial(' ');
+        }
+      block++;
     }
   if (r_size < blocksize + 4)
     {
@@ -204,7 +235,7 @@ void handle_switch(int sock, struct tftpx_request *request)
       handle_wrq(sock, request);
       break;
     case CMD_DATA:
-      printf("handle_data_packet called.\n");
+      //      printf("handle_data_packet called.\n");
       handle_data_packet(sock, &(request->packet), request->size);
       break;      
     default:
@@ -223,7 +254,8 @@ void process_udp_packet(int sock, const u_char *data, int ulen, uint16_t peer_po
   handle_switch(sock, &request);
 }
 
-void tftps_tick(void)
+void tftps_tick(int sock)
 {
-
+  if (block > 0)
+    send_ack(sock, &ack_packet, 4);
 }

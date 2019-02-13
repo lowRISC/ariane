@@ -193,3 +193,24 @@ uint8_t *hash_buf(const void *in_buf, int count)
  // printf("md5(%p,%d) = %s\n", in_buf, count, hash_value);
  return hash_value;
 }
+
+#ifdef TEST_MAIN
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int argc, char **argv)
+{
+  if (argc > 1)
+    {
+      FILE *fd = fopen(argv[1], "r");
+      int pos = fseek(fd, 0, SEEK_END);
+      long siz = ftell(fd);
+      int bgn = fseek(fd, 0, SEEK_SET);
+      char *buf = malloc(siz);
+      int rslt = fread(buf, 1, siz, fd);
+      uint8_t *hash_value = hash_buf(buf, siz);
+      printf("md5(%p,%ld) = %s\n", buf, siz, hash_value);
+    }
+}
+
+#endif

@@ -40,6 +40,11 @@ program:
 
 ELF=src/bootrom/bootrom.elf
 
+newmcs: work-fpga/ariane_xilinx.new.mcs
+
+work-fpga/ariane_xilinx.new.mcs: work-fpga/ariane_xilinx.new.bit
+	env XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" vivado -nojournal -mode batch -source scripts/prologue.tcl -source scripts/write_cfgmem.tcl -tclargs $@ $<
+
 new: work-fpga/ariane_xilinx.bit search-ramb.log 
 	riscv64-unknown-elf-objcopy -I elf64-little -O verilog $(ELF) cnvmem.mem
 	iverilog scripts/cnvmem.v -o cnvmem

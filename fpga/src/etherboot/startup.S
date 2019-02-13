@@ -2,7 +2,7 @@
 # 
 # 
 #include <smp.h>
-#define DRAM_BASE 0x80100000
+#define DRAM_BASE 0x87FF0000
 
   .section .text.init
   .option norvc
@@ -32,7 +32,7 @@ _copy:
 _reloc:
   la a5, trap_entry
   csrw mtvec, a5  
-  li sp, 0x84000000
+  li sp, 0x87FF0000
   la a1, _BSS_START_
   la a2, _BSS_END_
 _zbss:

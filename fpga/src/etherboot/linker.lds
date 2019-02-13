@@ -3,7 +3,7 @@ ENTRY(_prog_start)
 SECTIONS
 {
     ROM_BASE = 0x10000; /* ... but actually position independent */
-    DDR_BASE = 0x80100000;
+    DDR_BASE = 0x87FF0000;
     
     . = DDR_BASE;
 

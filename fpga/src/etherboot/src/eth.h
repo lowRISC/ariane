@@ -340,7 +340,8 @@ void eth_interrupt(void);
 void recog_packet(int proto_type, uint32_t *alloc32, int xlength);
 void *mysbrk(size_t len);
 int mysend(int sock, void *buf, int ulen);
-void tftps_tick(void);
+void tftps_tick(int sock);
+void ethboot(void);
 
 static inline void eth_write(size_t addr, uint64_t data)
 {

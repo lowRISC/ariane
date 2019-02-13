@@ -45,7 +45,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-//#include "sdhci-minion-hash-md5.h"
+
 volatile uint32_t *const plic = (volatile uint32_t *)PLICBase;
 volatile uint64_t * get_ddr_base() { return (uint64_t *) DRAMBase; }
 volatile uint64_t   get_ddr_size() { return (uint64_t) DRAMLength; }
@@ -65,7 +65,7 @@ volatile uint64_t *const eth_base = (volatile uint64_t *)EthernetBase;
 //#define VERBOSE
 //#define UDP_DEBUG
 
-void *mysbrk(size_t len)
+void *mysbrk_(size_t len)
 {
   static unsigned long rused = 0;
   char *rd = rused + (char *)get_ddr_base() +  ((uint64_t)get_ddr_size()) / 2;
@@ -309,7 +309,13 @@ void recog_packet(int proto_type, uint32_t *alloc32, int xlength)
 #endif
                   break;
                 case    IPPROTO_IPIP: printf("IP Proto = IPIP\n"); break;
-                case    IPPROTO_TCP: printf("IP Proto = TCP\n"); break;
+                case    IPPROTO_TCP:
+#ifdef VERBOSE
+                  printf("IP Proto = TCP\n");
+#else
+		  printf("T");
+#endif                  
+                  break;
                 case    IPPROTO_EGP: printf("IP Proto = EGP\n"); break;
                 case    IPPROTO_PUP: printf("IP Proto = PUP\n"); break;
                 case    IPPROTO_UDP:
@@ -560,12 +566,15 @@ int eth_main(void) {
     if (cnt-- == 0)
       {
         if (!saved_peer_ip)
-          dhcp_main(mac_addr.addr);
+          {
+            dhcp_main(mac_addr.addr);
+            cnt = 10000000;       
+          }
         else if (dhcp_ack_cnt)
           {
-            tftps_tick();
+            tftps_tick(0);
+            cnt = 10000;       
           }
-        cnt = 10000000;       
       }
 #ifndef INTERRUPT_MODE
     while (eth_read(RSR_OFFSET) & RSR_RECV_DONE_MASK) copyin_pkt();
@@ -610,7 +619,6 @@ void ethboot(void)
   write_csr(mie, old_mie);
   write_csr(mstatus, old_mstatus);
 #endif
-  init_uart();
   eth_write(MACHI_OFFSET, eth_read(MACHI_OFFSET)&~MACHI_IRQ_EN);
   eth_write(RSR_OFFSET, RSR_RECV_LAST_MASK);
   printf("Ethernet interrupt status = %ld\n", eth_read(RSR_OFFSET));
