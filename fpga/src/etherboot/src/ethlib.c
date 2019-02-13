@@ -74,13 +74,11 @@ void *mysbrk(size_t len)
 }
 
 
-#define PORT 8888   //The port on which to send data
-#define CHUNK_SIZE 1456
+#define PORT 69   //The TFTP well-known port on which to send data
 
 #define min(x,y) (x) < (y) ? (x) : (y)
 
 int eth_discard;
-void process_my_packet(int size, const u_char *buffer);
 
 static int copyin_pkt(void)
 {
@@ -129,17 +127,13 @@ static int copyin_pkt(void)
 }
 
 // max size of file image is increased to 17M to support FreeBSD downloading
-#define MAX_FILE_SIZE (sizeof_maskarray*8*CHUNK_SIZE)
 
 // size of DDR RAM (128M for NEXYS4-DDR) 
 #define DDR_SIZE 0x8000000
 
-enum {sizeof_maskarray=CHUNK_SIZE};
-
 static int oldidx;
 static int dhcp_off_cnt;
 static int dhcp_ack_cnt;
-static uint64_t maskarray[sizeof_maskarray/sizeof(uint64_t)];
 const char *const regnam(int ix)
 {
  switch (ix)
@@ -303,7 +297,7 @@ void recog_packet(int proto_type, uint32_t *alloc32, int xlength)
                       printf("sending ICMP reply (header = %d, total = %d, checksum = %x)\n", sizeof(struct icmphdr), len, chksum);
                       PrintData((u_char *)icmp_hdr, len);
 #endif                      
-                      lite_queue(alloc32, xlength);
+                      lite_queue(0, alloc32, xlength);
                     }
                   }
                   break;
@@ -342,7 +336,7 @@ void recog_packet(int proto_type, uint32_t *alloc32, int xlength)
                         saved_peer_port = peer_port;
                         saved_peer_ip = peer_ip;
                         memcpy(saved_peer_addr, peer_addr, sizeof(saved_peer_addr));
-                        process_udp_packet(udp_hdr->body, ulen-sizeof(struct udphdr), peer_port, peer_ip, peer_addr);
+                        process_udp_packet(0, udp_hdr->body, ulen-sizeof(struct udphdr), peer_port, peer_ip, peer_addr);
                       }
                     else if (peer_port == DHCP_SERVER_PORT)
                       {
@@ -371,9 +365,9 @@ void recog_packet(int proto_type, uint32_t *alloc32, int xlength)
                            dport,
                            ulen);
 #else
-                        //                        print_uart_short(dport);
+                        //        print_uart_short(dport);
 #endif
-                        udp_send(mac_addr.addr, (void *)(udp_hdr->body), ulen, PORT, peer_port, srcaddr, peer_ip, peer_addr);
+                        //        udp_send(mac_addr.addr, (void *)(udp_hdr->body), ulen, PORT, peer_port, srcaddr, peer_ip, peer_addr);
                       }
                   }
                   break;
@@ -447,7 +441,7 @@ void recog_packet(int proto_type, uint32_t *alloc32, int xlength)
 #ifdef VERBOSE
                 printf("sending ARP reply (length = %d)\n", len);
 #endif
-                lite_queue(alloc32, len);
+                lite_queue(0, alloc32, len);
                }
              else
                {
@@ -466,9 +460,16 @@ void recog_packet(int proto_type, uint32_t *alloc32, int xlength)
             break;
           default:
             printf("proto_type = 0x%x\n", proto_type);
-            lite_queue(alloc32, 0);
+            lite_queue(0, alloc32, 0);
             break;
           }
+}
+
+int mysend(int sock, void *buf, int ulen) {
+  uint32_t srcaddr;
+  memcpy(&srcaddr, &uip_hostaddr, 4);
+  udp_send(mac_addr.addr, buf, ulen, PORT, saved_peer_port, srcaddr, saved_peer_ip, saved_peer_addr);
+  return ulen;
 }
 
 uint16_t __bswap_16(uint16_t x)
@@ -525,9 +526,6 @@ int eth_main(void) {
   rxbuf = (inqueue_t *)mysbrk(sizeof(inqueue_t)*queuelen);
   txbuf = (outqueue_t *)mysbrk(sizeof(outqueue_t)*queuelen);
 #endif  
-  printf("Max file size is %d bytes\n", MAX_FILE_SIZE);
-  //  maskarray = (uint64_t *)mysbrk(sizeof_maskarray);
-  memset(maskarray, 0, sizeof_maskarray);
   
 #ifndef VERBOSE  
   printf("MAC = %lx:%lx\n", hi&MACHI_MACADDR_MASK, lo);
@@ -563,12 +561,9 @@ int eth_main(void) {
       {
         if (!saved_peer_ip)
           dhcp_main(mac_addr.addr);
-        else if (saved_peer_port)
+        else if (dhcp_ack_cnt)
           {
-            uint32_t srcaddr;
-            memcpy(&srcaddr, &uip_hostaddr, 4);
-            printf("Report blocks unsolicited\n");
-            udp_send(mac_addr.addr, maskarray, sizeof_maskarray, PORT, saved_peer_port, srcaddr, saved_peer_ip, saved_peer_addr);
+            tftps_tick();
           }
         cnt = 10000000;       
       }
@@ -581,7 +576,7 @@ int eth_main(void) {
         uint64_t *alloc = txbuf[txtail].alloc;
         int length = txbuf[txtail].len;
         int i, rslt;
-        lite_queue(alloc, length);
+        lite_queue(0, alloc, length);
         txtail = (txtail + 1) % queuelen;
       }
 #endif    
@@ -607,7 +602,7 @@ int eth_main(void) {
   } while (1);
 }
 
-static void ethboot(void)
+void ethboot(void)
 {
   uint8_t *memory_base = (uint8_t *)(get_ddr_base());
 #ifdef INTERRUPT_MODE
@@ -631,125 +626,6 @@ static void ethboot(void)
   printf("Goodbye, booter ...\n");
   asm volatile ("fence.i");
   asm volatile ("mret");
-}
-
-void process_udp_packet(const u_char *data, int ulen, uint16_t peer_port, uint32_t peer_ip, const u_char *peer_addr)
-{
-  uint16_t idx;	
-  static uint16_t maxidx;
-  uint64_t siz = ((uint64_t)get_ddr_size());
-  uint8_t *boot_file_buf = (uint8_t *)(get_ddr_base()) + siz - MAX_FILE_SIZE;
-  uint8_t *boot_file_buf_end = (uint8_t *)(get_ddr_base()) + siz;
-  uint32_t srcaddr;
-  memcpy(&srcaddr, &uip_hostaddr, 4);
-  if (ulen == CHUNK_SIZE+sizeof(uint16_t))
-    {
-      memcpy(&idx, data+CHUNK_SIZE, sizeof(uint16_t));
-#ifdef VERBOSE
-      printf("idx = %x\n", idx);
-#else
-      print_uart_short(idx);
-#endif
-      switch (idx)
-        {
-        case 0xFFFF:
-          {
-            printf("Boot requested\n");
-            ethboot();
-            break;
-          }
-        case 0xFFFE:
-          {
-            oldidx = 0;
-            maxidx = 0;
-            printf("Clear blocks requested\n");
-            memset(maskarray, 0, sizeof_maskarray);
-            udp_send(mac_addr.addr, maskarray, sizeof_maskarray, PORT, peer_port, srcaddr, peer_ip, peer_addr);
-            break;
-          }
-        case 0xFFFD:
-          {
-            printf("Report blocks requested\n");
-            udp_send(mac_addr.addr, maskarray, sizeof_maskarray, PORT, peer_port, srcaddr, peer_ip, peer_addr);
-            break;
-          }
-        case 0xFFFC:
-          {
-            uint8_t *digest;
-            uint32_t *target;
-            size_t siz;
-            memcpy(&target, data, sizeof(uint32_t *));
-            memcpy(&siz, data+sizeof(uint32_t *), sizeof(siz));
-            printf("Copy and report MD5 of size %ld of target memory %p\n", siz, target);
-            memcpy(target, boot_file_buf, siz);
-            digest = hash_buf(target, siz);
-            udp_send(mac_addr.addr, digest, hash_length * 2 + 1, PORT, peer_port, srcaddr, peer_ip, peer_addr);
-            break;
-          }
-        case 0xFFFB:
-          {
-            const uint8_t *fakedigest;
-            uint32_t *target;
-            size_t siz;
-            memcpy(&target, data, sizeof(uint32_t *));
-            memcpy(&siz, data+sizeof(uint32_t *), sizeof(siz));
-            printf("Copying chunk of size %ld to target memory %p\n", siz, target);
-            memcpy(target, boot_file_buf, siz);
-	    fakedigest = data+sizeof(uint32_t *)+sizeof(size_t);
-            udp_send(mac_addr.addr, fakedigest, hash_length * 2 + 1, PORT, peer_port, srcaddr, peer_ip, peer_addr);
-            break;
-          }
-        case 0xFFFA:
-          {
-            void *target;
-            size_t siz;
-            memcpy(&target, data, sizeof(target));
-            memcpy(&siz, data+sizeof(void *), sizeof(siz));
-            printf("Clearing chunk of size %ld to target memory %p\n", siz, target);
-            memset(target, 0, siz);
-            break;
-          }
-        case 0xFFF9:
-          {
-            void *target;
-            size_t siz;
-            memcpy(&target, data, sizeof(target));
-            memcpy(&siz, data+sizeof(void *), sizeof(siz));
-            printf("Downloading chunk of size %ld from target memory %p\n", siz, target);
-            udp_send(mac_addr.addr, target, siz, PORT, peer_port, srcaddr, peer_ip, peer_addr);
-            break;
-          }
-        default:
-          {
-            uint8_t *boot_file_ptr = boot_file_buf+idx*CHUNK_SIZE;
-            if (boot_file_ptr+CHUNK_SIZE < boot_file_buf_end)
-              {
-                memcpy(boot_file_ptr, data, CHUNK_SIZE);
-                maskarray[idx/64] |= 1ULL << (idx&63);
-                if (maxidx <= idx)
-                  maxidx = idx+1;
-              }
-            else
-              printf("Data Payload index %d out of range\n", idx);
-#ifdef VERBOSE
-            printf("Data Payload index %d\n", idx);
-#else
-            if (idx % 100 == 0) printf(".");
-#endif
-            oldidx = idx;
-          }
-        }
-    }
-  else if (ulen < ETH_DATA_LEN)
-    {
-      printf("UDP packet length %d sent to port %d\n", ulen, peer_port);
-#ifdef UDP_DEBUG
-      PrintData(data, ulen);
-#endif      
-      udp_send(mac_addr.addr, (void *)data, ulen, PORT, peer_port, srcaddr, peer_ip, peer_addr);
-    }
-  else
-    printf("Packet length %d discarded\n", ulen);
 }
 
 #if defined(UDP_DEBUG)

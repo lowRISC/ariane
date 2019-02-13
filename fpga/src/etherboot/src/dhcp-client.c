@@ -115,7 +115,7 @@ in_cksum(unsigned short *addr, int len)
 }
 
 #if 0
-void lite_queue(const void *buf, int length)
+void lite_queue(int sock, const void *buf, int length)
 {
   int i, rslt;
   int rnd = ((length-1|7)+1);
@@ -124,7 +124,7 @@ void lite_queue(const void *buf, int length)
   txhead = (txhead+1) % queuelen;
 }
 #else
-void lite_queue(const void *buf, int length)
+void lite_queue(int sock, const void *buf, int length)
 {
   int i;
   int rnd = (((length-1)|7)+1);
@@ -269,7 +269,7 @@ void dhcp_input(dhcp_t *dhcp, u_int8_t *mac, int *offcount, int *ackcount)
 
 int my_inject(const void *buf, size_t siz)
 {
-  lite_queue(buf, siz);
+  lite_queue(0, buf, siz);
   return siz;
 }
 

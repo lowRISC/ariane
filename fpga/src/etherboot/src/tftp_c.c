@@ -1,121 +1,112 @@
-/**
- * tftp_c.c - tftp client
- */
+/**********************************************
+
+Copyright (c) 2016 tftpx Authors
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the tftpx nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+ * Author: Jonathan Kimmitt (based on work_thread.c by ideawu)
+ * Original Author: ideawu(www.ideawu.net)
+ * Date: 2007-04, 2007-05
+ * File: tftp_c.c
+ * Description: Bare metal tftp server for Ariane/lowRISC
+ *********************************************/
+
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/time.h>
-/**
- * utility.h - header file which contains common function of tftp_c.c and tftp_s.c
- */
+#include <unistd.h>
 #include "eth.h"
 
-#define MYPORT "4950" // port to be opened on server
-#define SERVERPORT "4950" // the port users will be connecting to
-#define MAXBUFLEN 550 // get sockaddr, IPv4 or IPv6:
-#define MAX_READ_LEN 512 // maximum data size that can be sent on one packet
-#define MAX_FILENAME_LEN 100 // maximum length of file name supported
-#define MAX_PACKETS 99 // maximum number of file packets
-#define MAX_TRIES 3 // maximum number of tries if packet times out
-#define TIME_OUT 5 // in seconds
+#define CMD_RRQ (int16_t)1
+#define CMD_WRQ (int16_t)2
+#define CMD_DATA (int16_t)3
+#define CMD_ACK (int16_t)4
+#define CMD_ERROR (int16_t)5
+#define CMD_LIST (int16_t)6
+#define CMD_HEAD (int16_t)7
 
+// TFTPX_DATA_SIZE
+#define DATA_SIZE 512
+//
+#define LIST_BUF_SIZE (DATA_SIZE * 8)
 
-// converts block number to length-2 string
-void s_to_i(char *f, int n){
-	if(n==0){
-		f[0] = '0', f[1] = '0', f[2] = '\0';
-	} else if(n%10 > 0 && n/10 == 0){
-		char c = n+'0';
-		f[0] = '0', f[1] = c, f[2] = '\0';
-	} else if(n%100 > 0 && n/100 == 0){
-		char c2 = (n%10)+'0';
-		char c1 = (n/10)+'0';
-		f[0] = c1, f[1] = c2, f[2] = '\0';
-	} else {
-		f[0] = '9', f[1] = '9', f[2] = '\0';
-	}
+struct tftpx_packet {
+	uint16_t cmd;
+	union{
+		uint16_t code;
+		uint16_t block;
+		// For a RRQ and WRQ TFTP packet
+		char filename[2];
+	};
+	char data[DATA_SIZE];
+};
+
+struct tftpx_request {
+	int size;
+	void *client;
+	struct tftpx_packet packet;
+};
+
+/*
+Error Codes
+
+   Value     Meaning
+
+   0         Not defined, see error message (if any).
+   1         File not found.
+   2         Access violation.
+   3         Disk full or allocation exceeded.
+   4         Illegal TFTP operation.
+   5         Unknown transfer ID.
+   6         File already exists.
+   7         No such user.
+*/
+
+/* hack in a document_root */
+char *conf_document_root = "";
+
+/* poor man's atoi that only does natural numbers (including zero in case some pedantic insists zero is unnatural) */
+
+int myatoi(const char *nptr)
+{
+  int rslt = 0;
+  while (*nptr)
+    {
+    switch(*nptr)
+      {
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+        rslt = rslt * 10 + *nptr - '0';
+      }
+    ++nptr;
+    }
+  return rslt;
 }
 
-// makes RRQ packet
-char* make_rrq(char *filename){
-	char *packet;
-        int len = 2+strlen(filename);
-	packet = mysbrk(len);
-	memset(packet, 0, len);
-	strcat(packet, "01");//opcode
-	strcat(packet, filename);
-	return packet;
-}
-
-// makes WRQ packet
-char* make_wrq(char *filename){
-	char *packet;
-        int len = 2+strlen(filename);
-	packet = mysbrk(len);
-	memset(packet, 0, len);
-	strcat(packet, "02");//opcode
-	strcat(packet, filename);
-	return packet;
-}
-
-// makes data packet
-char* make_data_pack(int block, char *data){
-	char *packet;
-	char temp[3];
-        int len = 4+strlen(data);
-	s_to_i(temp, block);
-	packet = mysbrk(len);
-	memset(packet, 0, len);
-	strcat(packet, "03");//opcode
-	strcat(packet, temp);
-	strcat(packet, data);
-	return packet;
-}
-
-// makes ACK packet
-char* make_ack(char* block){
-	char *packet;
-        int len = 2+strlen(block);
-	packet = mysbrk(len);
-	memset(packet, 0, len);
-	strcat(packet, "04");//opcode
-	strcat(packet, block);
-	return packet;
-}
-
-// makes ERR packet
-char* make_err(char *errcode, char* errmsg){
-	char *packet;
-        int len = 4+strlen(errmsg);
-	packet = mysbrk(len);
-	memset(packet, 0, len);
-	strcat(packet, "05");//opcode
-	strcat(packet, errcode);
-	strcat(packet, errmsg);
-	return packet;
-}
-
-const char *peer(void) {
-  return "localhost";
-}
-
-int poll(int sockfd, char *buf, int max) {
-  return 0;
-}
-
-int sendto(int sockfd, char *buf, int max) {
-  return 0;
-}
-
-void file_open_write(const char *nam)
+void file_open(const char *path)
 {
 
 }
 
-void packet_write(char *buf, int siz)
+void file_write(void *data, int siz)
 {
 
 }
@@ -125,216 +116,114 @@ void file_close(void)
 
 }
 
-// TIMEOUT DISABLED IN THIS VERSION
-int check_timeout(int sockfd, char *buf) {
-	return poll(sockfd, buf, MAXBUFLEN-1);
+// Send an ACK packet. Return bytes sent.
+// If error occurs, return -1;
+int send_ack(int sock, struct tftpx_packet *packet, int size){
+	if(mysend(sock, packet, size) != size){
+		return -1;
+	}
+	
+	return size;
 }
 
-int tftp_main(int sockfd, const char *direction, char *server, char *file){
+int myrecv(int sock, struct tftpx_packet *rcv_packet, int siz)
+{
+  return 0;
+}
 
-        //	struct addrinfo *p;
-	int numbytes;
-	char buf[MAXBUFLEN];
-		
-	//===========CONFIGURATION OF CLIENT - ENDS===========
+static ushort block;
+static int blocksize;
 
+void handle_wrq(int sock, struct tftpx_request *request) {
+	struct tftpx_packet ack_packet;
+	char fullpath[256];
+	char *r_path = request->packet.filename;	// request file
+	char *mode = r_path + strlen(r_path) + 1;
+	char *blocksize_str = mode + strlen(mode) + 1;	
+	blocksize = myatoi(blocksize_str);
 
-	//===========MAIN IMPLEMENTATION - STARTS===========
-	if(strcmp(direction, "GET") == 0 || strcmp(direction, "get") == 0){ //GET DATA FROM SERVER
-		//SENDING RRQ
-		char *message = make_rrq(file);
-		char last_recv_message[MAXBUFLEN];strcpy(last_recv_message, "");
-		char last_sent_ack[10];strcpy(last_sent_ack, message);
-		if((numbytes = sendto(sockfd, message, strlen(message))) == -1){
-			perror("CLIENT: sendto");
-			return(1);
-		}
-		printf("CLIENT: sent %d bytes to %s\n", numbytes, server);
-
-		char filename[MAX_FILENAME_LEN];
-		strcpy(filename, file);
-		strcat(filename, "_client");
-
-		file_open_write(filename);
-
-		//RECEIVING ACTUAL FILE
-		int c_written;
-		do{
-			//RECEIVING FILE - PACKET DATA
-			if ((numbytes = poll(sockfd, buf, MAXBUFLEN-1)) == -1) {
-				perror("CLIENT: recvfrom");
-				return(1);
-			}
-			printf("CLIENT: got packet from %s\n", peer());
-			printf("CLIENT: packet is %d bytes long\n", numbytes);
-			buf[numbytes] = '\0';
-			printf("CLIENT: packet contains \"%s\"\n", buf);
-
-			//CHECKING IF ERROR PACKET
-			if(buf[0]=='0' && buf[1]=='5'){
-				printf("CLIENT: got error packet: %s\n", buf);
-				return(1);
-			}
-
-			//SENDING LAST ACK AGAIN - AS IT WAS NOT REACHED
-			if(strcmp(buf, last_recv_message) == 0){
-				sendto(sockfd, last_sent_ack, strlen(last_sent_ack));
-				continue;
-			}
-
-			//WRITING FILE - PACKET DATA
-			c_written = strlen(buf+4);
-			packet_write(buf+4, c_written);
-			strcpy(last_recv_message, buf);
-
-			//SENDING ACKNOWLEDGEMENT - PACKET DATA
-			char block[3];
-			strncpy(block, buf+2, 2);
-			block[2] = '\0';
-			char *t_msg = make_ack(block);
-			if((numbytes = sendto(sockfd, t_msg, strlen(t_msg))) == -1){
-				perror("CLIENT ACK: sendto");
-				return(1);
-			}
-			printf("CLIENT: sent %d bytes\n", numbytes);
-			strcpy(last_sent_ack, t_msg);
-		} while(c_written == MAX_READ_LEN);
-		printf("NEW FILE: %s SUCCESSFULLY MADE\n", filename);
-                file_close();
-	} else if(strcmp(direction, "PUT") == 0 || strcmp(direction, "put") == 0){	//WRITE DATA TO SERVER	
-#if 0
-                //SENDING WRQ
-		char *message = make_wrq(file);
-		char *last_message;
-		if((numbytes = sendto(sockfd, message, strlen(message))) == -1){
-			perror("CLIENT: sendto");
-			exit(1);
-		}
-		printf("CLIENT: sent %d bytes to %s\n", numbytes, server);
-		last_message = message;
-
-		//WAITING FOR ACKNOWLEDGEMENT - WRQ
-		int times;
-		for(times=0;times<=MAX_TRIES;++times){
-			if(times == MAX_TRIES){// reached max no. of tries
-				printf("CLIENT: MAX NUMBER OF TRIES REACHED\n");
-				exit(1);
-			}
-
-			// checking if timeout has occurred or not
-			numbytes = check_timeout(sockfd, buf);
-			if(numbytes == -1){//error
-				perror("CLIENT: recvfrom");
-				exit(1);
-			} else if(numbytes == -2){//timeout
-				printf("CLIENT: try no. %d\n", times+1);
-				int temp_bytes;
-				if((temp_bytes = sendto(sockfd, last_message, strlen(last_message))) == -1){
-					perror("CLIENT ACK: sendto");
-					exit(1);
-				}
-				printf("CLIENT: sent %d bytes AGAIN\n", temp_bytes);
-				continue;
-			} else { //valid
-				break;
-			}
-		}
-		printf("CLIENT: got packet from %s\n", peer());
-		printf("CLIENT: packet is %d bytes long\n", numbytes);
-		buf[numbytes] = '\0';
-		printf("CLIENT: packet contains \"%s\"\n", buf);
-
-		if(buf[0]=='0' && buf[1]=='4'){
-			FILE *fp = fopen(file, "rb");
-			if(fp == NULL || access(file, F_OK) == -1){
-				printf("CLIENT: file %s does not exist\n", file);
-				exit(1);
-			}
-
-			//calculating of size of file
-			int block = 1;
-			fseek(fp, 0, SEEK_END);
-			int total = ftell(fp);
-			fseek(fp, 0, SEEK_SET);
-			int remaining = total;
-			if(remaining == 0)
-				++remaining;
-			else if(remaining%MAX_READ_LEN == 0)
-				--remaining;
-
-			while(remaining>0){
-				//READING FILE - DATA PACKET
-				char temp[MAX_READ_LEN+5];
-				if(remaining>MAX_READ_LEN){
-					fread(temp, MAX_READ_LEN, sizeof(char), fp);
-					temp[MAX_READ_LEN] = '\0';
-					remaining -= (MAX_READ_LEN);
-				} else {
-					fread(temp, remaining, sizeof(char), fp);
-					temp[remaining] = '\0';
-					remaining = 0;
-				}
-
-				//SENDING FILE - DATA PACKET
-				char *t_msg = make_data_pack(block, temp);
-				if((numbytes = sendto(sockfd, t_msg, strlen(t_msg))) == -1){
-					perror("CLIENT: sendto");
-					exit(1);
-				}
-				printf("CLIENT: sent %d bytes to %s\n", numbytes, server);
-				last_message = t_msg;
-
-				//WAITING FOR ACKNOWLEDGEMENT - DATA PACKET
-				int times;
-				for(times=0;times<=MAX_TRIES;++times){
-					if(times == MAX_TRIES){
-						printf("CLIENT: MAX NUMBER OF TRIES REACHED\n");
-						exit(1);
-					}
-
-					numbytes = check_timeout(sockfd, buf);
-					if(numbytes == -1){//error
-						perror("CLIENT: recvfrom");
-						exit(1);
-					} else if(numbytes == -2){//timeout
-						printf("CLIENT: try no. %d\n", times+1);
-						int temp_bytes;
-						if((temp_bytes = sendto(sockfd, last_message, strlen(last_message))) == -1){
-							perror("CLIENT ACK: sendto");
-							exit(1);
-						}
-						printf("CLIENT: sent %d bytes AGAIN\n", temp_bytes);
-						continue;
-					} else { //valid
-						break;
-					}
-				}
-				printf("CLIENT: got packet from %s\n", peer());
-				printf("CLIENT: packet is %d bytes long\n", numbytes);
-				buf[numbytes] = '\0';
-				printf("CLIENT: packet contains \"%s\"\n", buf);
-
-				if(buf[0]=='0' && buf[1]=='5'){//if error packet received
-					printf("CLIENT: got error packet: %s\n", buf);
-					exit(1);
-				}
-				
-				++block;
-				if(block>MAX_PACKETS)
-					block = 1;
-			}
-			
-			fclose(fp);
-		} else {//some bad packed received
-			printf("CLIENT ACK: expecting but got: %s\n", buf);
-			exit(1);
-		}
-#endif
-	} else { //INVALID REQUEST
-		printf("USAGE: tftp_c GET/PUT server filename\n");
-		return (1);
+	if (blocksize <= 0 || blocksize > DATA_SIZE) {
+		blocksize = DATA_SIZE;
 	}
-	//===========MAIN IMPLEMENTATION - ENDS===========
 
-	return 0;
+	if (strlen(r_path) + strlen(conf_document_root) > sizeof(fullpath) - 1) {		
+		printf("Request path too long. %ld\n", strlen(r_path) + strlen(conf_document_root));
+		return;
+	}
+	
+	// build fullpath
+	memset(fullpath, 0, sizeof(fullpath));
+	strcpy(fullpath, conf_document_root);
+	if(r_path[0] != '/'){
+		strcat(fullpath, "/");
+	}
+	strcat(fullpath, r_path);
+
+	printf("wrq: \"%s\", blocksize=%d\n", fullpath, blocksize);
+	
+	//if(!strncasecmp(mode, "octet", 5) && !strncasecmp(mode, "netascii", 8)){
+	//	// send error packet
+	//	return;
+	//}
+		
+	file_open(fullpath);
+	
+	ack_packet.cmd = htons(CMD_ACK);
+	ack_packet.block = htons(0);
+	send_ack(sock, &ack_packet, 4);
+	block = 1;
+}
+
+void handle_data_packet(int sock, struct tftpx_packet *rcv_packet, int r_size) {
+  struct tftpx_packet ack_packet;
+  if(r_size >= 4 && rcv_packet->cmd == htons(CMD_DATA) && rcv_packet->block == htons(block))
+    {
+      printf("DATA: block=%d, data_size=%d\n", ntohs(rcv_packet->block), r_size - 4);
+      // Valid DATA
+      file_write(rcv_packet->data, r_size - 4);
+      ack_packet.cmd = htons(CMD_ACK);
+      ack_packet.block = htons(block);
+      send_ack(sock, &ack_packet, 4);
+      printf("Send ACK=%d\n", block);
+      block ++;
+    }
+  if (r_size < blocksize + 4)
+    {
+      printf("Receive file end.\n");
+      file_close();
+    }
+} 
+
+void handle_switch(int sock, struct tftpx_request *request)
+{
+  // Choose handler
+  switch(ntohs(request->packet.cmd))
+    {
+    case CMD_WRQ:
+      printf("handle_wrq called.\n");
+      handle_wrq(sock, request);
+      break;
+    case CMD_DATA:
+      printf("handle_data_packet called.\n");
+      handle_data_packet(sock, &(request->packet), request->size);
+      break;      
+    default:
+      printf("Illegal TFTP operation.\n");
+      break;
+    }
+}
+
+void process_udp_packet(int sock, const u_char *data, int ulen, uint16_t peer_port, uint32_t peer_ip, const u_char *peer_addr)
+{
+  struct tftpx_request request;
+  memset(&request, 0, sizeof(request));
+  request.size = ulen;
+  request.client = 0;
+  memcpy(&(request.packet), data, sizeof(struct tftpx_packet));
+  handle_switch(sock, &request);
+}
+
+void tftps_tick(void)
+{
+
 }

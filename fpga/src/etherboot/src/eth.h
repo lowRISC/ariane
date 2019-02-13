@@ -251,8 +251,8 @@ uint32_t __bswap_32(uint32_t x);
       for (i = 0; i < sizeof(uint16_t); i++) optr[sizeof(uint16_t)-i-1] = iptr[i]; \
       __tmp; })
 
-#define htonl(x) ntohl(x)
-#define htons(x) ntohs(x)
+static inline uint32_t htonl(uint32_t x) { return ntohl(x); }
+static inline uint16_t htons(uint16_t x) { return ntohs(x); }
 
 typedef unsigned int __u_int;
 typedef __u_int bpf_u_int32;
@@ -324,7 +324,7 @@ extern outqueue_t *txbuf;
 #endif
 
 int dhcp_main(u_int8_t mac[6]);
-void lite_queue(const void *buf, int length);
+void lite_queue(int sock, const void *buf, int length);
 void dhcp_input(dhcp_t *dhcp, u_int8_t mac[6], int *offcount, int *ackcount);
 int udp_send(const u_int8_t *mac, const void *msg, int payload_size, uint16_t client, uint16_t server, uint32_t srcaddr, uint32_t dstaddr, const u_int8_t *destmac);
 void loopback_test(int loops, int sim);
@@ -332,13 +332,15 @@ int eth_main(void);
 void process_ip_packet(const u_char *, int);
 void print_ip_packet(const u_char * , int);
 void print_tcp_packet(const u_char * , int);
-void process_udp_packet(const u_char *, int, uint16_t, uint32_t, const u_char *);
+void process_udp_packet(int sock, const u_char *, int, uint16_t, uint32_t, const u_char *);
 void PrintData (const u_char * , int);
 unsigned short csum(uint8_t *buf, int nbytes);
-void lite_queue(const void *buf, int length);
+void lite_queue(int sock, const void *buf, int length);
 void eth_interrupt(void);
 void recog_packet(int proto_type, uint32_t *alloc32, int xlength);
 void *mysbrk(size_t len);
+int mysend(int sock, void *buf, int ulen);
+void tftps_tick(void);
 
 static inline void eth_write(size_t addr, uint64_t data)
 {
