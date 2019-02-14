@@ -18,6 +18,7 @@ module ariane_peripherals #(
     parameter int AxiUserWidth = 1,
     parameter bit InclUART     = 1,
     parameter bit InclSPI      = 0,
+    parameter bit InclXIP      = 0,
     parameter bit InclEthernet = 0,
     parameter bit InclGPIO     = 0
 ) (
@@ -28,6 +29,7 @@ module ariane_peripherals #(
     AXI_BUS.in         uart            ,
     AXI_BUS.in         spi             ,
     AXI_BUS.in         gpio            ,
+    AXI_BUS.in         xip             ,
     input  logic       eth_clk_i       ,
     AXI_BUS.in         ethernet        ,
     output logic [1:0] irq_o           ,
@@ -52,7 +54,10 @@ module ariane_peripherals #(
     input  logic       spi_miso        ,
     output logic       spi_ss          ,
     output logic [7:0] leds_o          ,
-    input  logic [7:0] dip_switches_i
+    input  logic [7:0] dip_switches_i  ,
+    // XIP quad-SPI
+    inout  wire        flash_ss        ,
+    inout  wire  [3:0] flash_io    
 );
 
     // ---------------
@@ -718,6 +723,27 @@ framing_top eth_rgmii
         assign s_axi_gpio_rlast = 1'b1;
         assign s_axi_gpio_wlast = 1'b1;
     end
+
+    // ---------------
+    // 6. XIP quad-spi
+    // ---------------
+
+    if (InclXIP) begin : gen_xip
+
+spixip #(
+    .AXI_ID_WIDTH   ( AxiIdWidth       ),
+    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+    .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_USER_WIDTH ( AxiUserWidth     )
+) i_axi2rom (
+    .clk_i  ( clk_i                   ),
+    .rst_ni ( rst_ni                  ),
+    .slave  ( xip                     ),
+    .flash_ss,
+    .flash_io
+);
+    end
+
 endmodule
 
 `default_nettype wire

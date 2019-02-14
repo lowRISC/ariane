@@ -4,9 +4,9 @@
 
 module cnvmem;
 
-   integer i, fd, first, last;
+   integer i, j, fd, first, last;
    
-   reg [7:0] mem[`vstrt:`vstop];
+   reg [7:0] byt, mem[`vstrt:`vstop];
    reg [127:0] mem2[0:'hfff];
 
    initial
@@ -38,6 +38,16 @@ module cnvmem;
         fd = $fopen("boot.mem", "w");
         for (i = 0; i <= 'hfff; i=i+1)
           $fdisplay(fd, "%32x", mem2[i]);
+        $fclose(fd);
+        fd = $fopen("boot.bin", "w");
+        for (i = 0; i <= 'hfff; i=i+1)
+          begin
+             for (j = 0; j < 128; j=j+8)
+               begin
+                  byt = mem2[i] >> j;
+                  $fwrite(fd, "%c", byt);
+               end
+          end
         $fclose(fd);
      end
    

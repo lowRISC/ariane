@@ -46,7 +46,7 @@ module bootram (
    assign ram_block_addr = addr_i >> BRAM_ADDR_LSB_BITS + BRAM_OFFSET_BITS;
    assign ram_lsb_addr = addr_i >> BRAM_OFFSET_BITS;
    assign ram_we_shift = ram_lsb_addr << BRAM_OFFSET_BITS; // avoid ISim error
-   assign ram_we_full = we_i << ram_we_shift;
+   assign ram_we_full = ram_we << ram_we_shift;
    assign ram_wrdata_full = {(BRAM_WIDTH / 64){wdata_i}};
 
    always @(posedge clk_i)

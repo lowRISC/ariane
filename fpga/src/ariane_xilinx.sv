@@ -197,6 +197,7 @@ axi_node_wrap_with_slices #(
         ariane_soc::SPIBase,
         ariane_soc::EthernetBase,
         ariane_soc::GPIOBase,
+        ariane_soc::XIPBase,
         ariane_soc::DRAMBase
     }),
     .end_addr_i   ({
@@ -208,6 +209,7 @@ axi_node_wrap_with_slices #(
         ariane_soc::SPIBase      + ariane_soc::SPILength - 1,
         ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
         ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
+        ariane_soc::XIPBase      + ariane_soc::XIPLength - 1,
         ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1
     })
 );
@@ -327,6 +329,7 @@ axi_slave_connect i_axi_slave_connect_clint (.axi_req_o(axi_clint_req), .axi_res
 
 // ---------------
 // ROM
+// Although this is a ROM, it is convenient to be able to make it writable
 // ---------------
 axi2mem #(
     .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
@@ -348,7 +351,7 @@ axi2mem #(
 bootram i_bootram (
     .clk_i   ( clk       ),
     .req_i   ( rom_req   ),
-    .we_i    ( rom_we    ),
+    .we_i    ( rom_we & sw[7] ), // This is a ROM, but to debug we can write if sw[7] is high
     .addr_i  ( rom_addr  ),
     .be_i    ( rom_be    ),
     .wdata_i ( rom_wdata ),
@@ -367,9 +370,11 @@ ariane_peripherals #(
     .InclGPIO     ( 1'b1             ),
     `ifdef GENESYSII
     .InclSPI      ( 1'b1         ),
+    .InclXIP      ( 1'b1         ),
     .InclEthernet ( 1'b1         )
     `elsif VCU118
     .InclSPI      ( 1'b0         ),
+    .InclXIP      ( 1'b0         ),
     .InclEthernet ( 1'b0         )
     `endif
 ) i_ariane_peripherals (
@@ -380,6 +385,7 @@ ariane_peripherals #(
     .uart         ( master[ariane_soc::UART]     ),
     .spi          ( master[ariane_soc::SPI]      ),
     .gpio         ( master[ariane_soc::GPIO]     ),
+    .xip          ( master[ariane_soc::XIP]      ),
     .eth_clk_i    ( eth_clk                      ),
     .ethernet     ( master[ariane_soc::Ethernet] ),
     .irq_o        ( irq                          ),
