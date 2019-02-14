@@ -327,6 +327,7 @@ axi_slave_connect i_axi_slave_connect_clint (.axi_req_o(axi_clint_req), .axi_res
 
 // ---------------
 // ROM
+// Although this is a ROM, it is convenient to be able to make it writable
 // ---------------
 axi2mem #(
     .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
@@ -348,7 +349,7 @@ axi2mem #(
 bootram i_bootram (
     .clk_i   ( clk       ),
     .req_i   ( rom_req   ),
-    .we_i    ( rom_we    ),
+    .we_i    ( rom_we & sw[7] ), // This is a ROM, but to debug we can write if sw[7] is high
     .addr_i  ( rom_addr  ),
     .be_i    ( rom_be    ),
     .wdata_i ( rom_wdata ),

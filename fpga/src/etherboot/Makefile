@@ -29,6 +29,7 @@ $(MAIN): ariane.dtb $(OBJS_C) $(OBJS_S) linker.lds
 
 %.bin: %.elf
 	$(CROSSCOMPILE)objcopy -O binary $< $@
+	$(CROSSCOMPILE)objdump -d -l -S $< > $*.dis
 
 %.o: %.c
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
