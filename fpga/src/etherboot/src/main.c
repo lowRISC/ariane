@@ -6,7 +6,8 @@ int main()
 {
     init_uart();
     print_uart("Hello World!\r\n");
-    eth_main();
+    //    eth_main();
+    sd_main();
     while (1)
     {
         // do nothing
