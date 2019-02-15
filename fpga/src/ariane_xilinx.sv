@@ -16,9 +16,9 @@ module ariane_xilinx (
   input  logic         sys_clk_p   ,
   input  logic         sys_clk_n   ,
   input  logic         cpu_resetn  ,
-  inout  logic [31:0]  ddr3_dq     ,
-  inout  logic [ 3:0]  ddr3_dqs_n  ,
-  inout  logic [ 3:0]  ddr3_dqs_p  ,
+  inout  wire  [31:0]  ddr3_dq     ,
+  inout  wire  [ 3:0]  ddr3_dqs_n  ,
+  inout  wire  [ 3:0]  ddr3_dqs_p  ,
   output logic [14:0]  ddr3_addr   ,
   output logic [ 2:0]  ddr3_ba     ,
   output logic         ddr3_ras_n  ,
@@ -69,11 +69,12 @@ module ariane_xilinx (
   input  wire [7:0]    pci_exp_rxp     ,
   input  wire [7:0]    pci_exp_rxn     ,
 `endif
-  // SPI
-  output logic        spi_mosi    ,
-  input  logic        spi_miso    ,
-  output logic        spi_ss      ,
-  output logic        spi_clk_o   ,
+  // SD (shared with SPI)
+  output wire        sd_sclk,
+  input wire         sd_detect,
+  inout wire [3:0]   sd_dat,
+  inout wire         sd_cmd,
+  output reg         sd_reset,
   // common part
   input  logic        tck         ,
   input  logic        tms         ,
@@ -154,6 +155,8 @@ logic dmactive;
 
 // IRQ
 logic [1:0] irq;
+logic    timer_irq;
+   
 assign test_en    = 1'b0;
 
 logic [NBSlave-1:0] pc_asserted;
@@ -395,10 +398,11 @@ ariane_peripherals #(
     .eth_mdio,
     .eth_mdc,
     .phy_tx_clk_i   ( phy_tx_clk                  ),
-    .spi_clk_o      ( spi_clk_o                   ),
-    .spi_mosi       ( spi_mosi                    ),
-    .spi_miso       ( spi_miso                    ),
-    .spi_ss         ( spi_ss                      ),
+    .sd_sclk,
+    .sd_detect,
+    .sd_dat,
+    .sd_cmd,
+    .sd_reset,
     .leds_o         ( led                         ),
     .dip_switches_i ( sw                          )
 );
