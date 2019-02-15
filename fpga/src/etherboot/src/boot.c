@@ -24,17 +24,23 @@ FATFS FatFs;   // Work area (file system object) for logical drive
 
 char md5buf[SD_READ_SIZE];
 
+void just_jump (void)
+{
+  void (*fun_ptr)(void) = (void*)DRAMBase;
+  asm volatile ("fence.i");
+  fun_ptr();
+}
+
 void sd_main(int sw)
 {
   FIL fil;                // File object
   FRESULT fr;             // FatFs return code
   uint8_t *boot_file_buf = (uint8_t *)(DRAMBase) + ((uint64_t)DRAMLength) - MAX_FILE_SIZE; // at the end of DDR space
-  uint8_t *memory_base = (uint8_t *)(DRAMBase);
 
   // Register work area to the default drive
   if(f_mount(&FatFs, "", 1)) {
     printf("Fail to mount SD driver!\n");
-    return 1;
+    return;
   }
 
   // Open a file
@@ -42,15 +48,13 @@ void sd_main(int sw)
   fr = f_open(&fil, "boot.bin", FA_READ);
   if (fr) {
     printf("Failed to open boot!\n");
-    return (int)fr;
+    return;
   }
 
   // Read file into memory
-  uint8_t *hashbuf;
   uint32_t fsize = 0;           // file size count
   uint32_t br;                  // Read count
   do {
-    char *sum;
     fr = f_read(&fil, boot_file_buf+fsize, SD_READ_SIZE, &br);  // Read a chunk of source file
     if (!fr)
       {
@@ -64,41 +68,34 @@ void sd_main(int sw)
   // Close the file
   if(f_close(&fil)) {
     printf("fail to close file!");
-    return 1;
+    return;
   }
   if(f_mount(NULL, "", 1)) {         // unmount it
     printf("fail to umount disk!");
-    return 1;
+    return;
   }
 
   printf("Loaded %d bytes to memory address %x from boot.bin of %d bytes.\n", fsize, boot_file_buf, fsize);
-#if 1
+#ifdef VERBOSE_MD5
+  uint8_t *hashbuf;
   hashbuf = hash_buf(boot_file_buf, fsize);
   printf("hash = %s\n", hashbuf);
 #endif 
   // read elf
   printf("load elf to DDR memory\n");
-  if(br = load_elf(boot_file_buf, fsize))
+  br = load_elf(boot_file_buf, fsize);
+  if (br)
+    {
     printf("elf read failed with code %d", br);
+    return;
+    }
   printf("Boot the loaded program...\n");
-
-  uintptr_t mstatus = read_csr(mstatus);
-  mstatus = INSERT_FIELD(mstatus, MSTATUS_MPP, PRV_M);
-  mstatus = INSERT_FIELD(mstatus, MSTATUS_MPIE, 1);
-  write_csr(mstatus, mstatus);
-  write_csr(mepc, memory_base);
-  asm volatile ("mret");
-}
-
-int just_jump (void)
-{
-  uint8_t *memory_base = (uint8_t *)(DRAMBase);
-  uintptr_t mstatus = read_csr(mstatus);
-  mstatus = INSERT_FIELD(mstatus, MSTATUS_MPP, PRV_M);
-  mstatus = INSERT_FIELD(mstatus, MSTATUS_MPIE, 1);
-  write_csr(mstatus, mstatus);
-  write_csr(mepc, memory_base);
-  asm volatile ("mret");
+  just_jump();
+  /* unreachable code to prevent warnings */
+  LD_WORD(NULL);
+  LD_DWORD(NULL);
+  ST_WORD(NULL, 0);
+  ST_DWORD(NULL, 0);
 }
 
 #define HELLO "Hello LowRISC! "__TIMESTAMP__": "

@@ -20,6 +20,7 @@
 #include <linux/sizes.h>
 #include <asm/lowrisc-sdhi.h>
 #include <clk.h>
+#include "ariane.h"
 
 #define CONFIG_SYS_SH_SDHI_NR_CHANNEL 1
 #define CONFIG_SH_SDHI_FREQ	97500000
@@ -680,7 +681,7 @@ static int lowrisc_start_cmd(struct lowrisc_sd_host *host,
         host->cmdidx = opc;
         host->data = data;
         
-        memset(cmd->response, 0, sizeof(cmd->response));
+        memset(cmd->response, 0, sizeof(*(cmd->response)));
         
 	LOGV(("opc = %d, arg = %x, resp_type = %x\n",
 	      opc, cmd->cmdarg, cmd->resp_type));
@@ -776,7 +777,7 @@ static const struct mmc_ops lowrisc_ops = {
 	.init           = lowrisc_initialize,
 };
 
-static struct mmc_config lowrisc_cfg = {
+static const struct mmc_config lowrisc_cfg = {
 	.name           = DRIVER_NAME,
 	.ops            = &lowrisc_ops,
 	.f_min          = 5000000,
@@ -808,7 +809,7 @@ int lowrisc_init(unsigned long addr, int ch, unsigned long quirks)
 	}
 
 	host->ch = ch;
-	host->ioaddr = (void __iomem *)addr;
+	host->ioaddr = (void __iomem *)SPIBase;
 	host->quirks = quirks;
 
 	if (host->quirks & SH_SDHI_QUIRK_64BIT_BUF)

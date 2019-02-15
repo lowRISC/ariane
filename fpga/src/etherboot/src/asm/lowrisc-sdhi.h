@@ -36,16 +36,8 @@ enum {SD_CARD_RESP_END=1,SD_CARD_RW_END=2, SD_CARD_CARD_REMOVED_0=4, SD_CARD_CAR
 
 extern int lowrisc_init(unsigned long addr, int ch, unsigned long quirks);
 
-enum { clint_base_addr = 0x02000000,
-	plic_base_addr = 0x0c000000,
-	bram_base_addr = 0x40000000,
-          sd_base_addr = 0x40010000,        
-          sd_bram_addr = 0x40018000,
-         eth_base_addr = 0x40020000,
-        keyb_base_addr = 0x40030000, // These have been relocated
-        uart_base_addr = 0x40034000,
-         vga_base_addr = 0x40038000,
-        ddr_base_addr  = 0x80000000
-      };
+#include "ariane.h"
+
+enum { sd_base_addr = SPIBase };
 
 #endif /* _SH_SDHI_H */

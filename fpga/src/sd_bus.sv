@@ -25,7 +25,7 @@ module sd_bus
  input wire         spisd_en,
  input wire         spisd_we,
  input wire [7:0]   spisd_be,
- input wire [17:0]  spisd_addr,
+ input wire [15:0]  spisd_addr,
  input wire [63:0]  spisd_wrdata,
  output reg [63:0]  spisd_rddata
  );
@@ -66,17 +66,18 @@ module sd_bus
    reg 	   sd_cmd_start, sd_cmd_rst, sd_data_rst, sd_clk_rst;
    wire [9:0] sd_xfr_addr;
    
-logic [6:0] sd_clk_daddr;
-logic       sd_clk_dclk, sd_clk_den, sd_clk_drdy, sd_clk_dwe, sd_clk_locked;
-logic [15:0] sd_clk_din, sd_clk_dout;
-logic [3:0] sd_irq_en_reg, sd_irq_stat_reg;
-   logic [133:0]    sd_cmd_response, sd_cmd_response_reg;
-   logic [31:0] 	sd_cmd_resp_sel, sd_status_reg;
-   logic [31:0] 	sd_status, sd_cmd_wait, sd_data_wait, sd_cmd_wait_reg, sd_data_wait_reg;
-   logic [6:0] 	    sd_cmd_crc_val;
-   logic [47:0] 	sd_cmd_packet, sd_cmd_packet_reg;
-   logic [15:0] 	sd_transf_cnt, sd_transf_cnt_reg;
-   logic            sd_detect_reg;
+   logic [6:0] sd_clk_daddr;
+   logic       sd_clk_dclk, sd_clk_den, sd_clk_drdy, sd_clk_dwe, sd_clk_locked;
+   logic [15:0] sd_clk_din, sd_clk_dout;
+   logic [3:0]  sd_irq_en_reg, sd_irq_stat_reg;
+   logic [133:0] sd_cmd_response, sd_cmd_response_reg;
+   logic [31:0]  sd_cmd_resp_sel, sd_status_reg;
+   logic [31:0]  sd_status, sd_cmd_wait, sd_data_wait, sd_cmd_wait_reg, sd_data_wait_reg;
+   logic [6:0]   sd_cmd_crc_val;
+   logic [47:0]  sd_cmd_packet, sd_cmd_packet_reg;
+   logic [15:0]  sd_transf_cnt, sd_transf_cnt_reg;
+   logic         sd_detect_reg;
+   logic         sd_xfr_addr_prev, spisd_addr_prev_15;
    
 assign sd_clk_dclk = msoc_clk;
 
@@ -106,9 +107,10 @@ always @(posedge msoc_clk or negedge rstn)
    end
    else
      begin
+        spisd_addr_prev_15 <= spisd_addr[15];
         sd_irq_stat_reg <= {~sd_detect_reg,sd_detect_reg,sd_status[10],sd_status[8]};
         sd_irq <= |(sd_irq_en_reg & sd_irq_stat_reg);
-        if (spisd_en&spisd_we&(|spisd_be)&~spisd_addr[14])
+        if (spisd_en&spisd_we&(|spisd_be)&~spisd_addr[15])
 	  case(spisd_addr[6:3])
 	    0: sd_align_reg <= spisd_wrdata;
 	    1: sd_clk_din <= spisd_wrdata;
@@ -182,9 +184,8 @@ always @(posedge sd_clk_o)
    
    logic [7:0] rx_wr = rx_wr_en ? (sd_xfr_addr[0] ? 8'hF0 : 8'hF) : 8'b0;
    logic [63:0] douta, doutb;
-   logic sd_xfr_addr_prev;
    logic [31:0] swapbein = {data_in_rx[7:0],data_in_rx[15:8],data_in_rx[23:16],data_in_rx[31:24]};
-   assign spisd_rddata = spisd_addr[15] ? doutb : sd_cmd_resp_sel;
+   assign spisd_rddata = spisd_addr_prev_15 ? doutb : sd_cmd_resp_sel;
    assign data_out_tx = sd_xfr_addr_prev ? {douta[39:32],douta[47:40],douta[55:48],douta[63:56]} :
                                            {douta[7:0],douta[15:8],douta[23:16],douta[31:24]};
   
@@ -203,10 +204,10 @@ always @(posedge sd_clk_o)
         .wea    ( rx_wr                       ),     // Port A Write Enable Input
         .clkb   ( msoc_clk                    ),     // Port B Clock
         .doutb  ( doutb                       ),     // Port B 1-bit Data Output
-        .addrb  ( spisd_addr[11:3]              ),     // Port B 14-bit Address Input
-        .dinb   ( spisd_wrdata                  ),     // Port B 1-bit Data Input
-        .enb    ( spisd_en&spisd_addr[15]       ),     // Port B RAM Enable Input
-        .web    ( spisd_be                      )      // Port B Write Enable Input
+        .addrb  ( spisd_addr[11:3]            ),     // Port B 14-bit Address Input
+        .dinb   ( spisd_wrdata                ),     // Port B 1-bit Data Input
+        .enb    ( spisd_en&spisd_addr[15]     ),     // Port B RAM Enable Input
+        .web    ( spisd_we ? spisd_be : 4'b0  )      // Port B Write Enable Input
         );
 
    always @(posedge msoc_clk)

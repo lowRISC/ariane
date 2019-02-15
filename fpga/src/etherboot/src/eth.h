@@ -328,7 +328,6 @@ void lite_queue(int sock, const void *buf, int length);
 void dhcp_input(dhcp_t *dhcp, u_int8_t mac[6], int *offcount, int *ackcount);
 int udp_send(const u_int8_t *mac, const void *msg, int payload_size, uint16_t client, uint16_t server, uint32_t srcaddr, uint32_t dstaddr, const u_int8_t *destmac);
 void loopback_test(int loops, int sim);
-int eth_main(void);
 void process_ip_packet(const u_char *, int);
 void print_ip_packet(const u_char * , int);
 void print_tcp_packet(const u_char * , int);

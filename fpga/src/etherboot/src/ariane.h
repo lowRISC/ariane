@@ -1,4 +1,7 @@
-    typedef enum {
+#ifndef __ARIANE_H
+#define __ARIANE_H
+
+typedef enum {
         DebugBase    = 0x00000000,
         ROMBase      = 0x00010000,
         CLINTBase    = 0x02000000,
@@ -22,3 +25,8 @@ enum {
     DRAMLength     = 0x40000000, // 1GByte of DDR (split between two chips on Genesys2)
     SRAMLength     = 0x1800000,  // 24 MByte of SRAM
 };
+
+void eth_main(void);
+void sd_main(int sw);
+
+#endif

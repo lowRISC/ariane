@@ -10,8 +10,8 @@
 #include <mmc.h>
 #include "mmc_private.h"
 
-static struct list_head mmc_devices;
-static int cur_dev_num = -1;
+struct list_head mmc_devices;
+int cur_dev_num = -1;
 
 #if !CONFIG_IS_ENABLED(MMC_TINY)
 struct mmc *find_mmc_device(int dev_num)
