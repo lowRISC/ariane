@@ -40,3 +40,9 @@
 [submodule "fpga/src/ariane-ethernet"]
 	path = fpga/src/ariane-ethernet
 	url = https://github.com/lowRISC/ariane-ethernet.git
+[submodule "OpenIP"]
+	path = OpenIP
+	url = https://github.com/lowRISC/OpenIP.git
+[submodule "src/OpenIP"]
+	path = src/OpenIP
+	url = https://github.com/lowRISC/OpenIP.git
