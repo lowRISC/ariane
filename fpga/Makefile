@@ -45,7 +45,7 @@ newmcs: work-fpga/ariane_xilinx.new.mcs
 work-fpga/ariane_xilinx.new.mcs: work-fpga/ariane_xilinx.new.bit
 	env XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" vivado -nojournal -mode batch -source scripts/prologue.tcl -source scripts/write_cfgmem.tcl -tclargs $@ $<
 
-new: work-fpga/ariane_xilinx.bit search-ramb.log scripts/cnvmem.v
+new: work-fpga/ariane_xilinx.bit search-ramb.log scripts/cnvmem.v boot.bmm 
 	riscv64-unknown-elf-objcopy -O verilog $(ELF) cnvmem.mem
 	iverilog scripts/cnvmem.v -o cnvmem
 	./cnvmem
