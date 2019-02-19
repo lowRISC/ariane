@@ -343,14 +343,14 @@ sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)
 
 # vcs-specific
-vcs_command := vcs -q -full64 -sverilog -assert svaext -gui -R +lint=PCWM -debug_access+all                  \
+vcs_command := vcs -q -full64 -sverilog -assert svaext -R +lint=PCWM -debug_access+all -timescale=1ns/1ps \
                     $(filter-out %.vhd, $(ariane_pkg))                                     \
                     $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
                     +define+$(defines)                                                     \
                     +incdir+src/axi_node                                                   \
                     +incdir+src/OpenIP/axi                                                 \
                     $(if $(DEBUG),--trace-structs --trace,)                                \
-                    tb/ariane_tb.sv tb/dpi/SimJTAG.cc tb/dpi/remote_bitbang.cc tb/dpi/msim_helper.cc                   \
+                    tb/ariane_tb.sv                                                        \
                     tb/common/mock_uart.sv
 
 #$(foreach i, ${src}, -v $(i))

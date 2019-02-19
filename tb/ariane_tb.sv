@@ -23,19 +23,17 @@ import uvm_pkg::*;
 
 `define MAIN_MEM(P) dut.i_sram.genblk1[0].i_ram.Mem_DP[(``P``)]
 
+`ifndef VCS
 import "DPI-C" function read_elf(input string filename);
 import "DPI-C" function byte get_section(output longint address, output longint len);
 import "DPI-C" context function byte read_section(input longint address, inout byte buffer[]);
+`endif
 
 module ariane_tb;
 
 `ifndef VCS
     static uvm_cmdline_processor uvcl = uvm_cmdline_processor::get_inst();
 `endif
-    localparam int unsigned CLOCK_PERIOD = 20ns;
-    // toggle with RTC period
-    localparam int unsigned RTC_CLOCK_PERIOD = 30.517us;
-
     localparam NUM_WORDS = 2**25;
     logic clk_i;
     logic rst_ni;
@@ -62,14 +60,15 @@ module ariane_tb;
 
     // Clock process
     initial begin
+       $vcdpluson;
         clk_i = 1'b0;
         rst_ni = 1'b0;
         repeat(8)
-            #(CLOCK_PERIOD/2) clk_i = ~clk_i;
+            #10 clk_i = ~clk_i;
         rst_ni = 1'b1;
         forever begin
-            #(CLOCK_PERIOD/2) clk_i = 1'b1;
-            #(CLOCK_PERIOD/2) clk_i = 1'b0;
+            #10 clk_i = 1'b1;
+            #10 clk_i = 1'b0;
 
             //if (cycles > max_cycles)
             //    $fatal(1, "Simulation reached maximum cycle count of %d", max_cycles);
@@ -81,8 +80,8 @@ module ariane_tb;
     initial begin
         forever begin
             rtc_i = 1'b0;
-            #(RTC_CLOCK_PERIOD/2) rtc_i = 1'b1;
-            #(RTC_CLOCK_PERIOD/2) rtc_i = 1'b0;
+            #15.25 rtc_i = 1'b1;
+            #15.25 rtc_i = 1'b0;
         end
     end
 
@@ -113,16 +112,13 @@ module ariane_tb;
         if (binary != "") begin
 `ifndef VCS           
             `uvm_info( "Core Test", $sformatf("Preloading ELF: %s", binary), UVM_LOW)
-`endif
             void'(read_elf(binary));
             // wait with preloading, otherwise randomization will overwrite the existing value
             wait(rst_ni);
 
             // while there are more sections to process
             while (get_section(address, len)) begin
-`ifndef VCS
                 `uvm_info( "Core Test", $sformatf("Loading Address: %x, Length: %x", address, len), UVM_LOW)
-`endif               
                 buffer = new [len];
                 void'(read_section(address, buffer));
                 // preload memories
@@ -136,6 +132,7 @@ module ariane_tb;
                     `MAIN_MEM((address[28:0] >> 3) + i) = mem_row;
                 end
             end
+`endif               
         end
     end
 
