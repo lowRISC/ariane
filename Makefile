@@ -85,8 +85,7 @@ CFLAGS := -I$(QUESTASIM_HOME)/include         \
         src/util/axi_master_connect_rev.sv                             \
         src/common_cells/src/deprecated/generic_fifo.sv                \
         src/common_cells/src/deprecated/pulp_sync.sv                   \
-        src/common_cells/src/deprecated/find_first_one.sv              \
-#        src/axi/src/axi_multicut.sv                                    
+        src/common_cells/src/deprecated/find_first_one.sv              
 src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
         $(wildcard src/fpu/src/utils/*.vhd)                            \
         $(wildcard src/fpu/src/ops/*.vhd)                              \
@@ -118,6 +117,15 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
         src/util/axi_slave_connect_rev.sv                              \
         src/axi_node/axi_xbar_rework.sv                                \
         src/fpga-support/rtl/SyncSpRamBeNx64.sv                        \
+        src/OpenIP/axi/crossbar.sv src/OpenIP/axi/demux_raw.sv \
+        src/OpenIP/axi/mux_raw.sv \
+        src/OpenIP/axi/regslice.sv src/OpenIP/axi/xbar_join.sv \
+                    $(wildcard fpga/src/axi_slice/src/*buffer.sv) fpga/src/axi_slice/src/axi_single_slice.sv \
+                    src/util/sram.sv src/OpenIP/util/to_if.sv src/OpenIP/util/from_if.sv  \
+                    src/OpenIP/util/slave_adapter.sv \
+		    src/axi/src/axi_delayer.sv fpga/src/axi2apb/src/axi2apb_64_32.sv \
+                    src/OpenIP/util/round_robin_arbiter.sv src/OpenIP/util/regslice.sv src/OpenIP/util/onehot.sv \
+        src/OpenIP/util/priority_arbiter.sv                            \
         src/common_cells/src/sync.sv                                   \
         src/common_cells/src/cdc_2phase.sv                             \
         src/common_cells/src/spill_register.sv                         \
@@ -146,7 +154,8 @@ src := $(addprefix $(root-dir), $(src))
 uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
 uart_src := $(addprefix $(root-dir), $(uart_src))
 
-fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv)
+fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv) \
+    src/axi_node/src/axi_node_wrap_with_slices.sv src/axi/src/axi_cut.sv src/axi/src/axi_multicut.sv                            
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
 
 # look for testbenches
@@ -334,20 +343,15 @@ sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)
 
 # vcs-specific
-vcs_command := vcs -q -full64 -sverilog -assert svaext -gui -R +lint=PCWM                  \
+vcs_command := vcs -q -full64 -sverilog -assert svaext -gui -R +lint=PCWM -debug_access+all                  \
                     $(filter-out %.vhd, $(ariane_pkg))                                     \
                     $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
                     +define+$(defines)                                                     \
                     +incdir+src/axi_node                                                   \
                     +incdir+src/OpenIP/axi                                                 \
                     $(if $(DEBUG),--trace-structs --trace,)                                \
-                    $(foreach i, ${$(filter-out src/OpenIP/axi/common.sv, $(wildcard src/OpenIP/axi/*.sv))}, -v $(i))  \
-                    $(wildcard fpga/src/axi_slice/src/*buffer.sv) fpga/src/axi_slice/src/axi_single_slice.sv \
-                    src/util/sram.sv src/OpenIP/util/to_if.sv src/OpenIP/util/from_if.sv src/OpenIP/axi/crossbar.sv   \
-                    tb/ariane_tb.sv tb/dpi/SimJTAG.cc src/OpenIP/util/slave_adapter.sv src/OpenIP/axi/demux_raw.sv tb/common/mock_uart.sv \
-		    src/axi/src/axi_delayer.sv fpga/src/axi2apb/src/axi2apb_64_32.sv src/OpenIP/axi/regslice.sv src/OpenIP/axi/mux_raw.sv \
-                    src/OpenIP/axi/xbar_join.sv src/OpenIP/util/round_robin_arbiter.sv src/OpenIP/util/regslice.sv src/OpenIP/util/onehot.sv \
-                    src/OpenIP/util/priority_arbiter.sv tb/dpi/remote_bitbang.cc tb/dpi/msim_helper.cc                   \
+                    tb/ariane_tb.sv tb/dpi/SimJTAG.cc tb/dpi/remote_bitbang.cc tb/dpi/msim_helper.cc                   \
+                    tb/common/mock_uart.sv
 
 #$(foreach i, ${src}, -v $(i))
 sim-vcs:
