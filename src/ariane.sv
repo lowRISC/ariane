@@ -14,7 +14,13 @@
 
 import ariane_pkg::*;
 //pragma translate_off
-`ifndef VERILATOR
+`ifdef VCS
+ `define NOTRACE
+`endif
+`ifdef VERILATOR
+ `define NOTRACE
+`endif
+`ifndef NOTRACE
 import instruction_tracer_pkg::*;
 `endif
 //pragma translate_on
@@ -662,7 +668,7 @@ module ariane #(
   // Instruction Tracer
   // -------------------
   //pragma translate_off
-`ifndef VERILATOR
+`ifndef NOTRACE
   instruction_tracer_if tracer_if (clk_i);
   // assign instruction tracer interface
   // control signals

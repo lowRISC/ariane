@@ -75,6 +75,18 @@ CFLAGS := -I$(QUESTASIM_HOME)/include         \
           -std=c++11 -I../tb/dpi
 
 # this list contains the standalone components
+#        $(wildcard fpga/src/axi2apb/src/*.sv)                         
+#        $(wildcard fpga/src/axi_slice/src/*.sv)                        
+#        $(wildcard src/axi_node/src/*.sv)                              
+#        src/axi/src/axi_cut.sv                                         \
+        src/axi/src/axi_join.sv                                        \
+        src/axi/src/axi_delayer.sv                                     \
+        src/axi/src/axi_to_axi_lite.sv                                 \
+        src/util/axi_master_connect_rev.sv                             \
+        src/common_cells/src/deprecated/generic_fifo.sv                \
+        src/common_cells/src/deprecated/pulp_sync.sv                   \
+        src/common_cells/src/deprecated/find_first_one.sv              \
+#        src/axi/src/axi_multicut.sv                                    
 src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
         $(wildcard src/fpu/src/utils/*.vhd)                            \
         $(wildcard src/fpu/src/ops/*.vhd)                              \
@@ -86,20 +98,16 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
         $(wildcard src/cache_subsystem/*.sv))                          \
         $(wildcard bootrom/*.sv)                                       \
         $(wildcard src/clint/*.sv)                                     \
-        $(wildcard fpga/src/axi2apb/src/*.sv)                          \
-        $(wildcard fpga/src/axi_slice/src/*.sv)                        \
+        src/OpenIP/axi/common.sv                                       \
+        src/OpenIP/axi/channel.sv                                      \
+        $(wildcard src/axi/common.sv)                                  \
         $(wildcard src/plic/*.sv)                                      \
-        $(wildcard src/axi_node/src/*.sv)                              \
         $(wildcard src/axi_mem_if/src/*.sv)                            \
         $(filter-out src/debug/dm_pkg.sv, $(wildcard src/debug/*.sv))  \
         $(wildcard src/debug/debug_rom/*.sv)                           \
         src/register_interface/src/apb_to_reg.sv                       \
-        src/axi/src/axi_multicut.sv                                    \
         src/fpu/src/fpnew.vhd                                          \
         src/fpu/src/fpnew_top.vhd                                      \
-        src/common_cells/src/deprecated/generic_fifo.sv                \
-        src/common_cells/src/deprecated/pulp_sync.sv                   \
-        src/common_cells/src/deprecated/find_first_one.sv              \
         src/common_cells/src/rstgen_bypass.sv                          \
         src/common_cells/src/rstgen.sv                                 \
         src/common_cells/src/stream_mux.sv                             \
@@ -107,12 +115,8 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
         src/common_cells/src/stream_arbiter.sv                         \
         src/util/axi_master_connect.sv                                 \
         src/util/axi_slave_connect.sv                                  \
-        src/util/axi_master_connect_rev.sv                             \
         src/util/axi_slave_connect_rev.sv                              \
-        src/axi/src/axi_cut.sv                                         \
-        src/axi/src/axi_join.sv                                        \
-        src/axi/src/axi_delayer.sv                                     \
-        src/axi/src/axi_to_axi_lite.sv                                 \
+        src/axi_node/axi_xbar_rework.sv                                \
         src/fpga-support/rtl/SyncSpRamBeNx64.sv                        \
         src/common_cells/src/sync.sv                                   \
         src/common_cells/src/cdc_2phase.sv                             \
@@ -300,6 +304,7 @@ verilate_command := $(verilator)                                                
                     +define+$(defines)                                                     \
                     src/util/sram.sv                                                       \
                     +incdir+src/axi_node                                                   \
+                    +incdir+src/OpenIP/axi                                                 \
                     --unroll-count 256                                                     \
                     -Werror-PINMISSING                                                     \
                     -Werror-IMPLICIT                                                       \
@@ -327,6 +332,27 @@ verilate:
 
 sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)
+
+# vcs-specific
+vcs_command := vcs -q -full64 -sverilog -assert svaext -gui -R +lint=PCWM                  \
+                    $(filter-out %.vhd, $(ariane_pkg))                                     \
+                    $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+                    +define+$(defines)                                                     \
+                    +incdir+src/axi_node                                                   \
+                    +incdir+src/OpenIP/axi                                                 \
+                    $(if $(DEBUG),--trace-structs --trace,)                                \
+                    $(foreach i, ${$(filter-out src/OpenIP/axi/common.sv, $(wildcard src/OpenIP/axi/*.sv))}, -v $(i))  \
+                    $(wildcard fpga/src/axi_slice/src/*buffer.sv) fpga/src/axi_slice/src/axi_single_slice.sv \
+                    src/util/sram.sv src/OpenIP/util/to_if.sv src/OpenIP/util/from_if.sv src/OpenIP/axi/crossbar.sv   \
+                    tb/ariane_tb.sv tb/dpi/SimJTAG.cc src/OpenIP/util/slave_adapter.sv src/OpenIP/axi/demux_raw.sv tb/common/mock_uart.sv \
+		    src/axi/src/axi_delayer.sv fpga/src/axi2apb/src/axi2apb_64_32.sv src/OpenIP/axi/regslice.sv src/OpenIP/axi/mux_raw.sv \
+                    src/OpenIP/axi/xbar_join.sv src/OpenIP/util/round_robin_arbiter.sv src/OpenIP/util/regslice.sv src/OpenIP/util/onehot.sv \
+                    src/OpenIP/util/priority_arbiter.sv tb/dpi/remote_bitbang.cc tb/dpi/msim_helper.cc                   \
+
+#$(foreach i, ${src}, -v $(i))
+sim-vcs:
+	@echo "[Vcs] Building Model"
+	$(vcs_command)
 
 $(addsuffix -verilator,$(riscv-asm-tests)): verilate
 	$(ver-library)/Variane_testharness $(riscv-test-dir)/$(subst -verilator,,$@)

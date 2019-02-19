@@ -57,7 +57,7 @@ module plic_claim_complete_tracker #(
     logic                   save_claims_array_q [NUM_GATEWAYS+1][NUM_TARGETS];
     logic                   complete_array      [NUM_GATEWAYS+1][NUM_TARGETS];
 
-    logic [ID_BITWIDTH-1:0] complete_id;
+    logic [ID_BITWIDTH-1:0] complete_id [NUM_TARGETS];
 
 
     // for handling claims
@@ -94,11 +94,11 @@ module plic_claim_complete_tracker #(
                     // complete message to that gateway. if no claim has previously been issued, the
                     // complete message is ignored
                     // integer complete_id = target_irq_completes_identifier_i[counter];
-                    complete_id = target_irq_completes_identifier_i[counter];
+                    complete_id[counter] = target_irq_completes_identifier_i[counter];
 
-                    if (target_irq_completes_i[counter] && (save_claims_array_q[complete_id][counter] > 0)) begin
-                        complete_array[complete_id][counter]      <= 1;
-                        save_claims_array_q[complete_id][counter] <= 0;
+                    if (target_irq_completes_i[counter] && (save_claims_array_q[complete_id[counter]][counter] > 0)) begin
+                        complete_array[complete_id[counter]][counter]      <= 1;
+                        save_claims_array_q[complete_id[counter]][counter] <= 0;
                     end
                 end
             end

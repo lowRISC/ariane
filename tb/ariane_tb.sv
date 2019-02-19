@@ -15,9 +15,11 @@
 
 
 import ariane_pkg::*;
+`ifndef VCS
 import uvm_pkg::*;
 
 `include "uvm_macros.svh"
+`endif
 
 `define MAIN_MEM(P) dut.i_sram.genblk1[0].i_ram.Mem_DP[(``P``)]
 
@@ -27,8 +29,9 @@ import "DPI-C" context function byte read_section(input longint address, inout b
 
 module ariane_tb;
 
+`ifndef VCS
     static uvm_cmdline_processor uvcl = uvm_cmdline_processor::get_inst();
-
+`endif
     localparam int unsigned CLOCK_PERIOD = 20ns;
     // toggle with RTC period
     localparam int unsigned RTC_CLOCK_PERIOD = 30.517us;
@@ -87,13 +90,13 @@ module ariane_tb;
         forever begin
 
             wait (exit_o[0]);
-
+`ifndef VCS
             if ((exit_o >> 1)) begin
                 `uvm_error( "Core Test",  $sformatf("*** FAILED *** (tohost = %0d)", (exit_o >> 1)))
             end else begin
                 `uvm_info( "Core Test",  $sformatf("*** SUCCESS *** (tohost = %0d)", (exit_o >> 1)), UVM_LOW)
             end
-
+`endif
             $finish();
         end
     end
@@ -104,18 +107,22 @@ module ariane_tb;
         automatic logic [7:0][7:0] mem_row;
         longint address, len;
         byte buffer[];
+`ifndef VCS           
         void'(uvcl.get_arg_value("+PRELOAD=", binary));
-
+`endif
         if (binary != "") begin
+`ifndef VCS           
             `uvm_info( "Core Test", $sformatf("Preloading ELF: %s", binary), UVM_LOW)
-
+`endif
             void'(read_elf(binary));
             // wait with preloading, otherwise randomization will overwrite the existing value
             wait(rst_ni);
 
             // while there are more sections to process
             while (get_section(address, len)) begin
+`ifndef VCS
                 `uvm_info( "Core Test", $sformatf("Loading Address: %x, Length: %x", address, len), UVM_LOW)
+`endif               
                 buffer = new [len];
                 void'(read_section(address, buffer));
                 // preload memories

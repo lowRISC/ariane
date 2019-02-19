@@ -426,7 +426,7 @@ module ariane_testharness #(
     // ---------------
     // AXI Xbar
     // ---------------
-    axi_node_intf_wrap #(
+    axi_xbar_rework #(
         .NB_SLAVE           ( NB_SLAVE                   ),
         .NB_MASTER          ( ariane_soc::NB_PERIPHERALS ),
         .AXI_ADDR_WIDTH     ( AXI_ADDRESS_WIDTH          ),

@@ -160,6 +160,12 @@ module std_nbdcache #(
 
     assign tag[0] = '0;
 
+`ifdef PITON_ARIANE
+   localparam DCACHE_NUM_WORDS = serpent_cache_pkg::DCACHE_NUM_WORDS;
+`else
+   localparam DCACHE_NUM_WORDS = std_cache_pkg::DCACHE_NUM_WORDS;
+`endif
+   
     // --------------
     // Memory Arrays
     // --------------
