@@ -95,10 +95,8 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
         $(wildcard src/frontend/*.sv)                                  \
         $(filter-out src/cache_subsystem/std_no_dcache.sv,             \
         $(wildcard src/cache_subsystem/*.sv))                          \
-        $(wildcard bootrom/*.sv)                                       \
+        fpga/src/etherboot/etherboot.sv                                \
         $(wildcard src/clint/*.sv)                                     \
-        src/OpenIP/axi/common.sv                                       \
-        src/OpenIP/axi/channel.sv                                      \
         $(wildcard src/axi/common.sv)                                  \
         $(wildcard src/plic/*.sv)                                      \
         $(wildcard src/axi_mem_if/src/*.sv)                            \
@@ -115,17 +113,13 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
         src/util/axi_master_connect.sv                                 \
         src/util/axi_slave_connect.sv                                  \
         src/util/axi_slave_connect_rev.sv                              \
-        src/axi_node/axi_xbar_rework.sv                                \
         src/fpga-support/rtl/SyncSpRamBeNx64.sv                        \
-        src/OpenIP/axi/crossbar.sv src/OpenIP/axi/demux_raw.sv \
-        src/OpenIP/axi/mux_raw.sv \
-        src/OpenIP/axi/regslice.sv src/OpenIP/axi/xbar_join.sv \
-                    $(wildcard fpga/src/axi_slice/src/*buffer.sv) fpga/src/axi_slice/src/axi_single_slice.sv \
-                    src/util/sram.sv src/OpenIP/util/to_if.sv src/OpenIP/util/from_if.sv  \
-                    src/OpenIP/util/slave_adapter.sv \
-		    src/axi/src/axi_delayer.sv fpga/src/axi2apb/src/axi2apb_64_32.sv \
-                    src/OpenIP/util/round_robin_arbiter.sv src/OpenIP/util/regslice.sv src/OpenIP/util/onehot.sv \
-        src/OpenIP/util/priority_arbiter.sv                            \
+        src/OpenIP/util/simple_xbar_edited.sv                          \
+        $(wildcard fpga/src/axi_slice/src/*buffer.sv)                  \
+        fpga/src/axi_slice/src/axi_single_slice.sv                     \
+        src/util/sram.sv                                               \
+        src/axi/src/axi_delayer.sv                                     \
+        fpga/src/axi2apb/src/axi2apb_64_32.sv                          \
         src/common_cells/src/sync.sv                                   \
         src/common_cells/src/cdc_2phase.sv                             \
         src/common_cells/src/spill_register.sv                         \
@@ -154,7 +148,7 @@ src := $(addprefix $(root-dir), $(src))
 uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
 uart_src := $(addprefix $(root-dir), $(uart_src))
 
-fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv) \
+fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv) \
     src/axi_node/src/axi_node_wrap_with_slices.sv src/axi/src/axi_cut.sv src/axi/src/axi_multicut.sv                            
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
 
@@ -217,7 +211,7 @@ else
 endif
 
 # Build the TB and module using QuestaSim
-build: $(library) $(library)/.build-srcs $(library)/.build-tb $(dpi-library)/ariane_dpi.so
+build: $(library) $(library)/.build-srcs $(library)/.build-tb # $(dpi-library)/ariane_dpi.so
 	# Optimize top level
 	vopt$(questa_version) $(compile_flag) -work $(library)  $(top_level) -o $(top_level)_optimized +acc -check_synthesis
 
@@ -233,7 +227,7 @@ $(library)/.build-srcs: $(util) $(library)
 	touch $(library)/.build-srcs
 
 # build TBs
-$(library)/.build-tb: $(dpi)
+$(library)/.build-tb: # $(dpi)
 	# Compile top level
 	vlog$(questa_version) $(compile_flag) -sv $(tbs) -work $(library)
 	touch $(library)/.build-tb
@@ -242,14 +236,14 @@ $(library):
 	vlib${questa_version} $(library)
 
 # compile DPIs
-$(dpi-library)/%.o: tb/dpi/%.cc $(dpi_hdr)
-	mkdir -p $(dpi-library)
-	$(CXX) -shared -fPIC -std=c++0x -Bsymbolic $(CFLAGS) -c $< -o $@
-
-$(dpi-library)/ariane_dpi.so: $(dpi)
-	mkdir -p $(dpi-library)
-	# Compile C-code and generate .so file
-	$(CXX) -shared -m64 -o $(dpi-library)/ariane_dpi.so $? -L$(RISCV)/lib -Wl,-rpath,$(RISCV)/lib -lfesvr
+#$(dpi-library)/%.o: tb/dpi/%.cc $(dpi_hdr)
+#	mkdir -p $(dpi-library)
+#	$(CXX) -shared -fPIC -std=c++0x -Bsymbolic $(CFLAGS) -c $< -o $@
+#
+#$(dpi-library)/ariane_dpi.so: $(dpi)
+#	mkdir -p $(dpi-library)
+#	# Compile C-code and generate .so file
+#	$(CXX) -shared -m64 -o $(dpi-library)/ariane_dpi.so $? -L$(RISCV)/lib -Wl,-rpath,$(RISCV)/lib -lfesvr
 
 # single test runs on Questa can be started by calling make <testname>, e.g. make towers.riscv
 # the test names are defined in ci/riscv-asm-tests.list, and in ci/riscv-benchmarks.list
@@ -257,8 +251,10 @@ $(dpi-library)/ariane_dpi.so: $(dpi)
 # alternatively you can call make sim elf-bin=<path/to/elf-bin> in order to load an arbitrary binary
 sim: build
 	vsim${questa_version} +permissive $(questa-flags) $(questa-cmd) -lib $(library) +MAX_CYCLES=$(max_cycles) +UVM_TESTNAME=$(test_case) \
-	+BASEDIR=$(riscv-test-dir) $(uvm-flags) $(QUESTASIM_FLAGS) -gblso $(RISCV)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi        \
-	${top_level}_optimized +permissive-off ++$(elf-bin) ++$(target-options) | tee sim.log
+	+BASEDIR=$(riscv-test-dir) $(uvm-flags) $(QUESTASIM_FLAGS) -gblso $(RISCV)/lib/libfesvr.so        \
+	${top_level} +permissive-off ++$(elf-bin) ++$(target-options) | tee sim.log
+
+# -sv_lib $(dpi-library)/ariane_dpi 
 
 $(riscv-asm-tests): build
 	vsim${questa_version} +permissive $(questa-flags) $(questa-cmd) -lib $(library) +max-cycles=$(max_cycles) +UVM_TESTNAME=$(test_case) \
@@ -313,7 +309,6 @@ verilate_command := $(verilator)                                                
                     +define+$(defines)                                                     \
                     src/util/sram.sv                                                       \
                     +incdir+src/axi_node                                                   \
-                    +incdir+src/OpenIP/axi                                                 \
                     --unroll-count 256                                                     \
                     -Werror-PINMISSING                                                     \
                     -Werror-IMPLICIT                                                       \
@@ -348,8 +343,6 @@ vcs_command := vcs -q -full64 -sverilog -assert svaext -R +lint=PCWM -debug_acce
                     $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
                     +define+$(defines)                                                     \
                     +incdir+src/axi_node                                                   \
-                    +incdir+src/OpenIP/axi                                                 \
-                    $(if $(DEBUG),--trace-structs --trace,)                                \
                     tb/ariane_tb.sv                                                        \
                     tb/common/mock_uart.sv
 

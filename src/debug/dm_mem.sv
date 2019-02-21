@@ -385,7 +385,7 @@ module dm_mem #(
 
     debug_rom i_debug_rom (
         .clk_i,
-        .req_i,
+        .req_i(req_i || !rst_ni),
         .addr_i,
         .rdata_o (rom_rdata)
     );

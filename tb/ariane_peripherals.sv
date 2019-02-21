@@ -14,7 +14,6 @@ module ariane_peripherals #(
     parameter int AxiDataWidth = -1,
     parameter int AxiIdWidth   = -1,
     parameter int AxiUserWidth = 1,
-    parameter bit InclPLIC     = 0,
     parameter bit InclUART     = 1,
     parameter bit InclSPI      = 0,
     parameter bit InclEthernet = 0,
@@ -25,6 +24,7 @@ module ariane_peripherals #(
     AXI_BUS.in         plic            ,
     AXI_BUS.in         uart            ,
     AXI_BUS.in         spi             ,
+    AXI_BUS.in         gpio            ,
     AXI_BUS.in         ethernet        ,
     output logic [1:0] irq_o           ,
     // UART
@@ -149,8 +149,6 @@ module ariane_peripherals #(
         .reg_o     ( reg_bus      )
     );
 
-    if (InclPLIC) begin : gen_plic
-
     plic #(
         .ID_BITWIDTH        ( ariane_soc::PLICIdWidth       ),
         .PARAMETER_BITWIDTH ( ariane_soc::ParameterBitwidth ),
@@ -164,10 +162,6 @@ module ariane_peripherals #(
         .external_bus_io    ( reg_bus                )
     );
 
-    end
-    else
-      assign irq_o = 2'b0;
-         
     // ---------------
     // 2. UART
     // ---------------
@@ -483,7 +477,6 @@ module ariane_peripherals #(
         assign spi.r_last = 1'b1;
     end
 
-
     // ---------------
     // 4. Ethernet
     // ---------------
@@ -506,5 +499,33 @@ module ariane_peripherals #(
         assign ethernet.r_resp = axi_pkg::RESP_SLVERR;
         assign ethernet.r_data = 'hdeadbeef;
         assign ethernet.r_last = 1'b1;
+        assign ethernet.r_id = '0;
+        assign ethernet.r_user = '0;
     end
+
+    // ---------------
+    // 5. GPIO
+    // ---------------
+    if (0)
+      begin
+      end
+    else
+      begin
+        assign gpio.aw_ready = 1'b1;
+        assign gpio.ar_ready = 1'b1;
+        assign gpio.w_ready = 1'b1;
+
+        assign gpio.b_valid = gpio.aw_valid;
+        assign gpio.b_id = gpio.aw_id;
+        assign gpio.b_resp = axi_pkg::RESP_SLVERR;
+        assign gpio.b_user = '0;
+
+        assign gpio.r_valid = gpio.ar_valid;
+        assign gpio.r_resp = axi_pkg::RESP_SLVERR;
+        assign gpio.r_data = 'hdeadbeef;
+        assign gpio.r_last = 1'b1;
+        assign gpio.r_id = '0;
+        assign gpio.r_user = '0;
+    end
+
 endmodule

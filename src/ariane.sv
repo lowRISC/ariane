@@ -14,6 +14,9 @@
 
 import ariane_pkg::*;
 //pragma translate_off
+`ifdef QUESTA
+ `define NOTRACE
+`endif
 `ifdef VCS
  `define NOTRACE
 `endif
