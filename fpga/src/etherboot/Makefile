@@ -8,7 +8,9 @@ LDFLAGS = -nostdlib -nodefaultlibs -nostartfiles -Wl,-Map=mapfile
 
 INCLUDES = -I./ -I./src
 
-SRCS_C = src/blk_legacy.c src/ctype.c src/dhcp-client.c src/display_options.c src/div64.c src/elf.c src/ethlib.c src/ff.c src/hash-md5.c src/lowrisc_mmc.c src/main.c src/mini-printf.c src/mmc.c src/mmc_legacy.c src/random.c src/string.c src/strto.c src/tftp_c.c src/time.c src/uart.c src/boot.c
+SRCS_C = src/blk_legacy.c src/ctype.c src/dhcp-client.c src/display_options.c src/div64.c src/elf.c src/ethlib.c src/ff.c src/hash-md5.c src/lowrisc_mmc.c src/mini-printf.c src/mmc.c src/mmc_legacy.c src/random.c src/string.c src/strto.c src/tftp_c.c src/time.c src/uart.c src/boot.c
+BOOT_O = src/main.o
+
 SRCS_ASM = startup.S
 OBJS_C = $(SRCS_C:.c=.o)
 OBJS_S = $(SRCS_ASM:.S=.o)
@@ -20,8 +22,8 @@ MAIN_SV = $(MAIN:.elf=.sv)
 
 #.PHONY: clean
 
-$(MAIN): ariane.dtb $(OBJS_C) $(OBJS_S) linker.lds
-	$(CC) $(CFLAGS) $(LDFLAGS) $(INCLUDES) -Tlinker.lds $(OBJS_S) $(OBJS_C) -o $(MAIN)
+$(MAIN): ariane.dtb $(OBJS_C) src/main.o $(OBJS_S) linker.lds
+	$(CC) $(CFLAGS) $(LDFLAGS) $(INCLUDES) -Tlinker.lds $(OBJS_S) $(OBJS_C) src/main.o -o $@
 	@echo "LD    >= $(MAIN)"
 
 %.img: %.bin
@@ -50,5 +52,8 @@ clean:
 
 all: $(MAIN) $(MAIN_BIN) $(MAIN_IMG) $(MAIN_SV)
 	@echo "zero stage etherboot loader has been compiled!"
+
+dram.elf: $(OBJS_C) src/dram.o $(OBJS_S) linker.lds
+	$(CC) $(CFLAGS) $(LDFLAGS) $(INCLUDES) -Tlinker.lds $(OBJS_S) $(OBJS_C) src/dram.o -o $@
 
 # DO NOT DELETE THIS LINE -- make depend needs it

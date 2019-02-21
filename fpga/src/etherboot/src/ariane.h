@@ -17,13 +17,12 @@ enum {
     DebugLength    = 0x1000,
     ROMLength      = 0x10000,
     CLINTLength    = 0xC0000,
-    PLICLength     = 0x3FFFFFF,
+    PLICLength     = 0x4000000,
     UARTLength     = 0x1000,
     SPILength      = 0x800000,
     EthernetLength = 0x10000,
     GPIOLength     = 0x1000,
     DRAMLength     = 0x40000000, // 1GByte of DDR (split between two chips on Genesys2)
-    SRAMLength     = 0x1800000,  // 24 MByte of SRAM
 };
 
 void eth_main(void);
