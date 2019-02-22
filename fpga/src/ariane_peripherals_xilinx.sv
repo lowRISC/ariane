@@ -16,7 +16,6 @@ module ariane_peripherals #(
     parameter int AxiDataWidth = -1,
     parameter int AxiIdWidth   = -1,
     parameter int AxiUserWidth = 1,
-    parameter bit InclPLIC     = 0,
     parameter bit InclUART     = 1,
     parameter bit InclSPI      = 0,
     parameter bit InclEthernet = 0,
@@ -156,7 +155,6 @@ module ariane_peripherals #(
         .reg_o     ( reg_bus      )
     );
 
-    if (InclPLIC) begin : gen_plic
     plic #(
         .ID_BITWIDTH        ( ariane_soc::PLICIdWidth       ),
         .PARAMETER_BITWIDTH ( ariane_soc::ParameterBitwidth ),
@@ -169,10 +167,6 @@ module ariane_peripherals #(
         .eip_targets_o      ( irq_o                  ),
         .external_bus_io    ( reg_bus                )
     );
-       end
-    else
-         assign irq_o = 2'b0;
-
     // ---------------
     // 2. UART
     // ---------------
@@ -297,7 +291,6 @@ module ariane_peripherals #(
     // ---------------
     // 3. SPI
     // ---------------
-
     if (InclSPI) begin : gen_spi
 
 logic                    spi_en, spi_we, spi_int_n, spi_pme_n, spi_mdio_i, spi_mdio_o, spi_mdio_oe;

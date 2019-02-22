@@ -11,6 +11,8 @@ set_property -dict [list CONFIG.C_NUM_OF_PROBES {44} \
                         CONFIG.C_EN_STRG_QUAL {1} \
                         CONFIG.C_INPUT_PIPE_STAGES {1} \
                         CONFIG.C_ADV_TRIGGER {false} \
+                        CONFIG.C_TRIGOUT_EN {true} \
+                        CONFIG.C_TRIGIN_EN {true} \
                         CONFIG.C_SLOT_0_AXI_ID_WIDTH {5} \
                         CONFIG.C_SLOT_0_AXI_DATA_WIDTH {64} \
                         CONFIG.C_SLOT_0_AXI_ADDR_WIDTH {64} \

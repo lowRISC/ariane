@@ -9,10 +9,28 @@
   .globl _prog_start
 _prog_start:
   smp_pause(s1, s2)
+# Hack alert. This stack location is in the SD-Card buffer region because
+# we can't be sure the DDR has fired up yet. Normally this would not matter
+# but we want to be able to trigger on any protocol delays > 100 cycles.        
+  li sp, 0x20008FF8
+  la t0, init_uart
+  jalr ra, t0
+  la t0, print_uart
+  la a0, hello
+  jalr ra, t0
+
   la a1, _prog_start
   la a2, _DATA_END_
   li a3, DRAM_BASE
-  add a5, zero, a3      
+# use a delay before we try the DDR memory
+  li t4, 1000000
+_wait:
+  ld a4, 0(a1)
+  add t4, t4, -1
+  ld a4, 8(a1)
+  bne t4, zero, _wait      
+  li sp, 0x87FFFFF8
+  ld a4, 0(a3)
 _copy:
   ld a4, 0(a1)
   sd a4, 0(a3)
@@ -32,7 +50,6 @@ _copy:
 _reloc:
   la a5, trap_entry
   csrw mtvec, a5  
-  li sp, 0x88000000
   la a1, _BSS_START_
   la a2, _BSS_END_
 _zbss:
@@ -54,6 +71,8 @@ trap_entry:
 1:      
   wfi
   j 1b
+hello:
+  .ascii "Hello from Ariane! Please wait a moment...\n\000"
   .section .dtb
   .globl _dtb
   .align 4, 0

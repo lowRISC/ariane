@@ -10,6 +10,9 @@ create_ip -name ila -vendor xilinx.com -library ip -module_name $ipName
 set_property -dict [list CONFIG.C_PROBE0_WIDTH {160} \
                         CONFIG.C_DATA_DEPTH {1024} \
                         CONFIG.C_NUM_OF_PROBES {2} \
+                        CONFIG.C_ADV_TRIGGER {false} \
+                        CONFIG.C_TRIGOUT_EN {true} \
+                        CONFIG.C_TRIGIN_EN {true} \
                         CONFIG.C_INPUT_PIPE_STAGES {0}] [get_ips $ipName]
 
 generate_target {instantiation_template} [get_files ./$ipName.srcs/sources_1/ip/$ipName/$ipName.xci]
