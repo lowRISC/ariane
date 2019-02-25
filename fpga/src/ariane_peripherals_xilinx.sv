@@ -167,7 +167,6 @@ module ariane_peripherals #(
         .eip_targets_o      ( irq_o                  ),
         .external_bus_io    ( reg_bus                )
     );
-
     // ---------------
     // 2. UART
     // ---------------
@@ -292,9 +291,6 @@ module ariane_peripherals #(
     // ---------------
     // 3. SPI
     // ---------------
-    assign spi.b_user = 1'b0;
-    assign spi.r_user = 1'b0;
-
     if (InclSPI) begin : gen_spi
 
 logic                    spi_en, spi_we, spi_int_n, spi_pme_n, spi_mdio_i, spi_mdio_o, spi_mdio_oe;
