@@ -70,7 +70,7 @@ CFLAGS := -I$(QUESTASIM_HOME)/include         \
 
 # this list contains the standalone components
 src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
-		$(filter-out src/fpu/src/fpnew_pkg.sv, $(wildcard src/fpu/src/*.sv)) \
+		$(filter-out src/fpu/src/fpnew_pkg.sv, $(wildcard src/fpu_dummy/*.sv)) \
 		$(filter-out src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv,    \
 		$(wildcard src/fpu_div_sqrt_mvp/hdl/*.sv))                     \
 		$(wildcard src/frontend/*.sv)                                  \
@@ -78,18 +78,16 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		$(wildcard src/cache_subsystem/*.sv))                          \
 		$(wildcard bootrom/*.sv)                                       \
 		$(wildcard src/clint/*.sv)                                     \
-		$(wildcard fpga/src/axi2apb/src/*.sv)                          \
-		$(wildcard fpga/src/axi_slice/src/*.sv)                        \
+		$(filter-out fpga/src/axi2apb/src/axi2apb_wrap.sv, $(wildcard fpga/src/axi2apb/src/*.sv))                          \
+		$(filter-out fpga/src/axi_slice/src/axi_slice_wrap.sv, $(wildcard fpga/src/axi_slice/src/*.sv))                        \
 		$(wildcard src/plic/*.sv)                                      \
-		$(wildcard src/axi_node/src/*.sv)                              \
+		$(filter-out src/axi_node/src/axi_node_wrap_with_slices.sv, $(wildcard src/axi_node/src/*.sv))                              \
 		$(wildcard src/axi_mem_if/src/*.sv)                            \
 		$(filter-out src/debug/dm_pkg.sv, $(wildcard src/debug/*.sv))  \
 		$(wildcard src/debug/debug_rom/*.sv)                           \
 		src/register_interface/src/apb_to_reg.sv                       \
-		src/axi/src/axi_multicut.sv                                    \
 		src/common_cells/src/deprecated/generic_fifo.sv                \
 		src/common_cells/src/deprecated/pulp_sync.sv                   \
-		src/common_cells/src/deprecated/find_first_one.sv              \
 		src/common_cells/src/rstgen_bypass.sv                          \
 		src/common_cells/src/rstgen.sv                                 \
 		src/common_cells/src/stream_mux.sv                             \
@@ -98,12 +96,8 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		src/common_cells/src/stream_arbiter_flushable.sv               \
 		src/util/axi_master_connect.sv                                 \
 		src/util/axi_slave_connect.sv                                  \
-		src/util/axi_master_connect_rev.sv                             \
 		src/util/axi_slave_connect_rev.sv                              \
-		src/axi/src/axi_cut.sv                                         \
-		src/axi/src/axi_join.sv                                        \
 		src/axi/src/axi_delayer.sv                                     \
-		src/axi/src/axi_to_axi_lite.sv                                 \
 		src/fpga-support/rtl/SyncSpRamBeNx64.sv                        \
 		src/common_cells/src/sync.sv                                   \
 		src/common_cells/src/cdc_2phase.sv                             \
@@ -128,12 +122,20 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		tb/common/SimDTM.sv                                            \
 		tb/common/SimJTAG.sv
 
+extra_src :=	src/util/axi_master_connect_rev.sv                             \
+		src/axi/src/axi_to_axi_lite.sv                                 \
+		src/axi/src/axi_multicut.sv                                    \
+		src/axi/src/axi_join.sv                                        \
+		src/axi/src/axi_cut.sv                                         \
+		src/common_cells/src/deprecated/find_first_one.sv              \
+		src/axi_node/src/axi_node_wrap_with_slices.sv
+
 src := $(addprefix $(root-dir), $(src))
 
 uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
 uart_src := $(addprefix $(root-dir), $(uart_src))
 
-fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/bootrom/*.sv)
+fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(extra_src)
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
 
 # look for testbenches
@@ -298,7 +300,7 @@ check-benchmarks:
 	ci/check-tests.sh tmp/riscv-benchmarks- $(shell wc -l $(riscv-benchmarks-list) | awk -F " " '{ print $1 }')
 
 # verilator-specific
-verilate_command := $(verilator)                                                                       \
+verilate_command := $(verilator)                                                                                           \
 					$(filter-out %.vhd, $(ariane_pkg))                                                 \
 					$(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))                         \
 					+define+$(defines)                                                                 \
@@ -331,6 +333,20 @@ verilate:
 
 sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)
+# vcs-specific
+vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate -debug_access+all -timescale=1ns/1ps \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+	            +define+$(defines)                                                     \
+	            +incdir+src/axi_node                                                   \
+		    src/util/sram.sv                                                       \
+	            tb/ariane_tb.sv                                                        \
+	            tb/common/mock_uart.sv
+
+#$(foreach i, ${src}, -v $(i))
+sim-vcs:
+	@echo "[Vcs] Building Model"
+	$(vcs_command)
 
 $(addsuffix -verilator,$(riscv-asm-tests)): verilate
 	$(ver-library)/Variane_testharness $(riscv-test-dir)/$(subst -verilator,,$@)

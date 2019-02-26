@@ -15,19 +15,25 @@
 
 
 import ariane_pkg::*;
+`ifndef VCS
 import uvm_pkg::*;
 
 `include "uvm_macros.svh"
+`endif
 
 `define MAIN_MEM(P) dut.i_sram.genblk1[0].i_ram.Mem_DP[(``P``)]
 
+`ifndef VCS
 import "DPI-C" function read_elf(input string filename);
 import "DPI-C" function byte get_section(output longint address, output longint len);
 import "DPI-C" context function byte read_section(input longint address, inout byte buffer[]);
+`endif
 
 module ariane_tb;
 
+`ifndef VCS
     static uvm_cmdline_processor uvcl = uvm_cmdline_processor::get_inst();
+`endif
 
     localparam int unsigned CLOCK_PERIOD = 20ns;
     // toggle with RTC period
@@ -59,6 +65,7 @@ module ariane_tb;
 
     // Clock process
     initial begin
+       $vcdpluson;
         clk_i = 1'b0;
         rst_ni = 1'b0;
         repeat(8)
@@ -87,13 +94,13 @@ module ariane_tb;
         forever begin
 
             wait (exit_o[0]);
-
+`ifndef VCS
             if ((exit_o >> 1)) begin
                 `uvm_error( "Core Test",  $sformatf("*** FAILED *** (tohost = %0d)", (exit_o >> 1)))
             end else begin
                 `uvm_info( "Core Test",  $sformatf("*** SUCCESS *** (tohost = %0d)", (exit_o >> 1)), UVM_LOW)
             end
-
+`endif
             $finish();
         end
     end
@@ -104,9 +111,37 @@ module ariane_tb;
         automatic logic [7:0][7:0] mem_row;
         longint address, len;
         byte buffer[];
+`ifdef VCS
+        @(posedge rst_ni)
+        if ($value$plusargs("PRELOAD=%s", binary))
+          $display("+PRELOAD=%s", binary);
+`else
         void'(uvcl.get_arg_value("+PRELOAD=", binary));
-
+`endif
         if (binary != "") begin
+`ifdef VCS
+           typedef enum {maxsiz=1048576} max_t;
+           logic [7:0] tmp [maxsiz-1:0];
+           $display("Loading .. %s", binary);
+           $readmemh(binary, tmp);
+           len = maxsiz;
+           while (1'bx === ^tmp[--len])
+             ;
+           $display("bytes detected: %d", len);
+           for (int i = 0; i <= len; i+=8)
+             begin
+                mem_row = '0;
+                for (int j = 0; j < 8; j++)
+                  begin
+                     mem_row[j] = tmp[i + j];
+                  end
+                if (1'bx !== ^mem_row)
+                  begin
+                     $display("mem[%d] = %x", i/8, mem_row);
+                     `MAIN_MEM(i/8) = mem_row;
+                  end
+             end
+`else           
             `uvm_info( "Core Test", $sformatf("Preloading ELF: %s", binary), UVM_LOW)
 
             void'(read_elf(binary));
@@ -129,6 +164,7 @@ module ariane_tb;
                     `MAIN_MEM((address[28:0] >> 3) + i) = mem_row;
                 end
             end
+`endif               
         end
     end
 

@@ -124,6 +124,12 @@ module miss_handler #(
         logic        valid;
     } reservation_d, reservation_q;
 
+`ifdef PITON_ARIANE
+   localparam DCACHE_NUM_WORDS = serpent_cache_pkg::DCACHE_NUM_WORDS;
+`else
+   localparam DCACHE_NUM_WORDS = std_cache_pkg::DCACHE_NUM_WORDS;
+`endif
+      
     // ------------------------------
     // Cache Management
     // ------------------------------

@@ -58,7 +58,7 @@ generate
           .ADDR_WIDTH($clog2(NUM_WORDS)),
           .DATA_DEPTH(NUM_WORDS),
           .OUT_REGS (0),
-          .SIM_INIT (2)
+          .SIM_INIT (1)
         ) i_ram (
            .Clk_CI    ( clk_i                     ),
            .Rst_RBI   ( rst_ni                    ),

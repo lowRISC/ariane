@@ -1,5 +1,6 @@
 // See LICENSE.SiFive for license details.
 //VCS coverage exclude_file
+`ifdef DPI
 import "DPI-C" function int jtag_tick
 (
  output bit jtag_TCK,
@@ -9,7 +10,8 @@ import "DPI-C" function int jtag_tick
 
  input bit  jtag_TDO
 );
-
+`endif //  `ifdef DPI
+   
 module SimJTAG #(
                  parameter TICK_DELAY = 50
                  )(
@@ -68,6 +70,7 @@ module SimJTAG #(
          init_done_sticky <= init_done | init_done_sticky;
          if (enable && init_done_sticky) begin
             tickCounterReg <= tickCounterNxt;
+`ifdef DPI
             if (tickCounterReg == 0) begin
                __exit = jtag_tick(
                                   __jtag_TCK,
@@ -76,6 +79,7 @@ module SimJTAG #(
                                   __jtag_TRSTn,
                                   __jtag_TDO);
             end
+`endif
          end // if (enable && init_done_sticky)
       end // else: !if(reset || r_reset)
    end // always @ (posedge clock)
