@@ -82,4 +82,10 @@ module ariane_regfile #(
     assign rdata_o[i] = mem[raddr_i[i]];
   end
 
+   // These registers are for debugging and should be automatically removd by synthesis
+  for (genvar i = 0; i < NUM_WORDS; i++) begin:r_debug
+     wire [DATA_WIDTH-1:0] r;
+     assign r = mem[i];
+  end
+
 endmodule

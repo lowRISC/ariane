@@ -34,6 +34,11 @@ module ariane_tb;
 `ifndef VCS
     static uvm_cmdline_processor uvcl = uvm_cmdline_processor::get_inst();
 `endif
+
+    localparam int unsigned CLOCK_PERIOD = 20ns;
+    // toggle with RTC period
+    localparam int unsigned RTC_CLOCK_PERIOD = 30.517us;
+
     localparam NUM_WORDS = 2**25;
     logic clk_i;
     logic rst_ni;
@@ -64,11 +69,11 @@ module ariane_tb;
         clk_i = 1'b0;
         rst_ni = 1'b0;
         repeat(8)
-            #10 clk_i = ~clk_i;
+            #(CLOCK_PERIOD/2) clk_i = ~clk_i;
         rst_ni = 1'b1;
         forever begin
-            #10 clk_i = 1'b1;
-            #10 clk_i = 1'b0;
+            #(CLOCK_PERIOD/2) clk_i = 1'b1;
+            #(CLOCK_PERIOD/2) clk_i = 1'b0;
 
             //if (cycles > max_cycles)
             //    $fatal(1, "Simulation reached maximum cycle count of %d", max_cycles);
@@ -80,8 +85,8 @@ module ariane_tb;
     initial begin
         forever begin
             rtc_i = 1'b0;
-            #15.25 rtc_i = 1'b1;
-            #15.25 rtc_i = 1'b0;
+            #(RTC_CLOCK_PERIOD/2) rtc_i = 1'b1;
+            #(RTC_CLOCK_PERIOD/2) rtc_i = 1'b0;
         end
     end
 
@@ -106,12 +111,39 @@ module ariane_tb;
         automatic logic [7:0][7:0] mem_row;
         longint address, len;
         byte buffer[];
-`ifndef VCS           
+`ifdef VCS
+        @(posedge rst_ni)
+        if ($value$plusargs("PRELOAD=%s", binary))
+          $display("+PRELOAD=%s", binary);
+`else
         void'(uvcl.get_arg_value("+PRELOAD=", binary));
 `endif
         if (binary != "") begin
-`ifndef VCS           
+`ifdef VCS
+           typedef enum {maxsiz=1048576} max_t;
+           logic [7:0] tmp [maxsiz-1:0];
+           $display("Loading .. %s", binary);
+           $readmemh(binary, tmp);
+           len = maxsiz;
+           while (1'bx === ^tmp[--len])
+             ;
+           $display("bytes detected: %d", len);
+           for (int i = 0; i <= len; i+=8)
+             begin
+                mem_row = '0;
+                for (int j = 0; j < 8; j++)
+                  begin
+                     mem_row[j] = tmp[i + j];
+                  end
+                if (1'bx !== ^mem_row)
+                  begin
+                     $display("mem[%d] = %x", i/8, mem_row);
+                     `MAIN_MEM(i/8) = mem_row;
+                  end
+             end
+`else           
             `uvm_info( "Core Test", $sformatf("Preloading ELF: %s", binary), UVM_LOW)
+
             void'(read_elf(binary));
             // wait with preloading, otherwise randomization will overwrite the existing value
             wait(rst_ni);

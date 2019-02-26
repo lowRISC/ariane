@@ -75,81 +75,73 @@ CFLAGS := -I$(QUESTASIM_HOME)/include         \
           -std=c++11 -I../tb/dpi
 
 # this list contains the standalone components
-#        $(wildcard fpga/src/axi2apb/src/*.sv)                         
-#        $(wildcard fpga/src/axi_slice/src/*.sv)                        
-#        $(wildcard src/axi_node/src/*.sv)                              
-#        src/axi/src/axi_cut.sv                                         \
-        src/axi/src/axi_join.sv                                        \
-        src/axi/src/axi_delayer.sv                                     \
-        src/axi/src/axi_to_axi_lite.sv                                 \
-        src/util/axi_master_connect_rev.sv                             \
-        src/common_cells/src/deprecated/generic_fifo.sv                \
-        src/common_cells/src/deprecated/pulp_sync.sv                   \
-        src/common_cells/src/deprecated/find_first_one.sv              
 src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
-        $(wildcard src/fpu/src/utils/*.vhd)                            \
-        $(wildcard src/fpu/src/ops/*.vhd)                              \
-        $(wildcard src/fpu/src/subunits/*.vhd)                         \
-        $(filter-out src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv,    \
-        $(wildcard src/fpu_div_sqrt_mvp/hdl/*.sv))                     \
-        $(wildcard src/frontend/*.sv)                                  \
-        $(filter-out src/cache_subsystem/std_no_dcache.sv,             \
-        $(wildcard src/cache_subsystem/*.sv))                          \
-        fpga/src/etherboot/etherboot.sv                                \
-        $(wildcard src/clint/*.sv)                                     \
-        $(wildcard src/axi/common.sv)                                  \
-        $(wildcard src/plic/*.sv)                                      \
-        $(wildcard src/axi_mem_if/src/*.sv)                            \
-        $(filter-out src/debug/dm_pkg.sv, $(wildcard src/debug/*.sv))  \
-        $(wildcard src/debug/debug_rom/*.sv)                           \
-        src/register_interface/src/apb_to_reg.sv                       \
-        src/fpu/src/fpnew.vhd                                          \
-        src/fpu/src/fpnew_top.vhd                                      \
-        src/common_cells/src/rstgen_bypass.sv                          \
-        src/common_cells/src/rstgen.sv                                 \
-        src/common_cells/src/stream_mux.sv                             \
-        src/common_cells/src/stream_demux.sv                           \
-        src/common_cells/src/stream_arbiter.sv                         \
-        src/util/axi_master_connect.sv                                 \
-        src/util/axi_slave_connect.sv                                  \
-        src/util/axi_slave_connect_rev.sv                              \
-        src/fpga-support/rtl/SyncSpRamBeNx64.sv                        \
-        src/OpenIP/util/simple_xbar_edited.sv                          \
-        $(wildcard fpga/src/axi_slice/src/*buffer.sv)                  \
-        fpga/src/axi_slice/src/axi_single_slice.sv                     \
-        src/util/sram.sv                                               \
-        src/axi/src/axi_delayer.sv                                     \
-        fpga/src/axi2apb/src/axi2apb_64_32.sv                          \
-        src/common_cells/src/sync.sv                                   \
-        src/common_cells/src/cdc_2phase.sv                             \
-        src/common_cells/src/spill_register.sv                         \
-        src/common_cells/src/sync_wedge.sv                             \
-        src/common_cells/src/edge_detect.sv                            \
-        src/common_cells/src/fifo_v3.sv                                \
-        src/common_cells/src/fifo_v2.sv                                \
-        src/common_cells/src/fifo_v1.sv                                \
-        src/common_cells/src/lzc.sv                                    \
-        src/common_cells/src/rrarbiter.sv                              \
-        src/common_cells/src/ready_valid_delay.sv                      \
-        src/common_cells/src/lfsr_8bit.sv                              \
-        src/common_cells/src/lfsr_16bit.sv                             \
-        src/common_cells/src/counter.sv                                \
-        src/common_cells/src/pipe_reg_simple.sv                        \
-        src/tech_cells_generic/src/cluster_clock_inverter.sv           \
-        src/tech_cells_generic/src/pulp_clock_mux2.sv                  \
-        tb/ariane_testharness.sv                                       \
-        tb/ariane_peripherals.sv                                       \
-        tb/common/uart.sv                                              \
-        tb/common/SimDTM.sv                                            \
-        tb/common/SimJTAG.sv
+		$(filter-out src/fpu/src/fpnew_pkg.sv, $(wildcard src/fpu_dummy/*.sv)) \
+		$(filter-out src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv,    \
+		$(wildcard src/fpu_div_sqrt_mvp/hdl/*.sv))                     \
+		$(wildcard src/frontend/*.sv)                                  \
+		$(filter-out src/cache_subsystem/std_no_dcache.sv,             \
+		$(wildcard src/cache_subsystem/*.sv))                          \
+		$(wildcard bootrom/*.sv)                                       \
+		$(wildcard src/clint/*.sv)                                     \
+		$(filter-out fpga/src/axi2apb/src/axi2apb_wrap.sv, $(wildcard fpga/src/axi2apb/src/*.sv))                          \
+		$(filter-out fpga/src/axi_slice/src/axi_slice_wrap.sv, $(wildcard fpga/src/axi_slice/src/*.sv))                        \
+		$(wildcard src/plic/*.sv)                                      \
+		$(filter-out src/axi_node/src/axi_node_wrap_with_slices.sv, $(wildcard src/axi_node/src/*.sv))                              \
+		$(wildcard src/axi_mem_if/src/*.sv)                            \
+		$(filter-out src/debug/dm_pkg.sv, $(wildcard src/debug/*.sv))  \
+		$(wildcard src/debug/debug_rom/*.sv)                           \
+		src/register_interface/src/apb_to_reg.sv                       \
+		src/common_cells/src/deprecated/generic_fifo.sv                \
+		src/common_cells/src/deprecated/pulp_sync.sv                   \
+		src/common_cells/src/rstgen_bypass.sv                          \
+		src/common_cells/src/rstgen.sv                                 \
+		src/common_cells/src/stream_mux.sv                             \
+		src/common_cells/src/stream_demux.sv                           \
+		src/common_cells/src/stream_arbiter.sv                         \
+		src/common_cells/src/stream_arbiter_flushable.sv               \
+		src/util/axi_master_connect.sv                                 \
+		src/util/axi_slave_connect.sv                                  \
+		src/util/axi_slave_connect_rev.sv                              \
+		src/axi/src/axi_delayer.sv                                     \
+		src/fpga-support/rtl/SyncSpRamBeNx64.sv                        \
+		src/common_cells/src/sync.sv                                   \
+		src/common_cells/src/cdc_2phase.sv                             \
+		src/common_cells/src/spill_register.sv                         \
+		src/common_cells/src/sync_wedge.sv                             \
+		src/common_cells/src/edge_detect.sv                            \
+		src/common_cells/src/fifo_v3.sv                                \
+		src/common_cells/src/fifo_v2.sv                                \
+		src/common_cells/src/fifo_v1.sv                                \
+		src/common_cells/src/lzc.sv                                    \
+		src/common_cells/src/rrarbiter.sv                              \
+		src/common_cells/src/stream_delay.sv                           \
+		src/common_cells/src/lfsr_8bit.sv                              \
+		src/common_cells/src/lfsr_16bit.sv                             \
+		src/common_cells/src/counter.sv                                \
+		src/common_cells/src/shift_reg.sv                              \
+		src/tech_cells_generic/src/cluster_clock_inverter.sv           \
+		src/tech_cells_generic/src/pulp_clock_mux2.sv                  \
+		tb/ariane_testharness.sv                                       \
+		tb/ariane_peripherals.sv                                       \
+		tb/common/uart.sv                                              \
+		tb/common/SimDTM.sv                                            \
+		tb/common/SimJTAG.sv
+
+extra_src :=	src/util/axi_master_connect_rev.sv                             \
+		src/axi/src/axi_to_axi_lite.sv                                 \
+		src/axi/src/axi_multicut.sv                                    \
+		src/axi/src/axi_join.sv                                        \
+		src/axi/src/axi_cut.sv                                         \
+		src/common_cells/src/deprecated/find_first_one.sv              \
+		src/axi_node/src/axi_node_wrap_with_slices.sv
 
 src := $(addprefix $(root-dir), $(src))
 
 uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
 uart_src := $(addprefix $(root-dir), $(uart_src))
 
-fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv) \
-    src/axi_node/src/axi_node_wrap_with_slices.sv src/axi/src/axi_cut.sv src/axi/src/axi_multicut.sv                            
+fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(extra_src)
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
 
 # look for testbenches
@@ -161,14 +153,16 @@ riscv-benchmarks-dir      := tmp/riscv-tests/build/benchmarks/
 riscv-asm-tests-list      := ci/riscv-asm-tests.list
 riscv-amo-tests-list      := ci/riscv-amo-tests.list
 riscv-mul-tests-list      := ci/riscv-mul-tests.list
+riscv-fp-tests-list       := ci/riscv-fp-tests.list
 riscv-benchmarks-list     := ci/riscv-benchmarks.list
 riscv-asm-tests           := $(shell xargs printf '\n%s' < $(riscv-asm-tests-list)  | cut -b 1-)
 riscv-amo-tests           := $(shell xargs printf '\n%s' < $(riscv-amo-tests-list)  | cut -b 1-)
 riscv-mul-tests           := $(shell xargs printf '\n%s' < $(riscv-mul-tests-list)  | cut -b 1-)
+riscv-fp-tests            := $(shell xargs printf '\n%s' < $(riscv-fp-tests-list)   | cut -b 1-)
 riscv-benchmarks          := $(shell xargs printf '\n%s' < $(riscv-benchmarks-list) | cut -b 1-)
 
 # Search here for include files (e.g.: non-standalone components)
-incdir :=
+incdir := src/common_cells/include/common_cells
 # Compile and sim flags
 compile_flag     += +cover=bcfst+/dut -incr -64 -nologo -quiet -suppress 13262 -permissive +define+$(defines)
 uvm-flags        += +UVM_NO_RELNOTES +UVM_VERBOSITY=LOW
@@ -338,13 +332,14 @@ sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)
 
 # vcs-specific
-vcs_command := vcs -q -full64 -sverilog -assert svaext -R +lint=PCWM -debug_access+all -timescale=1ns/1ps \
-                    $(filter-out %.vhd, $(ariane_pkg))                                     \
-                    $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
-                    +define+$(defines)                                                     \
-                    +incdir+src/axi_node                                                   \
-                    tb/ariane_tb.sv                                                        \
-                    tb/common/mock_uart.sv
+vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate -debug_access+all -timescale=1ns/1ps \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+	            +define+$(defines)                                                     \
+	            +incdir+src/axi_node                                                   \
+		    src/util/sram.sv                                                       \
+	            tb/ariane_tb.sv                                                        \
+	            tb/common/mock_uart.sv
 
 #$(foreach i, ${src}, -v $(i))
 sim-vcs:
@@ -360,10 +355,13 @@ $(addsuffix -verilator,$(riscv-amo-tests)): verilate
 $(addsuffix -verilator,$(riscv-mul-tests)): verilate
 	$(ver-library)/Variane_testharness $(riscv-test-dir)/$(subst -verilator,,$@)
 
+$(addsuffix -verilator,$(riscv-fp-tests)): verilate
+	$(ver-library)/Variane_testharness $(riscv-test-dir)/$(subst -verilator,,$@)
+
 $(addsuffix -verilator,$(riscv-benchmarks)): verilate
 	$(ver-library)/Variane_testharness $(riscv-benchmarks-dir)/$(subst -verilator,,$@)
 
-run-asm-tests-verilator: $(addsuffix -verilator, $(riscv-asm-tests)) $(addsuffix -verilator, $(riscv-amo-tests)) $(addsuffix -verilator, $(riscv-mul-tests))
+run-asm-tests-verilator: $(addsuffix -verilator, $(riscv-asm-tests)) $(addsuffix -verilator, $(riscv-amo-tests)) $(addsuffix -verilator, $(riscv-fp-tests)) $(addsuffix -verilator, $(riscv-fp-tests))
 
 # split into two halfs for travis jobs (otherwise they will time out)
 run-asm-tests1-verilator: $(addsuffix -verilator, $(filter rv64ui-v-% ,$(riscv-asm-tests)))
@@ -373,6 +371,8 @@ run-asm-tests2-verilator: $(addsuffix -verilator, $(filter-out rv64ui-v-% ,$(ris
 run-amo-verilator: $(addsuffix -verilator, $(riscv-amo-tests))
 
 run-mul-verilator: $(addsuffix -verilator, $(riscv-mul-tests))
+
+run-fp-verilator: $(addsuffix -verilator, $(riscv-fp-tests))
 
 run-benchmarks-verilator: $(addsuffix -verilator,$(riscv-benchmarks))
 
