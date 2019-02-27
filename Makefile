@@ -39,20 +39,17 @@ endif
 # Sources
 # Package files -> compile first
 ariane_pkg := include/riscv_pkg.sv                          \
-              src/debug/dm_pkg.sv                           \
-              include/ariane_pkg.sv                         \
-              include/std_cache_pkg.sv                      \
-              include/serpent_cache_pkg.sv                  \
-              src/axi/src/axi_pkg.sv                        \
-              src/register_interface/src/reg_intf.sv        \
-              include/axi_intf.sv                           \
-              tb/ariane_soc_pkg.sv                          \
-              include/ariane_axi_pkg.sv                     \
-              src/fpu/src/pkg/fpnew_pkg.vhd                 \
-              src/fpu/src/pkg/fpnew_fmts_pkg.vhd            \
-              src/fpu/src/pkg/fpnew_comps_pkg.vhd           \
-              src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv \
-              src/fpu/src/pkg/fpnew_pkg_constants.vhd
+			  src/debug/dm_pkg.sv                           \
+			  include/ariane_pkg.sv                         \
+			  include/std_cache_pkg.sv                      \
+			  include/serpent_cache_pkg.sv                  \
+			  src/axi/src/axi_pkg.sv                        \
+			  src/register_interface/src/reg_intf.sv        \
+			  include/axi_intf.sv                           \
+			  tb/ariane_soc_pkg.sv                          \
+			  include/ariane_axi_pkg.sv                     \
+			  src/fpu/src/fpnew_pkg.sv                      \
+			  src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
 ariane_pkg := $(addprefix $(root-dir), $(ariane_pkg))
 
 # utility modules
@@ -87,7 +84,7 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		$(filter-out fpga/src/axi2apb/src/axi2apb_wrap.sv, $(wildcard fpga/src/axi2apb/src/*.sv))                          \
 		$(filter-out fpga/src/axi_slice/src/axi_slice_wrap.sv, $(wildcard fpga/src/axi_slice/src/*.sv))                        \
 		$(wildcard src/plic/*.sv)                                      \
-		$(filter-out src/axi_node/src/axi_node_wrap_with_slices.sv, $(wildcard src/axi_node/src/*.sv))                              \
+		$(filter-out src/axi_node/src/axi_node_wrap_with_slices.sv src/axi_node/src/axi_node_intf_wrap.sv, $(wildcard src/axi_node/src/*.sv)) \
 		$(wildcard src/axi_mem_if/src/*.sv)                            \
 		$(filter-out src/debug/dm_pkg.sv, $(wildcard src/debug/*.sv))  \
 		$(wildcard src/debug/debug_rom/*.sv)                           \
@@ -99,12 +96,11 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		src/common_cells/src/stream_mux.sv                             \
 		src/common_cells/src/stream_demux.sv                           \
 		src/common_cells/src/stream_arbiter.sv                         \
-		src/common_cells/src/stream_arbiter_flushable.sv               \
 		src/util/axi_master_connect.sv                                 \
 		src/util/axi_slave_connect.sv                                  \
 		src/util/axi_slave_connect_rev.sv                              \
-		src/axi/src/axi_delayer.sv                                     \
 		src/fpga-support/rtl/SyncSpRamBeNx64.sv                        \
+		src/OpenIP/util/simple_xbar_edited.sv                          \
 		src/common_cells/src/sync.sv                                   \
 		src/common_cells/src/cdc_2phase.sv                             \
 		src/common_cells/src/spill_register.sv                         \
@@ -115,11 +111,12 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		src/common_cells/src/fifo_v1.sv                                \
 		src/common_cells/src/lzc.sv                                    \
 		src/common_cells/src/rrarbiter.sv                              \
-		src/common_cells/src/stream_delay.sv                           \
 		src/common_cells/src/lfsr_8bit.sv                              \
 		src/common_cells/src/lfsr_16bit.sv                             \
 		src/common_cells/src/counter.sv                                \
-		src/common_cells/src/shift_reg.sv                              \
+		src/common_cells/src/pipe_reg_simple.sv                        \
+		src/common_cells/src/ready_valid_delay.sv                      \
+		src/axi/src/axi_delayer.sv                                     \
 		src/tech_cells_generic/src/cluster_clock_inverter.sv           \
 		src/tech_cells_generic/src/pulp_clock_mux2.sv                  \
 		tb/ariane_testharness.sv                                       \
@@ -136,12 +133,16 @@ extra_src :=	src/util/axi_master_connect_rev.sv                             \
 		src/common_cells/src/deprecated/find_first_one.sv              \
 		src/axi_node/src/axi_node_wrap_with_slices.sv
 
+#		src/common_cells/src/stream_arbiter_flushable.sv               \
+		src/common_cells/src/stream_delay.sv                           \
+		src/common_cells/src/shift_reg.sv                              \
+
 src := $(addprefix $(root-dir), $(src))
 
 uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
 uart_src := $(addprefix $(root-dir), $(uart_src))
 
-fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(extra_src)
+fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(extra_src)
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
 
 # look for testbenches

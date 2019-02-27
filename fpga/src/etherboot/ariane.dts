@@ -17,8 +17,8 @@
       device_type = "cpu";
       reg = <0>;
       status = "okay";
-      compatible = "eth, ariane", "riscv";
-      riscv,isa = "rv64imacsu";
+      compatible = "ethz, ariane", "riscv";
+      riscv,isa = "rv64imafdc";
       mmu-type = "riscv,sv39";
       tlb-split;
       // HLIC - hart local interrupt controller

@@ -26,9 +26,10 @@ char md5buf[SD_READ_SIZE];
 
 void just_jump (void)
 {
-  void (*fun_ptr)(void) = (void*)DRAMBase;
+  extern uint8_t _dtb[];
+  void (*fun_ptr)(uint64_t, void *) = (void*)DRAMBase;
   asm volatile ("fence.i");
-  fun_ptr();
+  fun_ptr(read_csr(mhartid), _dtb);
 }
 
 void sd_main(int sw)

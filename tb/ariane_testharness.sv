@@ -235,7 +235,12 @@ module ariane_testharness #(
         .data_i ( rom_rdata               )
     );
 
-    etherboot i_bootrom (
+`ifdef ETHERBOOT   
+    etherboot
+`else
+    bootrom
+`endif                         
+    i_bootrom (                         
         .clk_i      ( clk_i     ),
         .req_i      ( rom_req   ),
         .addr_i     ( rom_addr  ),

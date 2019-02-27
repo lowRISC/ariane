@@ -61,10 +61,6 @@ _zbss:
   blt a1, a2, _zbss
   call main
   smp_resume(s1, s2)
-  csrr a0, mhartid
-  la a1, _dtb
-  li s1, DRAM_BASE
-  jr s1
 trap_entry:
   csrr t0, mcause
   csrr t1, mepc
