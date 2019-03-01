@@ -179,21 +179,22 @@ module fpnew_top #(
         .clk(clk_i), // input wire clk
         .trig_in(in_valid_i), // input wire trig_in 
         .trig_in_ack(trig_in_ack), // output wire trig_in_ack 
-        .probe0(operands_i[0]),
-        .probe1(operands_i[1]),
-        .probe2(operands_i[2]),
-        .probe3(rnd_mode_i),
+        .probe0(opa),
+        .probe1(opb),
+        .probe2(opc),
+        .probe3(rnd_mode),
         .probe4(op_i),              
         .probe5(tag_i),              
         .probe6(enable),              
-        .probe7(rnd_mode),              
+        .probe7(src_fmt),              
         .probe8(fpu_op),              
         .probe9(result_o),              
         .probe10(ready),              
         .probe11(status_o),
         .probe12(out_valid_o),
         .probe13(count_cycles),
-        .probe14(count_ready)
+        .probe14(count_ready),
+        .probe15(dst_fmt)
 );
 
 endmodule
