@@ -333,7 +333,7 @@ sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)
 
 # vcs-specific
-vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate -debug_access+all -timescale=1ns/1ps \
+vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
 	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
 	            +define+$(defines)                                                     \

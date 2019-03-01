@@ -35,16 +35,16 @@
 
 `timescale 1ns / 100ps
 
-module fpu_div( clk, rst, enable, opa, opb, sign, mantissa_7,
-exponent_out);
-input		clk;
-input		rst;
-input		enable;
-input	[63:0]	opa;
-input	[63:0]	opb;
-output		sign;
-output	[55:0] mantissa_7;
-output  [11:0] exponent_out;
+module fpu_div(
+ input         clk,
+ input         rst,
+ input         enable,
+ input [63:0]  opa,
+ input [63:0]  opb,
+ output        sign,
+ output [55:0] mantissa_7,
+ output reg [11:0] exponent_out);
+   
 
 parameter	preset  = 53;
 
@@ -62,8 +62,6 @@ reg [5:0] 	dividend_shift_2;
 reg [5:0] 	divisor_shift;
 reg [5:0] 	divisor_shift_2;
 reg [5:0] 	count_out;
-reg [11:0]  exponent_out;
-
 
 wire   sign = opa[63] ^ opb[63];
 reg [51:0] mantissa_a;
