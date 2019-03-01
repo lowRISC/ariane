@@ -35,35 +35,26 @@
 
 `timescale 1ns / 100ps
 
-module fpu_exceptions( clk, rst, enable, rmode, opa, opb, in_except,
-exponent_in, mantissa_in, fpu_op, out, ex_enable, underflow, overflow, 
-inexact, exception, invalid);
-input		clk;
-input		rst;
-input		enable;
-input	[1:0]	rmode;
-input	[63:0]	opa;
-input	[63:0]	opb;
-input	[63:0]	in_except;
-input	[11:0]	exponent_in;
-input	[1:0]	mantissa_in;
-input	[2:0]	fpu_op;
-output	[63:0]	out;
-output		ex_enable;
-output		underflow;
-output		overflow;
-output		inexact;
-output		exception;
-output		invalid;
-
-reg		[63:0]	out;
-reg		ex_enable;
-reg		underflow;
-reg		overflow;
-reg		inexact;
-reg		exception;
-reg		invalid;
-
+module fpu_exceptions(
+input		clk,
+input		rst,
+input		enable,
+input	[1:0]	rmode,
+input	[63:0]	opa,
+input	[63:0]	opb,
+input	[63:0]	in_except,
+input	[11:0]	exponent_in,
+input	[11:0]	exponent_mul_in,
+input	[1:0]	mantissa_in,
+input	[2:0]	fpu_op,
+output reg [63:0] out,
+output reg ex_enable,
+output reg underflow,
+output reg overflow,
+output reg inexact,
+output reg exception,
+output reg invalid);
+   
 reg		in_et_zero;
 reg		opa_et_zero;
 reg		opb_et_zero;
@@ -222,7 +213,7 @@ begin
 		addsub_inf_invalid <= (add & opa_pos_inf & opb_neg_inf) | (add & opa_neg_inf & opb_pos_inf) | 
 					(subtract & opa_pos_inf & opb_pos_inf) | (subtract & opa_neg_inf & opb_neg_inf);
 		addsub_inf <= (add_inf | sub_inf) & !addsub_inf_invalid;
-		out_inf_trigger <= addsub_inf | mul_inf | div_inf | div_by_0 | (exponent_in > 2046);
+		out_inf_trigger <= addsub_inf | mul_inf | div_inf | div_by_0 | (exponent_in > 2046) | (exponent_mul_in > 2046);
 		out_pos_inf <= out_inf_trigger & !in_except[63];
 		out_neg_inf <= out_inf_trigger & in_except[63];
 		round_nearest <= (rmode == 2'b00);

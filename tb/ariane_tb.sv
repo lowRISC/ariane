@@ -108,7 +108,7 @@ module ariane_tb;
     // for faster simulation we can directly preload the ELF
     // Note that we are loosing the capabilities to use risc-fesvr though
     initial begin
-        automatic logic [7:0][7:0] mem_row;
+        automatic logic [7:0][7:0] mem_row, prev_mem_row;
         longint address, len;
         byte buffer[];
 `ifdef VCS
@@ -121,24 +121,22 @@ module ariane_tb;
         if (binary != "") begin
 `ifdef VCS
            typedef enum {maxsiz=1048576} max_t;
-           logic [7:0] tmp [maxsiz-1:0];
+           logic [63:0] tmp [maxsiz-1:0];
            $display("Loading .. %s", binary);
            $readmemh(binary, tmp);
            len = maxsiz;
            while (1'bx === ^tmp[--len])
              ;
-           $display("bytes detected: %d", len);
-           for (int i = 0; i <= len; i+=8)
+           $display("words detected: %d", len);
+           for (int i = 0; i <= len; i++)
              begin
-                mem_row = '0;
-                for (int j = 0; j < 8; j++)
-                  begin
-                     mem_row[j] = tmp[i + j];
-                  end
+                mem_row = tmp[i];
                 if (1'bx !== ^mem_row)
                   begin
-                     $display("mem[%d] = %x", i/8, mem_row);
-                     `MAIN_MEM(i/8) = mem_row;
+                     if (mem_row || (mem_row !== prev_mem_row))
+                       $display("mem[%d] = %x", i, mem_row);
+                     prev_mem_row = mem_row;
+                     `MAIN_MEM(i) = mem_row;
                   end
              end
 `else           

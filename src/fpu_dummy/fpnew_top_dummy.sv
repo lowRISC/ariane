@@ -54,52 +54,50 @@ module fpnew_top #(
    localparam int unsigned NUM_FORMATS  = fpnew_pkg::NUM_FP_FORMATS;
 
    logic          enable;
-   logic [1:0]    rmode;
-   logic [3:0]    fpu_op;
-   logic [63:0]   opa, opb;
+   logic [2:0]    rnd_mode;
+   logic [2:0]    src_fmt, dst_fmt;
+   logic [4:0]    fpu_op;
+   logic [63:0]   opa, opb, opc;
 
    always @(posedge clk_i)
      if (!rst_ni)
        begin
           opa = 0;
           opb = 0;
-          rmode = 0;
+          opc = 0;
+          src_fmt = 0;
+          dst_fmt = 0;
+          rnd_mode = 0;
           fpu_op = 0;
           tag_o = 0;
        end
      else if (in_valid_i)
        begin
-          opa = operands_i[1];
-          opb = operands_i[2];
-          case (rnd_mode_i)
-            fpnew_pkg::RNE: rmode = 0;
-            fpnew_pkg::RTZ: rmode = 1;
-            fpnew_pkg::RDN: rmode = 3;
-            fpnew_pkg::RUP: rmode = 2;
-            fpnew_pkg::RMM: rmode = 0;
-            fpnew_pkg::DYN: rmode = 0;
-          endcase; // case (rnd_mode_i)
+          opa = operands_i[0];
+          opb = operands_i[1];
+          opc = operands_i[2];
+          src_fmt = src_fmt_i;
+          dst_fmt = dst_fmt_i;
+          rnd_mode = rnd_mode_i;
           tag_o = tag_i;
           case (op_i)
-            fpnew_pkg::FMADD: fpu_op = 0;
-            fpnew_pkg::FNMSUB: fpu_op = 1;
+            fpnew_pkg::FMADD: fpu_op = op_mod_i ? 5 : 4;
+            fpnew_pkg::FNMSUB: fpu_op = op_mod_i ? 4 : 13;
             fpnew_pkg::ADD: fpu_op = 0;
-            fpnew_pkg::MUL: fpu_op = 2;
-            // ADDMUL operation group
+            fpnew_pkg::MUL: fpu_op = 6;
             fpnew_pkg::DIV: fpu_op = 3;
-            fpnew_pkg::SQRT: fpu_op = 4;
-            // DIVSQRT operation group
-            fpnew_pkg::SGNJ: fpu_op = 5;
+            fpnew_pkg::SQRT: fpu_op = 8;
+            fpnew_pkg::SGNJ: fpu_op = 7;
             fpnew_pkg::MINMAX: fpu_op = 6;
-            fpnew_pkg::CMP: fpu_op = 7;
+            fpnew_pkg::CMP: fpu_op = 15;
             fpnew_pkg::CLASSIFY: fpu_op = 8;
-            // NONCOMP operation group
             fpnew_pkg::F2F: fpu_op = 9;
-            fpnew_pkg::F2I: fpu_op = 10;
-            fpnew_pkg::I2F: fpu_op = 11;
-            fpnew_pkg::CPKAB: fpu_op = 12;
-            fpnew_pkg::CPKCD: fpu_op = 13;
+            fpnew_pkg::F2I: fpu_op = 11;
+            fpnew_pkg::I2F: fpu_op = 12;
+            fpnew_pkg::CPKAB: fpu_op = 13;
+            fpnew_pkg::CPKCD: fpu_op = 14;
           endcase // case (op_i)
+          fpu_op[4] = op_mod_i;
        end
    
    logic         ready0;
@@ -109,25 +107,34 @@ module fpnew_top #(
    wire          inexact;
    wire          exception;
    wire          invalid;  
+   wire          divbyzero;  
+   wire [6:0]    count_cycles;
+   wire [6:0]    count_ready;
    
    fpu_double UUT (
             .clk(clk_i),
             .rst(!rst_ni),
-            .enable(enable),
-            .rmode(rmode),
-            .fpu_op(fpu_op),
-            .opa(opa),
-            .opb(opb),
+            .enable,
+            .rnd_mode,
+            .fpu_op,
+            .src_fmt,
+            .dst_fmt,
+            .opa,
+            .opb,
+            .opc,
             .out(result_o),
-            .ready(ready),
-            .underflow(underflow),
-            .overflow(overflow),
-            .inexact(inexact),
-            .exception(exception),
-            .invalid(invalid));  
+            .ready,
+            .underflow,
+            .overflow,
+            .inexact,
+            .exception,
+            .invalid,
+            .divbyzero,
+            .count_cycles,
+            .count_ready);  
 
    assign status_o.NV = invalid; // Invalid
-   assign status_o.DZ = exception; // Divide by zero
+   assign status_o.DZ = divbyzero; // Divide by zero
    assign status_o.OF = overflow; // Overflow
    assign status_o.UF = underflow; // Underflow
    assign status_o.NX = inexact; // Inexact
@@ -165,5 +172,28 @@ module fpnew_top #(
        end
    
    assign busy_o = !ready;
+
+   wire trig_in_ack;
    
+   xlnx_ila_4 fpu_ila (
+        .clk(clk_i), // input wire clk
+        .trig_in(in_valid_i), // input wire trig_in 
+        .trig_in_ack(trig_in_ack), // output wire trig_in_ack 
+        .probe0(operands_i[0]),
+        .probe1(operands_i[1]),
+        .probe2(operands_i[2]),
+        .probe3(rnd_mode_i),
+        .probe4(op_i),              
+        .probe5(tag_i),              
+        .probe6(enable),              
+        .probe7(rnd_mode),              
+        .probe8(fpu_op),              
+        .probe9(result_o),              
+        .probe10(ready),              
+        .probe11(status_o),
+        .probe12(out_valid_o),
+        .probe13(count_cycles),
+        .probe14(count_ready)
+);
+
 endmodule
