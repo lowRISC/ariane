@@ -36,16 +36,17 @@
 `timescale 1ns / 100ps
 
 
-module fpu_sub( clk, rst, enable, opa, opb, fpu_op, sign, diff_2, exponent_2);
-input		clk;
-input		rst;
-input		enable;
-input	[63:0]	opa, opb;	  
-input	[2:0]	fpu_op;
-output		sign;
-output	[55:0]	diff_2;
-output	[10:0]	exponent_2;
-		
+module fpu_sub(
+ input             clk,
+ input             rst,
+ input             enable,
+ input [63:0]      opa, opb, 
+ input [2:0]       fpu_op,
+ output reg        sign,
+ output reg [55:0] diff_2,
+ output reg [10:0] exponent_2,
+ output reg        shift_inexact);
+
 reg [6:0] 	diff_shift;
 reg [6:0] 	diff_shift_2;
 
@@ -58,7 +59,6 @@ reg   expa_gt_expb;
 reg   expa_et_expb;
 reg   mana_gtet_manb;
 reg   a_gtet_b;
-reg   sign;
 reg   [10:0] exponent_small;
 reg   [10:0] exponent_large;
 reg   [51:0] mantissa_small;
@@ -80,10 +80,7 @@ reg   diffshift_gt_exponent;
 reg   diffshift_et_55; // when the difference = 0
 reg   [54:0] diff_1;
 reg   [10:0] exponent;
-reg   [10:0] exponent_2;
 wire   in_norm_out_denorm = (exponent_large > 0) & (exponent== 0);
-reg   [55:0] diff_2;
-		
 
 always @(posedge clk) 
 	begin
@@ -118,6 +115,7 @@ always @(posedge clk)
 		exponent <= 0;
 		exponent_2 <= 0;
 		diff_2 <= 0;
+		shift_inexact <= 0;
 		end
 		else if (enable) begin
 		exponent_a <= opa[62:52];
@@ -141,6 +139,7 @@ always @(posedge clk)
 		minuend <= { !large_is_denorm, mantissa_large, 2'b00 };
 		subtrahend <= { !small_is_denorm, mantissa_small, 2'b00 };
 		subtra_shift <= subtrahend >> exponent_diff;
+                shift_inexact <= | (subtrahend & ((1<<exponent_diff)-1));
 		subtra_shift_3 <= subtra_fraction_enable ? subtra_shift_2 : subtra_shift;
 		diff_shift_2 <= diff_shift;
 		diff <= minuend - subtra_shift_3;
@@ -150,8 +149,8 @@ always @(posedge clk)
 		exponent <= diffshift_gt_exponent ? 0 : (exponent_large - diff_shift_2);
 		exponent_2 <= diffshift_et_55 ? 0 : exponent;
 		diff_2 <= in_norm_out_denorm ? { 1'b0, diff_1 >> 1} : {1'b0, diff_1};
-		
-		end
+		end // if (enable)
+                else shift_inexact <= 0;
 	end
 
 	

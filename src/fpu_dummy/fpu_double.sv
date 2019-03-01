@@ -93,7 +93,7 @@ reg		mul_enable;
 reg		div_enable; 
 reg [63:0] adda_reg, addb_reg;
 
-wire    mul_accum = (!fpu_op_reg[2]) || (mul_enable && (count_ready >= 24));
+wire    mul_accum = (!fpu_op_reg[2]) || (mul_enable && (count_ready >= 24) && (fpu_op_reg[2:0] != 3'b110));
    
 wire	add_enable_0 = ((fpu_op_reg[1:0] == 2'b00) && mul_accum) & !(adda_reg[63] ^ addb_reg[63]);
 wire	add_enable_1 = ((fpu_op_reg[1:0] == 2'b01) && mul_accum) & (adda_reg[63] ^ addb_reg[63]);
@@ -116,45 +116,59 @@ wire	add_sign;
 wire	sub_sign;
 wire	mul_sign;
 wire	div_sign;
-wire	except_enable;
+wire	except_enable_0, except_enable_1;
 reg	addsub_sign;
 reg	sign_round;
+reg     shift_inexact;
+   
 wire [63:0] out_round, mul_round;
-wire	[63:0]	out_except;
-
+wire	[63:0]	out_except_0, out_except_1;
+wire         shift_add_inexact,   shift_sub_inexact,   shift_mul_inexact;
+   
 fpu_add u1(
-	.clk(clk), .rst(rst), .enable(add_enable), .opa(adda_reg), .opb(addb_reg),
-	.sign(add_sign), .sum_2(sum_out), .exponent_2(exp_add_out));
+	   .clk(clk), .rst(rst), .enable(add_enable), .opa(adda_reg), .opb(addb_reg),
+	   .sign(add_sign), .sum_2(sum_out), .exponent_2(exp_add_out),
+           .shift_inexact(shift_add_inexact));
 
 fpu_sub u2(
-	.clk(clk), .rst(rst), .enable(sub_enable), .opa(adda_reg), .opb(addb_reg),
-	.fpu_op(fpu_op_reg), .sign(sub_sign), .diff_2(diff_out),
-	.exponent_2(exp_sub_out));
+	   .clk(clk), .rst(rst), .enable(sub_enable), .opa(adda_reg), .opb(addb_reg),
+	   .fpu_op(fpu_op_reg), .sign(sub_sign), .diff_2(diff_out),
+	   .exponent_2(exp_sub_out), .shift_inexact(shift_sub_inexact));
 
 fpu_mul u3(
-	.clk(clk), .rst(rst), .enable(mul_enable), .opa(opa), .opb(opb),
-	.sign(mul_sign), .product_7(mul_out), .exponent_5(exp_mul_out));	
+	   .clk(clk), .rst(rst), .enable(mul_enable), .opa(opa), .opb(opb),
+	   .sign(mul_sign), .product_7(mul_out), .exponent_5(exp_mul_out), .shift_inexact(shift_mul_inexact));	
 
-fpu_round u3r(.clk(clk), .rst(rst), .enable(mul_enable), .round_mode(rmode_reg),
-	.sign_term(mul_sign), .mantissa_term(mul_out), .exponent_term(exp_mul_out),
-	.round_out(mul_round), .exponent_final(exponent_mul_post_round));		
+fpu_round u3a(.clk(clk), .rst(rst), .enable(mul_enable), .round_mode(rmode_reg),
+	      .sign_term(mul_sign), .mantissa_term(mul_out), .exponent_term(exp_mul_out),
+	      .round_out(mul_round), .exponent_final(exponent_mul_post_round));		
 	
+fpu_exceptions u3b(.clk(clk), .rst(rst), .enable(mul_enable), .rmode(rmode_reg),
+	          .opa(opa), .opb(opb),
+	          .in_except(mul_round), .exponent_in(exponent_mul_post_round),
+	          .mantissa_in(mantissa_round[1:0]),
+                  .add(0), .subtract(0), .multiply(mul_enable), .divide(0),
+                  .out(out_except_1),
+	          .ex_enable(except_enable_1), .underflow(underflow_1), .overflow(overflow_1),
+	          .inexact(inexact_1), .exception(exception_1), .invalid(invalid_1));
+		
 fpu_div u4(
-	.clk(clk), .rst(rst), .enable(div_enable), .opa(opa_reg), .opb(opb_reg),
-	.sign(div_sign), .mantissa_7(div_out), .exponent_out(exp_div_out));	
+	   .clk(clk), .rst(rst), .enable(div_enable), .opa(opa_reg), .opb(opb_reg),
+	   .sign(div_sign), .mantissa_7(div_out), .exponent_out(exp_div_out));	
 
 fpu_round u5(.clk(clk), .rst(rst), .enable(op_enable),	.round_mode(rmode_reg),
-	.sign_term(sign_round), .mantissa_term(mantissa_round), .exponent_term(exponent_round),
-	.round_out(out_round), .exponent_final(exponent_post_round));		
+	     .sign_term(sign_round), .mantissa_term(mantissa_round), .exponent_term(exponent_round),
+	     .round_out(out_round), .exponent_final(exponent_post_round));		
 	
 fpu_exceptions u6(.clk(clk), .rst(rst), .enable(op_enable), .rmode(rmode_reg),
-	.opa(adda_reg), .opb(addb_reg),
-	.in_except(out_round), .exponent_in(exponent_post_round), .exponent_mul_in(exponent_mul_post_round),
-	.mantissa_in(mantissa_round[1:0]), .fpu_op(fpu_op_reg), .out(out_except),
-	.ex_enable(except_enable), .underflow(underflow_0), .overflow(overflow_0),
-	.inexact(inexact_0), .exception(exception_0), .invalid(invalid_0));
+	          .opa(adda_reg), .opb(addb_reg),
+	          .in_except(out_round), .exponent_in(exponent_post_round),
+	          .mantissa_in(mantissa_round[1:0]),
+                  .add(add_enable), .subtract(sub_enable), .multiply(mul_enable), .divide(div_enable),
+                  .out(out_except_0),
+	          .ex_enable(except_enable_0), .underflow(underflow_0), .overflow(overflow_0),
+	          .inexact(inexact_0), .exception(exception_0), .invalid(invalid_0));
 		
-	
 always @(posedge clk)
 begin
 	case (fpu_op_reg)
@@ -206,12 +220,13 @@ begin
 	else begin
 		add_enable <= (add_enable_0 | add_enable_1) & op_enable;
 		sub_enable <= (sub_enable_0 | sub_enable_1) & op_enable;
-		mul_enable <= fpu_op_reg[2] & op_enable;
+		mul_enable <= fpu_op_reg[2] & op_enable & (0 == &fpu_op_reg[1:0]);
 		div_enable <= (fpu_op_reg == 3'b011) & op_enable & enable_reg_3;
 			// div_enable needs to be high for two clock cycles
 		addsub_out <= add_enable ? sum_out : diff_out;
 		addsub_sign <= add_enable ? add_sign : sub_sign;
 		exp_addsub <= add_enable ? { 1'b0, exp_add_out} : { 1'b0, exp_sub_out};
+	        shift_inexact <= shift_add_inexact | shift_sub_inexact | shift_mul_inexact;
 		end
 end 
 
@@ -311,12 +326,12 @@ begin
 	else if (ready_1) begin
 		underflow <= underflow_0;
 		overflow <= overflow_0;
-		inexact <= inexact_0;
+		inexact <= shift_inexact | inexact_0;
 		exception <= exception_0;
 		invalid <= invalid_0;
 		divbyzero <= div_enable && !opb_reg;	   	 
                 case(fpu_op)
-                  0, 1, 3, 4, 5, 13, 21: out <= /*except_enable ? out_except :*/ out_round;
+                  0, 1, 3, 4, 5, 13, 17, 21: out <= except_enable_0 ? out_except_0 : out_round;
                   6: out <= mul_round;
                   18, 20, 26: out <= /*except_enable ? out_except :*/ {(~out_round[63]),out_round[62:0]};
                   23: casez (rnd_mode) /* meaning overloaded, see fpu_wrap.sv */

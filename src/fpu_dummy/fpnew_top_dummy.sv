@@ -83,7 +83,7 @@ module fpnew_top #(
           case (op_i)
             fpnew_pkg::FMADD: fpu_op = op_mod_i ? 5 : 4;
             fpnew_pkg::FNMSUB: fpu_op = op_mod_i ? 4 : 13;
-            fpnew_pkg::ADD: fpu_op = 0;
+            fpnew_pkg::ADD: fpu_op = op_mod_i ? 1 : 0;
             fpnew_pkg::MUL: fpu_op = 6;
             fpnew_pkg::DIV: fpu_op = 3;
             fpnew_pkg::SQRT: fpu_op = 8;

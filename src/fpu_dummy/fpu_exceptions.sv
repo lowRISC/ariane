@@ -36,33 +36,28 @@
 `timescale 1ns / 100ps
 
 module fpu_exceptions(
-input		clk,
-input		rst,
-input		enable,
-input	[1:0]	rmode,
-input	[63:0]	opa,
-input	[63:0]	opb,
-input	[63:0]	in_except,
-input	[11:0]	exponent_in,
-input	[11:0]	exponent_mul_in,
-input	[1:0]	mantissa_in,
-input	[2:0]	fpu_op,
-output reg [63:0] out,
-output reg ex_enable,
-output reg underflow,
-output reg overflow,
-output reg inexact,
-output reg exception,
-output reg invalid);
+ input             clk,
+ input             rst,
+ input             enable,
+ input [1:0]       rmode,
+ input [63:0]      opa,
+ input [63:0]      opb,
+ input [63:0]      in_except,
+ input [11:0]      exponent_in,
+ input [1:0]       mantissa_in,
+ input             add, subtract, multiply, divide,
+ output reg [63:0] out,
+ output reg ex_enable,
+ output reg underflow,
+ output reg overflow,
+ output reg inexact,
+ output reg exception,
+ output reg invalid);
    
 reg		in_et_zero;
 reg		opa_et_zero;
 reg		opb_et_zero;
 reg		input_et_zero;
-reg		add;
-reg		subtract;
-reg		multiply;
-reg		divide;
 reg		opa_QNaN;
 reg		opb_QNaN;
 reg		opa_SNaN;
@@ -125,10 +120,6 @@ begin
 		opa_et_zero <=   0;
 		opb_et_zero <=   0;
 		input_et_zero <= 0;
-		add 	<= 	0;
-		subtract <= 0;
-		multiply <= 0;
-		divide 	<= 	0;
 		opa_QNaN <= 0;
 		opb_QNaN <= 0;
 		opa_SNaN <= 0;
@@ -184,10 +175,6 @@ begin
 		opa_et_zero <= !(|opa[62:0]);
 		opb_et_zero <= !(|opb[62:0]);
 		input_et_zero <= !(|in_except[62:0]);	
-		add 	<= 	fpu_op == 3'b000;
-		subtract <= 	fpu_op == 3'b001;
-		multiply <= 	fpu_op == 3'b010;
-		divide 	<= 	fpu_op == 3'b011;
 		opa_QNaN <= (opa[62:52] == 2047) & |opa[51:0] & opa[51];
 		opb_QNaN <= (opb[62:52] == 2047) & |opb[51:0] & opb[51];
 		opa_SNaN <= (opa[62:52] == 2047) & |opa[51:0] & !opa[51];
@@ -213,7 +200,7 @@ begin
 		addsub_inf_invalid <= (add & opa_pos_inf & opb_neg_inf) | (add & opa_neg_inf & opb_pos_inf) | 
 					(subtract & opa_pos_inf & opb_pos_inf) | (subtract & opa_neg_inf & opb_neg_inf);
 		addsub_inf <= (add_inf | sub_inf) & !addsub_inf_invalid;
-		out_inf_trigger <= addsub_inf | mul_inf | div_inf | div_by_0 | (exponent_in > 2046) | (exponent_mul_in > 2046);
+	        out_inf_trigger <= addsub_inf | mul_inf | div_inf | div_by_0 | (exponent_in > 2046);
 		out_pos_inf <= out_inf_trigger & !in_except[63];
 		out_neg_inf <= out_inf_trigger & in_except[63];
 		round_nearest <= (rmode == 2'b00);
@@ -237,7 +224,7 @@ begin
 		NaN_out_trigger <= NaN_input | invalid_trigger;
 		SNaN_trigger <= invalid_trigger & !SNaN_input;
 		NaN_output_0 <= a_NaN ? { exp_2047, 1'b1, opa[50:0]} : { exp_2047, 1'b1, opb[50:0]};
-		NaN_output <= SNaN_trigger ? { exp_2047, 2'b01, opa[49:0]} : NaN_output_0;
+		NaN_output <= SNaN_trigger ? { exp_2047, 2'b10, opa[49:0]} : NaN_output_0;
 		inf_round_down <= { exp_2046, mantissa_max };
 		out_inf <= inf_round_down_trigger ? inf_round_down : { exp_2047, 52'b0 };
 		out_0 <= underflow_trigger ? { in_except[63], 63'b0 } : in_except;

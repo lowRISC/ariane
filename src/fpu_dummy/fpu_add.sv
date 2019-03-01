@@ -34,16 +34,17 @@
 
 `timescale 1ns / 100ps
 
-module fpu_add( clk, rst, enable, opa, opb, sign, sum_2, exponent_2);
-input		clk;
-input		rst;
-input		enable;
-input	[63:0]	opa, opb;
-output		sign;
-output  [55:0]	sum_2;
-output	[10:0]	exponent_2;
+module fpu_add(
+ input         clk,
+ input         rst,
+ input         enable,
+ input [63:0]  opa, opb,
+ output reg       sign,
+ output reg [55:0] sum_2,
+ output reg [10:0] exponent_2,
+ output reg    shift_inexact);
+   
 
-reg   sign;
 reg   [10:0] exponent_a;
 reg   [10:0] exponent_b;
 reg   [51:0] mantissa_a;
@@ -67,11 +68,9 @@ wire   [55:0] small_shift_2 = { 55'b0, 1'b1 };
 reg   [55:0] small_shift_3;
 reg   [55:0] sum;
 wire   sum_overflow = sum[55]; // sum[55] will be 0 if there was no carry from adding the 2 numbers
-reg   [55:0] sum_2;
 reg   [10:0] exponent;
 wire   sum_leading_one = sum_2[54]; // this is where the leading one resides, unless denorm
 reg   denorm_to_norm;
-reg   [10:0] exponent_2;
 
 always @(posedge clk) 
 	begin
@@ -118,13 +117,15 @@ always @(posedge clk)
 			large_add <= { 1'b0, !large_is_denorm, mantissa_large, 2'b0 };
 			small_add <= { 1'b0, !small_is_denorm, mantissa_small, 2'b0 };
 			small_shift <= small_add >> exponent_diff;
+                        shift_inexact <= | (small_add & ((1<<exponent_diff)-1));
 			small_shift_3 <= small_fraction_enable ? small_shift_2 : small_shift;
 			sum <= large_add + small_shift_3;
 			sum_2 <= sum_overflow ? sum >> 1 : sum;
 			exponent <= sum_overflow ? exponent_large + 1: exponent_large;
 			denorm_to_norm <= sum_leading_one & large_is_denorm;
 			exponent_2 <= denorm_to_norm ? exponent + 1 : exponent;
-		end
+		end // if (enable)
+                else shift_inexact <= 0;
 	end
 
 endmodule
