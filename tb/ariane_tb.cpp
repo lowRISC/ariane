@@ -19,8 +19,9 @@
 #include "verilator.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h"
+#ifdef DPI
 #include "Variane_testharness__Dpi.h"
-
+#endif
 #include <stdio.h>
 #include <iostream>
 #include <iomanip>
@@ -44,12 +45,14 @@ static vluint64_t main_time = 0;
 
 static const char *verilog_plusargs[] = {"jtag_rbb_enable"};
 
+#ifdef DPI
 extern dtm_t* dtm;
 extern remote_bitbang_t * jtag;
 
 void handle_sigterm(int sig) {
   dtm->stop();
 }
+#endif
 
 // Called by $time in Verilog converts to double, to match what SystemC does
 double sc_time_stamp () {
@@ -118,6 +121,9 @@ int main(int argc, char **argv) {
   char ** htif_argv = NULL;
   int verilog_plusargs_legal = 1;
 
+#ifndef DPI
+  vcdfile = fopen("verilog.dump", "w");
+#else  
   while (1) {
     static struct option long_options[] = {
       {"cycle-count", no_argument,       0, 'c' },
@@ -233,11 +239,13 @@ int main(int argc, char **argv) {
   }
 
 done_processing:
-  if (optind == argc) {
-    std::cerr << "No binary specified for emulator\n";
-    usage(argv[0]);
-    return 1;
-  }
+  if (optind == argc)
+    {
+      std::cerr << "No binary specified for emulator\n";
+      usage(argv[0]);
+      return 1;
+    }
+#endif  
   int htif_argc = 1 + argc - optind;
   htif_argv = (char **) malloc((htif_argc) * sizeof (char *));
   htif_argv[0] = argv[0];
@@ -246,10 +254,11 @@ done_processing:
   const char *vcd_file = NULL;
   Verilated::commandArgs(argc, argv);
 
+#ifdef DPI
   jtag = new remote_bitbang_t(rbb_port);
   dtm = new dtm_t(htif_argc, htif_argv);
   signal(SIGTERM, handle_sigterm);
-
+#endif
   std::unique_ptr<Variane_testharness> top(new Variane_testharness);
 
 #if VM_TRACE
@@ -279,7 +288,11 @@ done_processing:
   }
   top->rst_ni = 1;
 
-  while (!dtm->done() && !jtag->done()) {
+  while (1
+#ifdef DPI
+	 && !dtm->done() && !jtag->done()
+#endif
+	 ) {
     top->clk_i = 0;
     top->eval();
 #if VM_TRACE
@@ -308,6 +321,7 @@ done_processing:
     fclose(vcdfile);
 #endif
 
+#ifdef DPI
   if (dtm->exit_code()) {
     fprintf(stderr, "%s *** FAILED *** (code = %d) after %ld cycles\n", htif_argv[1], dtm->exit_code(), main_time);
     ret = dtm->exit_code();
@@ -320,7 +334,8 @@ done_processing:
 
   if (dtm) delete dtm;
   if (jtag) delete jtag;
-
+#endif
+  
   std::clock_t c_end = std::clock();
   auto t_end = std::chrono::high_resolution_clock::now();
 

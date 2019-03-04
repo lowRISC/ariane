@@ -416,7 +416,8 @@ module ariane_testharness #(
 
     sram #(
         .DATA_WIDTH ( AXI_DATA_WIDTH ),
-        .NUM_WORDS  ( NUM_WORDS      )
+        .NUM_WORDS  ( NUM_WORDS      ),
+        .SIM_INIT   ( 4 ) // use readmemh
     ) i_sram (
         .clk_i      ( clk_i                                                                       ),
         .rst_ni     ( rst_ni                                                                      ),

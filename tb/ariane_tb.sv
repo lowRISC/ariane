@@ -49,8 +49,6 @@ module ariane_tb;
 
     logic [31:0] exit_o;
 
-    string binary = "";
-
     ariane_testharness #(
         .NUM_WORDS         ( NUM_WORDS ),
         .InclSimDTM        ( 1'b1      ),
@@ -102,67 +100,6 @@ module ariane_tb;
             end
 `endif
             $finish();
-        end
-    end
-
-    // for faster simulation we can directly preload the ELF
-    // Note that we are loosing the capabilities to use risc-fesvr though
-    initial begin
-        automatic logic [7:0][7:0] mem_row, prev_mem_row;
-        longint address, len;
-        byte buffer[];
-`ifdef VCS
-        @(posedge rst_ni)
-        if ($value$plusargs("PRELOAD=%s", binary))
-          $display("+PRELOAD=%s", binary);
-`else
-        void'(uvcl.get_arg_value("+PRELOAD=", binary));
-`endif
-        if (binary != "") begin
-`ifdef VCS
-           typedef enum {maxsiz=1048576} max_t;
-           logic [63:0] tmp [maxsiz-1:0];
-           $display("Loading .. %s", binary);
-           $readmemh(binary, tmp);
-           len = maxsiz;
-           while (1'bx === ^tmp[--len])
-             ;
-           $display("words detected: %d", len);
-           for (int i = 0; i <= len; i++)
-             begin
-                mem_row = tmp[i];
-                if (1'bx !== ^mem_row)
-                  begin
-                     if (mem_row || (mem_row !== prev_mem_row))
-                       $display("mem[%d] = %x", i, mem_row);
-                     prev_mem_row = mem_row;
-                     `MAIN_MEM(i) = mem_row;
-                  end
-             end
-`else           
-            `uvm_info( "Core Test", $sformatf("Preloading ELF: %s", binary), UVM_LOW)
-
-            void'(read_elf(binary));
-            // wait with preloading, otherwise randomization will overwrite the existing value
-            wait(rst_ni);
-
-            // while there are more sections to process
-            while (get_section(address, len)) begin
-                `uvm_info( "Core Test", $sformatf("Loading Address: %x, Length: %x", address, len), UVM_LOW)
-                buffer = new [len];
-                void'(read_section(address, buffer));
-                // preload memories
-                // 64-bit
-                for (int i = 0; i < buffer.size()/8; i++) begin
-                    mem_row = '0;
-                    for (int j = 0; j < 8; j++) begin
-                        mem_row[j] = buffer[i*8 + j];
-                    end
-
-                    `MAIN_MEM((address[28:0] >> 3) + i) = mem_row;
-                end
-            end
-`endif               
         end
     end
 

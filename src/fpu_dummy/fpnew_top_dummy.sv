@@ -173,6 +173,8 @@ module fpnew_top #(
    
    assign busy_o = !ready;
 
+`ifndef VERILATOR
+   
    wire trig_in_ack;
    
    xlnx_ila_4 fpu_ila (
@@ -197,4 +199,6 @@ module fpnew_top #(
         .probe15(dst_fmt)
 );
 
+`endif
+   
 endmodule

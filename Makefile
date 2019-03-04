@@ -69,7 +69,7 @@ dpi_hdr := $(wildcard tb/dpi/*.h)
 dpi_hdr := $(addprefix $(root-dir), $(dpi_hdr))
 CFLAGS := -I$(QUESTASIM_HOME)/include         \
           -I$(RISCV)/include  \
-          -std=c++11 -I../tb/dpi
+          -std=c++11 -I../tb/dpi -g
 
 # this list contains the standalone components
 src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
@@ -315,13 +315,12 @@ verilate_command := $(verilator)                                                
                     -Wno-UNUSED                                                            \
                     -Wno-style                                                             \
                     -Wno-lint                                                              \
-                    $(if $(DEBUG),--trace-structs --trace,)                                \
+                    --trace --trace-structs                                                \
                     -LDFLAGS "-L$(RISCV)/lib -Wl,-rpath,$(RISCV)/lib -lfesvr"              \
                     -CFLAGS "$(CFLAGS)" -Wall --cc  --vpi                                  \
                     $(list_incdir) --top-module ariane_testharness                         \
                     --Mdir $(ver-library) -O3                                              \
-                    --exe tb/ariane_tb.cpp tb/dpi/SimDTM.cc tb/dpi/SimJTAG.cc              \
-                          tb/dpi/remote_bitbang.cc tb/dpi/msim_helper.cc
+                    --exe tb/ariane_tb.cpp
 
 # User Verilator, at some point in the future this will be auto-generated
 verilate:

@@ -75,7 +75,9 @@ reg [63:0]	opa_reg, opb_reg, opc_reg, sqrt0;
 reg [2:0]	fpu_op_reg;
 reg [1:0]	rmode_reg;
 reg			enable_reg;
-reg			enable_reg_1; // high for one clock cycle
+reg			enable_strt;
+reg			enable_reg_0; // high for one clock cycle (first time)
+reg			enable_reg_1; // high for one clock cycle (first and any iterations)
 reg			enable_reg_2; // high for one clock cycle		 
 reg			enable_reg_3; // high for two clock cycles
 reg			op_enable;	  
@@ -119,16 +121,13 @@ wire	div_sign;
 wire	except_enable_0, except_enable_1;
 reg	addsub_sign;
 reg	sign_round;
-reg     shift_inexact;
-reg [51:0] mantissa_a;   
-reg   [10:0] exponent_a;
-reg [8:0] look_sq;
+reg     shift_inexact, prev_inexact, invalid_sqrt;
 reg [7:0] mantissa_sq;
    
-wire [63:0] out_round, mul_round;
-wire	[63:0]	out_except_0, out_except_1;
-wire         shift_add_inexact,   shift_sub_inexact,   shift_mul_inexact;
-wire      underflow_1, overflow_1, inexact_1, exception_1, invalid_1;
+   wire [63:0] out_round, mul_round;
+   wire [63:0] out_except_0, out_except_1;
+   wire        shift_add_inexact, shift_sub_inexact, shift_mul_inexact, shift_div_inexact;
+   wire        underflow_1, overflow_1, inexact_1, exception_1, invalid_1;
    
    function [51:44] sqlookup;
       input [8:0] idx;
@@ -684,7 +683,8 @@ fpu_exceptions u3b(.clk(clk), .rst(rst), .enable(mul_enable), .rmode(rmode_reg),
 		
 fpu_div u4(
 	   .clk(clk), .rst(rst), .enable(div_enable), .opa(diva_reg), .opb(divb_reg),
-	   .sign(div_sign), .mantissa_7(div_out), .exponent_out(exp_div_out));	
+	   .sign(div_sign), .mantissa_7(div_out), .exponent_out(exp_div_out),
+	   .shift_inexact(shift_div_inexact));	
 
 fpu_round u5(.clk(clk), .rst(rst), .enable(op_enable),	.round_mode(rmode_reg),
 	     .sign_term(sign_round), .mantissa_term(mantissa_round), .exponent_term(exponent_round),
@@ -703,24 +703,18 @@ fpu_exceptions u6(.clk(clk), .rst(rst), .enable(op_enable), .rmode(rmode_reg),
 always @(posedge clk)
 begin
 	case (fpu_op_reg)
-	3'b011:		mantissa_round <= fpu_op[3] ? addsub_out : div_out;
-	default:	mantissa_round <= addsub_out;
-	endcase
-end
-
-always @(posedge clk)
-begin
-	case (fpu_op_reg)
-	3'b011:		exponent_round <= fpu_op[3] ? exp_addsub-1 : exp_div_out;
-	default:	exponent_round <= exp_addsub;
-	endcase
-end
-
-always @(posedge clk)
-begin
-	case (fpu_op_reg)
-	3'b011:		sign_round <= fpu_op[3] ? 1'b0 : div_sign;
-	default:	sign_round <= addsub_sign;
+	3'b011:
+	  begin
+	     mantissa_round <= fpu_op[3] ? addsub_out : div_out;
+	     exponent_round <= fpu_op[3] ? exp_addsub-1 : exp_div_out;
+	     sign_round <= fpu_op[3] ? 1'b0 : div_sign;
+	  end
+	default:
+	  begin
+	     mantissa_round <= addsub_out;
+	     exponent_round <= exp_addsub;
+	     sign_round <= addsub_sign;
+	  end
 	endcase
 end
 
@@ -732,7 +726,7 @@ begin
 	3'b011:		count_cycles <= fpu_op[3] ? 92 : 71;
 	3'b10?:		count_cycles <= 45; // multiply accum
 	3'b110:		count_cycles <= 24;
-	3'b111:		count_cycles <= 2; 
+	3'b111:		count_cycles <= 10; 
 	default:	count_cycles <= 100;
 	endcase
 end
@@ -757,81 +751,8 @@ begin
 		addsub_out <= add_enable ? sum_out : diff_out;
 		addsub_sign <= add_enable ? add_sign : sub_sign;
 		exp_addsub <= add_enable ? { 1'b0, exp_add_out} : { 1'b0, exp_sub_out};
-	        shift_inexact <= shift_add_inexact | shift_sub_inexact | shift_mul_inexact;
+	        shift_inexact <= shift_add_inexact | shift_sub_inexact | shift_mul_inexact | shift_div_inexact;
 		end
-end 
-
-always @(posedge clk)
-begin
-	if (rst) begin
-		enable_reg <= 0;
-		enable_reg_1 <= 0;
-		enable_reg_2 <= 0;	   
-		enable_reg_3 <= 0;
-		end
-	else begin
-		enable_reg <= enable;
-		enable_reg_1 <= enable & !enable_reg;
-		enable_reg_2 <= enable_reg_1;  
-		enable_reg_3 <= enable_reg_1 | enable_reg_2;
-		end
-end 
-		
-always @(posedge clk) 
-  begin
-     if (rst)
-       begin
-	  opa_reg <= 0;
-	  opb_reg <= 0;
-	  opc_reg <= 0;
-	  fpu_op_reg <= 0; 
-	  rmode_reg <= 0;
-	  op_enable <= 0;
-	  sqrt0 <= 0;
-          exponent_a = 0;
-          mantissa_a = 0;
-          look_sq = 0;
-          mantissa_sq = 0;
-	  adda_reg <= 0;
-	  addb_reg <= 0;
-	  diva_reg <= 0;
-	  divb_reg <= 0;
-       end
-     else
-       begin
-          casez(fpu_op)
-            5'b00011: begin diva_reg <= opa; divb_reg <= opb; end
-            5'b01011: begin diva_reg <= opa; divb_reg <= sqrt0; adda_reg <= mul_round; addb_reg <= sqrt0; end
-            5'b10101: begin adda_reg <= mul_round; addb_reg <= opc; end
-            5'b??0??: begin adda_reg <= opb; addb_reg <= opc; end
-            5'b??1??: begin adda_reg <= opc; addb_reg <= mul_round; end
-            endcase
-          if (enable_reg_1)
-            begin
-	       opa_reg <= opa;
-	       opb_reg <= opb;
-	       opc_reg <= opc;
-	       fpu_op_reg <= fpu_op;
-               exponent_a = opa[62:52];
-               mantissa_a = opa[51:0];
-               look_sq = {~exponent_a[0],mantissa_a[51:44]};
-               mantissa_sq = sqlookup(look_sq);
-               sqrt0 <= {exponent_a[10:1]+511,mantissa_sq,44'b0};
-               case (rnd_mode)
-                 fpnew_pkg::RNE: rmode_reg = 0;
-                 fpnew_pkg::RTZ: rmode_reg = 1;
-                 fpnew_pkg::RDN: rmode_reg = 3;
-                 fpnew_pkg::RUP: rmode_reg = 2;
-                 fpnew_pkg::RMM: rmode_reg = 0;
-                 fpnew_pkg::DYN: rmode_reg = 0;
-               endcase; // case (rnd_mode)
-	       op_enable <= 1;
-	    end
-       end
-  end
-
-always @(posedge clk)
-begin
 end 
 
 always @(posedge clk)
@@ -849,9 +770,64 @@ begin
 	     divbyzero <= 0;	   	 
 	     out <= 0;
              count_ready <= 0;
+	     enable_reg <= 0;
+	     enable_strt <= 0;
+	     enable_reg_0 <= 0;
+	     enable_reg_1 <= 0;
+	     enable_reg_2 <= 0;	   
+	     enable_reg_3 <= 0;
+	     opa_reg <= 0;
+	     opb_reg <= 0;
+	     opc_reg <= 0;
+	     fpu_op_reg <= 0; 
+	     rmode_reg <= 0;
+	     op_enable <= 0;
+	     sqrt0 <= 0;
+	     mantissa_sq <= 0;
+	     adda_reg <= 0;
+	     addb_reg <= 0;
+	     diva_reg <= 0;
+	     divb_reg <= 0;
+	     prev_inexact <= 0;
+	     invalid_sqrt <= 0;
 	  end
 	else
           begin
+	     casez(fpu_op)
+	       5'b00011: begin diva_reg <= opa; divb_reg <= opb; end
+	       5'b01011: begin diva_reg <= opa; divb_reg <= sqrt0; adda_reg <= mul_round; addb_reg <= sqrt0; end
+	       5'b10101: begin adda_reg <= mul_round; addb_reg <= opc; end
+	       5'b10111: begin adda_reg <= opa; addb_reg <= opb; end
+	       5'b??0??: begin adda_reg <= opb; addb_reg <= opc; end
+	       5'b??1??: begin adda_reg <= opc; addb_reg <= mul_round; end
+	       endcase
+	     if (enable_reg_0)
+	       begin
+		  opa_reg <= opa;
+		  opb_reg <= opb;
+		  opc_reg <= opc;
+		  fpu_op_reg <= fpu_op;
+		  prev_inexact <= 0;
+		  if (fpu_op != 23)
+		    invalid_sqrt <= 0;
+		  sqrt0 <= opa[63] ? 64'h7ff8000000000000: {opa[62:53]+511,sqlookup({~opa[52],opa[51:44]}),44'b0};
+		  case (rnd_mode)
+		    fpnew_pkg::RNE: rmode_reg <= 0;
+		    fpnew_pkg::RTZ: rmode_reg <= 1;
+		    fpnew_pkg::RDN: rmode_reg <= 3;
+		    fpnew_pkg::RUP: rmode_reg <= 2;
+		    fpnew_pkg::RMM: rmode_reg <= 0;
+		    fpnew_pkg::DYN: rmode_reg <= 0;
+		    default: rmode_reg <= 0;
+		  endcase; // case (rnd_mode)
+		  op_enable <= 1;
+	       end
+	     enable_reg <= enable;
+	     enable_strt <= enable;
+	     enable_reg_0 <= enable & !enable_strt;
+	     enable_reg_1 <= enable & !enable_reg;
+	     enable_reg_2 <= enable_reg_1;  
+	     enable_reg_3 <= enable_reg_1 | enable_reg_2;
 	     if (enable_reg_1)
                begin
 		  ready_0 <= 0;
@@ -868,10 +844,20 @@ begin
                        if (fpu_op == 11)
                          begin
                             sqrt0 <= out_round;
-                            if (sqrt0 == out_round)
-                              ready_0 <= 1;
+                            if ((sqrt0 == out_round) || opa[63])
+			      begin
+				 ready_0 <= 1;
+				 invalid_sqrt <= opa[63];
+			      end
                             else
-                              count_ready <= 0;
+			      begin
+				 prev_inexact <= shift_div_inexact;
+				 count_ready <= 0;
+				 enable_reg <= 0;
+				 enable_reg_1 <= 0;
+				 enable_reg_2 <= 0;	   
+				 enable_reg_3 <= 0;
+			      end
                          end
                        else
 		         ready_0 <= 1;
@@ -882,9 +868,9 @@ begin
              if (ready_1) begin
 		underflow <= underflow_0;
 		overflow <= overflow_0;
-		inexact <= shift_inexact | inexact_0;
+		inexact <= (shift_inexact | inexact_0 | prev_inexact) & ~invalid_sqrt;
 		exception <= exception_0;
-		invalid <= invalid_0;
+		invalid <= invalid_0 | invalid_sqrt;
 		divbyzero <= div_enable && !opb_reg;	   	 
                 case(fpu_op)
                   0, 1, 3, 4, 5, 11, 13, 17, 21: out <= except_enable_0 ? out_except_0 : out_round;
