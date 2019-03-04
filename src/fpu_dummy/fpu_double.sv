@@ -128,7 +128,8 @@ reg [7:0] mantissa_sq;
 wire [63:0] out_round, mul_round;
 wire	[63:0]	out_except_0, out_except_1;
 wire         shift_add_inexact,   shift_sub_inexact,   shift_mul_inexact;
-
+wire      underflow_1, overflow_1, inexact_1, exception_1, invalid_1;
+   
    function [51:44] sqlookup;
       input [8:0] idx;
 
