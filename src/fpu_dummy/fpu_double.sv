@@ -689,7 +689,7 @@ fpu_div u4(
 fpu_round u5(.clk(clk), .rst(rst), .enable(op_enable),	.round_mode(rmode_reg),
 	     .sign_term(sign_round), .mantissa_term(mantissa_round), .exponent_term(exponent_round),
 	     .round_out(out_round), .exponent_final(exponent_post_round));		
-	
+
 fpu_exceptions u6(.clk(clk), .rst(rst), .enable(op_enable), .rmode(rmode_reg),
 	          .opa(adda_reg), .opb(addb_reg),
 	          .in_except(out_round), .exponent_in(exponent_post_round),
@@ -702,13 +702,19 @@ fpu_exceptions u6(.clk(clk), .rst(rst), .enable(op_enable), .rmode(rmode_reg),
 		
 always @(posedge clk)
 begin
-	case (fpu_op_reg)
-	3'b011:
+	casez (fpu_op)
+	5'b??011:
 	  begin
 	     mantissa_round <= fpu_op[3] ? addsub_out : div_out;
 	     exponent_round <= fpu_op[3] ? exp_addsub-1 : exp_div_out;
 	     sign_round <= fpu_op[3] ? 1'b0 : div_sign;
 	  end
+	5'b10101:
+	  begin
+	     mantissa_round <= diff_out;
+	     exponent_round <= { 1'b0, exp_sub_out};
+	     sign_round <= addsub_sign;
+	  end	  
 	default:
 	  begin
 	     mantissa_round <= addsub_out;
@@ -873,9 +879,9 @@ begin
 		invalid <= invalid_0 | invalid_sqrt;
 		divbyzero <= div_enable && !opb_reg;	   	 
                 case(fpu_op)
-                  0, 1, 3, 4, 5, 11, 13, 17, 21: out <= except_enable_0 ? out_except_0 : out_round;
+                  0, 1, 3, 4, 5, 11, 17, 21: out <= except_enable_0 ? out_except_0 : out_round;
                   6: out <= mul_round;
-                  18, 20, 26: out <= /*except_enable ? out_except :*/ {(~out_round[63]),out_round[62:0]};
+                  13, 18, 20, 26: out <= /*except_enable ? out_except :*/ {(~out_round[63]),out_round[62:0]};
                   23: casez (rnd_mode) /* meaning overloaded, see fpu_wrap.sv */
                         3'b00?: out <= {opb[63],opa[62:0]};
                         3'b011: out <= opa;
