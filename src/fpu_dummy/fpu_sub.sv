@@ -42,6 +42,7 @@ module fpu_sub(
  input             enable,
  input [63:0]      opa, opb, 
  input [2:0]       fpu_op,
+ input             i2d,
  output reg        sign,
  output reg [55:0] diff_2,
  output reg [10:0] exponent_2,
@@ -143,16 +144,15 @@ always @(posedge clk)
 		subtra_shift_3 <= subtra_fraction_enable ? subtra_shift_2 : subtra_shift;
 		diff_shift_2 <= diff_shift;
 		diff <= minuend - subtra_shift_3;
-		diffshift_gt_exponent <= diff_shift_2 > exponent_large;
+		diffshift_gt_exponent <= (diff_shift_2 > exponent_large) && !i2d;
 		diffshift_et_55 <= diff_shift_2 == 55; 
 		diff_1 <= diffshift_gt_exponent ? diff << exponent_large : diff << diff_shift_2;
-		exponent <= diffshift_gt_exponent ? 0 : (exponent_large - diff_shift_2);
+		exponent <= diffshift_gt_exponent ? 0 : ((i2d ? 1075 : exponent_large) - diff_shift_2);
 		exponent_2 <= diffshift_et_55 ? 0 : exponent;
 		diff_2 <= in_norm_out_denorm ? { 1'b0, diff_1 >> 1} : {1'b0, diff_1};
 		end // if (enable)
                 else shift_inexact <= 0;
 	end
-
 	
 always @(diff)
    casez(diff)	

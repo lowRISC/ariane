@@ -58,6 +58,7 @@ module fpu_double(
  input             enable,
  input [2:0]       rnd_mode,
  input [4:0]       fpu_op,
+ input [1:0]       int_fmt,
  input [2:0]       src_fmt,
  input [2:0]       dst_fmt,
  input [63:0]      opa, opb, opc,
@@ -122,13 +123,14 @@ wire	div_sign;
 wire	except_enable_0, except_enable_1;
 reg	addsub_sign;
 reg	sign_round;
-reg     shift_inexact, prev_inexact, invalid_sqrt;
+reg     shift_inexact, prev_inexact, invalid_sqrt, i2d;
 reg [7:0] mantissa_sq;
    
-   wire [63:0] out_round, mul_round;
+   wire [63:0] out_round, mul_round, unsigned_opa;
    wire [63:0] out_except_0, out_except_1;
    wire        shift_add_inexact, shift_sub_inexact, shift_mul_inexact, shift_div_inexact;
    wire        underflow_1, overflow_1, inexact_1, exception_1, invalid_1;
+   wire [6:0]  norm_shift;
    
    function [51:44] sqlookup;
       input [8:0] idx;
@@ -659,7 +661,7 @@ fpu_add u1(
 
 fpu_sub u2(
 	   .clk(clk), .rst(rst), .enable(sub_enable), .opa(adda_reg), .opb(addb_reg),
-	   .fpu_op(fpu_op_reg), .sign(sub_sign), .diff_2(diff_out),
+	   .fpu_op(fpu_op_reg), .i2d(i2d), .sign(sub_sign), .diff_2(diff_out),
 	   .exponent_2(exp_sub_out), .shift_inexact(shift_sub_inexact));
 
 fpu_mul u3(
@@ -700,7 +702,9 @@ fpu_exceptions u6(.clk(clk), .rst(rst), .enable(op_enable), .rmode(rmode_reg),
                   .out(out_except_0),
 	          .ex_enable(except_enable_0), .underflow(underflow_0), .overflow(overflow_0),
 	          .inexact(inexact_0), .exception(exception_0), .invalid(invalid_0));
-		
+
+fpu_normalise u7 (.clk, .int_in(opa), .fpu_op, .int_fmt, .norm_shift, .unsigned_opa);
+
 always @(posedge clk)
 begin
 	casez (fpu_op)
@@ -716,6 +720,17 @@ begin
 	     exponent_round <= { 1'b0, exp_sub_out};
 	     sign_round <= addsub_sign;
 	  end	  
+	5'b?0010:
+	  begin
+             casez(norm_shift)
+               0: mantissa_round <= diff_out;
+               1: mantissa_round <= diff_out + {unsigned_opa[0],2'b0};
+               2: mantissa_round <= diff_out + {unsigned_opa[1:0],1'b0};
+               default: mantissa_round <= diff_out + unsigned_opa[norm_shift-3 +: 3];
+             endcase
+	     exponent_round <= exp_sub_out + norm_shift;
+	     sign_round <= opa[63] && !fpu_op[4];
+	  end
 	default:
 	  begin
 	     mantissa_round <= addsub_out;
@@ -798,11 +813,13 @@ begin
 	     divb_reg <= 0;
 	     prev_inexact <= 0;
 	     invalid_sqrt <= 0;
+             i2d <= 0;
 	  end
 	else
           begin
+             i2d <= 0;
 	     casez(fpu_op)
-	       5'b00010: begin adda_reg <= opa[51:0]; addb_reg <= 64'b0; end /* integer to double */
+	       5'b?0010: begin adda_reg <= unsigned_opa >> norm_shift; addb_reg <= 64'b0; i2d <= 1; end /* signed/unsigned integer to double */
 	       5'b00011: begin diva_reg <= opa; divb_reg <= opb; end
 	       5'b01011: begin diva_reg <= opa; divb_reg <= sqrt0; adda_reg <= mul_round; addb_reg <= sqrt0; end
 	       5'b10101: begin adda_reg <= mul_round; addb_reg <= opc; end
@@ -875,23 +892,37 @@ begin
 		  ready <= ready_1;  
 	       end
              if (ready_1) begin
-		underflow <= underflow_0;
-		overflow <= overflow_0;
-		inexact <= (shift_inexact | inexact_0 | prev_inexact) & ~invalid_sqrt;
-		exception <= exception_0;
-		invalid <= invalid_0 | invalid_sqrt;
-		divbyzero <= div_enable && !opb_reg;	   	 
+                casez(fpu_op)
+                    9, 23:
+                    {underflow,overflow,inexact,exception,invalid,divbyzero} <= 0;
+                  default:
+                    begin
+		       underflow <= underflow_0;
+		       overflow <= overflow_0;
+		       inexact <= (shift_inexact | inexact_0 | prev_inexact) & ~invalid_sqrt;
+		       exception <= exception_0;
+		       invalid <= invalid_0 | invalid_sqrt;
+		       divbyzero <= div_enable && !opb_reg;
+                    end
+                endcase
                 case(fpu_op)
-                  0, 1, 3, 4, 5, 11, 17, 21: out <= except_enable_0 ? out_except_0 : out_round;
+                  0, 1, 2, 3, 4, 5, 11, 17, 18, 21: out <= except_enable_0 ? out_except_0 : out_round;
                   6: out <= mul_round;
                   13, 18, 20, 26: out <= /*except_enable ? out_except :*/ {(~out_round[63]),out_round[62:0]};
-                  23: casez (rnd_mode) /* meaning overloaded, see fpu_wrap.sv */
+                  7, 23: casez (rnd_mode) /* meaning overloaded, see fpu_wrap.sv */
                         3'b00?: out <= {opb[63],opa[62:0]};
                         3'b011: out <= opa;
                         default: out <= 'HDEADBEEF;
-                      endcase // casez ({dst_fmt,rmode_reg})
+                      endcase
+                  9: casez({src_fmt,dst_fmt})
+                       6'b001000: /* fcvt.s.d */
+                         out <= opa_reg;
+                       6'b000001: /* fcvt.d.s */
+                         out <= opa_reg;
+                       default: out <= 'HDEADBEEF;
+                     endcase
                   default: out <= 'HDEADBEEF;
-                  endcase
+                endcase
 	     end // if (ready_1)
           end
 end 

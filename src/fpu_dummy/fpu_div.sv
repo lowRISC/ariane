@@ -63,7 +63,7 @@ reg [5:0] 	divisor_shift;
 reg [5:0] 	divisor_shift_2;
 reg [5:0] 	count_out;
 
-wire   sign = opa[63] ^ opb[63];
+assign sign = opa[63] ^ opb[63];
 reg [51:0] mantissa_a;
 reg [51:0] mantissa_b;
 wire [10:0] expon_a = opa[62:52];
@@ -125,7 +125,7 @@ wire [55:0] remainder_5 = (expon_final_4 == 1) ? remainder_2 : remainder_4;
 wire [55:0] remainder_6 = expon_final_4_et0 ? remainder_1 : remainder_5;
 wire	m_norm = |expon_final_5;
 wire	rem_lsb = |remainder_6[54:0];	
-wire [55:0] mantissa_7 = { 1'b0, m_norm, mantissa_6, remainder_6[55], rem_lsb };
+assign mantissa_7 = { 1'b0, m_norm, mantissa_6, remainder_6[55], rem_lsb };
 
 always @ (posedge clk)
 begin
@@ -226,6 +226,7 @@ always @ (posedge clk)
 	  dividend_a_shifted <= 0;
 	  divisor_b_shifted <=  0;
 	  mantissa_1 <= 0;
+          shift_inexact <= 0;
        end
      else if (enable_reg_2)
        begin

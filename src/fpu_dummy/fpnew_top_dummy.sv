@@ -55,6 +55,7 @@ module fpnew_top #(
 
    logic          enable;
    logic [2:0]    rnd_mode;
+   logic [1:0]    int_fmt;
    logic [2:0]    src_fmt, dst_fmt;
    logic [4:0]    fpu_op;
    logic [63:0]   opa, opb, opc;
@@ -62,42 +63,44 @@ module fpnew_top #(
    always @(posedge clk_i)
      if (!rst_ni)
        begin
-          opa = 0;
-          opb = 0;
-          opc = 0;
-          src_fmt = 0;
-          dst_fmt = 0;
-          rnd_mode = 0;
-          fpu_op = 0;
-          tag_o = 0;
+          opa <= 0;
+          opb <= 0;
+          opc <= 0;
+          int_fmt <= 0;
+          src_fmt <= 0;
+          dst_fmt <= 0;
+          rnd_mode <= 0;
+          fpu_op <= 0;
+          tag_o <= 0;
        end
      else if (in_valid_i)
        begin
-          opa = operands_i[0];
-          opb = operands_i[1];
-          opc = operands_i[2];
-          src_fmt = src_fmt_i;
-          dst_fmt = dst_fmt_i;
-          rnd_mode = rnd_mode_i;
-          tag_o = tag_i;
+          opa <= operands_i[0];
+          opb <= operands_i[1];
+          opc <= operands_i[2];
+          int_fmt <= int_fmt_i;
+          src_fmt <= src_fmt_i;
+          dst_fmt <= dst_fmt_i;
+          rnd_mode <= rnd_mode_i;
+          tag_o <= tag_i;
           case (op_i)
-            fpnew_pkg::FMADD: fpu_op = op_mod_i ? 5 : 4;
-            fpnew_pkg::FNMSUB: fpu_op = op_mod_i ? 4 : 13;
-            fpnew_pkg::ADD: fpu_op = op_mod_i ? 1 : 0;
-            fpnew_pkg::MUL: fpu_op = 6;
-            fpnew_pkg::DIV: fpu_op = 3;
-            fpnew_pkg::SQRT: fpu_op = 11;
-            fpnew_pkg::SGNJ: fpu_op = 7;
-            fpnew_pkg::MINMAX: fpu_op = 6;
-            fpnew_pkg::CMP: fpu_op = 15;
-            fpnew_pkg::CLASSIFY: fpu_op = 8;
-            fpnew_pkg::F2F: fpu_op = 9;
-            fpnew_pkg::F2I: fpu_op = 15;
-            fpnew_pkg::I2F: fpu_op = 2;
-            fpnew_pkg::CPKAB: fpu_op = 13;
-            fpnew_pkg::CPKCD: fpu_op = 14;
+            fpnew_pkg::FMADD: fpu_op <= op_mod_i ? 5 : 4;
+            fpnew_pkg::FNMSUB: fpu_op <= op_mod_i ? 4 : 13;
+            fpnew_pkg::ADD: fpu_op <= op_mod_i ? 1 : 0;
+            fpnew_pkg::MUL: fpu_op <= 6;
+            fpnew_pkg::DIV: fpu_op <= 3;
+            fpnew_pkg::SQRT: fpu_op <= 11;
+            fpnew_pkg::SGNJ: fpu_op <= 7;
+            fpnew_pkg::MINMAX: fpu_op <= 6;
+            fpnew_pkg::CMP: fpu_op <= 15;
+            fpnew_pkg::CLASSIFY: fpu_op <= 8;
+            fpnew_pkg::F2F: fpu_op <= 9;
+            fpnew_pkg::F2I: fpu_op <= 10;
+            fpnew_pkg::I2F: fpu_op <= 2;
+            fpnew_pkg::CPKAB: fpu_op <= 13;
+            fpnew_pkg::CPKCD: fpu_op <= 14;
           endcase // case (op_i)
-          fpu_op[4] = op_mod_i;
+          fpu_op[4] <= op_mod_i;
        end
    
    logic         ready0;
@@ -117,6 +120,7 @@ module fpnew_top #(
             .enable,
             .rnd_mode,
             .fpu_op,
+            .int_fmt,
             .src_fmt,
             .dst_fmt,
             .opa,
