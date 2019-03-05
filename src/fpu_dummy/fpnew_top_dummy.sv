@@ -93,7 +93,7 @@ module fpnew_top #(
             fpnew_pkg::CLASSIFY: fpu_op = 8;
             fpnew_pkg::F2F: fpu_op = 9;
             fpnew_pkg::F2I: fpu_op = 15;
-            fpnew_pkg::I2F: fpu_op = 12;
+            fpnew_pkg::I2F: fpu_op = 2;
             fpnew_pkg::CPKAB: fpu_op = 13;
             fpnew_pkg::CPKCD: fpu_op = 14;
           endcase // case (op_i)

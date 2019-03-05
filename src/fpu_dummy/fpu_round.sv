@@ -35,17 +35,16 @@
 
 `timescale 1ns / 100ps
 
-module fpu_round( clk, rst, enable, round_mode, sign_term, 
-mantissa_term, exponent_term, round_out, exponent_final);
-input		clk;
-input		rst;
-input		enable;
-input	[1:0]	round_mode;
-input		sign_term;
-input	[55:0]	mantissa_term;
-input	[11:0]	exponent_term;
-output	[63:0]	round_out;
-output	[11:0]	exponent_final;
+module fpu_round(
+ input 		   clk,
+ input 		   rst,
+ input 		   enable,
+ input [1:0] 	   round_mode,
+ input 		   sign_term,
+ input [55:0] 	   mantissa_term,
+ input [11:0] 	   exponent_term,
+ output reg [63:0] round_out,
+ output reg [11:0] exponent_final);
 
 wire	[55:0] rounding_amount = { 53'b0, 1'b1, 2'b0};
 wire	round_nearest = (round_mode == 2'b00);
@@ -67,8 +66,6 @@ wire	sum_round_overflow = sum_round[55];
 reg	  [55:0] sum_round_2;
 reg   [11:0] exponent_round;
 reg	  [55:0] sum_final; 
-reg   [11:0] exponent_final;
-reg   [63:0] round_out;
 
 always @(posedge clk) 
 	begin

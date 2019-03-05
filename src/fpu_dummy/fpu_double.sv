@@ -38,6 +38,7 @@
 ========================
 0 = add
 1 = sub
+2 = convert integer to float
 3 = div
 4 = mul(add)
 5 = mul(sub)
@@ -729,6 +730,7 @@ begin
 	case (fpu_op_reg)
 	3'b000:		count_cycles <= 20;
 	3'b001:		count_cycles <= 21;
+	3'b010:		count_cycles <= 21; // integer to double
 	3'b011:		count_cycles <= fpu_op[3] ? 92 : 71;
 	3'b10?:		count_cycles <= 45; // multiply accum
 	3'b110:		count_cycles <= 24;
@@ -750,7 +752,7 @@ begin
 		end
 	else begin
 		add_enable <= (add_enable_0 | add_enable_1 | count_ready >= 72) & op_enable;
-		sub_enable <= (sub_enable_0 | sub_enable_1) & op_enable;
+		sub_enable <= (sub_enable_0 | sub_enable_1 | (fpu_op_reg == 3'b010)) & op_enable;
 		mul_enable <= fpu_op_reg[2] & op_enable & (0 == &fpu_op_reg[1:0]);
 		div_enable <= (fpu_op_reg == 3'b011) & op_enable & enable_reg_3;
 			// div_enable needs to be high for two clock cycles
@@ -800,6 +802,7 @@ begin
 	else
           begin
 	     casez(fpu_op)
+	       5'b00010: begin adda_reg <= opa[51:0]; addb_reg <= 64'b0; end /* integer to double */
 	       5'b00011: begin diva_reg <= opa; divb_reg <= opb; end
 	       5'b01011: begin diva_reg <= opa; divb_reg <= sqrt0; adda_reg <= mul_round; addb_reg <= sqrt0; end
 	       5'b10101: begin adda_reg <= mul_round; addb_reg <= opc; end
