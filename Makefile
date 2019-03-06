@@ -339,6 +339,7 @@ vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate 
 	            +incdir+src/axi_node                                                   \
 		    src/util/sram.sv                                                       \
 		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
+		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
 	            tb/ariane_tb.sv                                                        \
 	            tb/common/mock_uart.sv
 

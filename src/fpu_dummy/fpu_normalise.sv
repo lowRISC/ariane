@@ -9,7 +9,7 @@ module fpu_normalise(
 always @(posedge clk)
   begin
      casez(int_fmt)
-       2'b10: unsigned_opa <= fpu_op[4] || !int_in[31] ? int_in[31:0] : 31'HFFFFFFFF & (-int_in);
+       2'b10: unsigned_opa <= fpu_op[4] || !int_in[31] ? int_in[31:0] : 32'HFFFFFFFF & (-int_in);
        2'b11: unsigned_opa <= fpu_op[4] || !int_in[63] ? int_in : -int_in;
        default: unsigned_opa <= 'hDEADBEEF;
      endcase
