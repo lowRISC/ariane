@@ -59,50 +59,10 @@ module fpnew_top #(
    logic [2:0]    src_fmt, dst_fmt;
    logic [4:0]    fpu_op;
    logic [63:0]   opa, opb, opc;
+   TagType        tag_int;
+   fpnew_pkg::operation_e op_int;
+   logic          op_mod, guard;
 
-   always @(posedge clk_i)
-     if (!rst_ni)
-       begin
-          opa <= 0;
-          opb <= 0;
-          opc <= 0;
-          int_fmt <= 0;
-          src_fmt <= 0;
-          dst_fmt <= 0;
-          rnd_mode <= 0;
-          fpu_op <= 0;
-          tag_o <= 0;
-       end
-     else if (in_valid_i)
-       begin
-          opa <= operands_i[0];
-          opb <= operands_i[1];
-          opc <= operands_i[2];
-          int_fmt <= int_fmt_i;
-          src_fmt <= src_fmt_i;
-          dst_fmt <= dst_fmt_i;
-          rnd_mode <= rnd_mode_i;
-          tag_o <= tag_i;
-          case (op_i)
-            fpnew_pkg::FMADD: fpu_op <= op_mod_i ? 5 : 4;
-            fpnew_pkg::FNMSUB: fpu_op <= op_mod_i ? 4 : 13;
-            fpnew_pkg::ADD: fpu_op <= op_mod_i ? 1 : 0;
-            fpnew_pkg::MUL: fpu_op <= 6;
-            fpnew_pkg::DIV: fpu_op <= 3;
-            fpnew_pkg::SQRT: fpu_op <= 11;
-            fpnew_pkg::SGNJ: fpu_op <= 7;
-            fpnew_pkg::MINMAX: fpu_op <= 6;
-            fpnew_pkg::CMP: fpu_op <= 15;
-            fpnew_pkg::CLASSIFY: fpu_op <= 8;
-            fpnew_pkg::F2F: fpu_op <= 9;
-            fpnew_pkg::F2I: fpu_op <= 10;
-            fpnew_pkg::I2F: fpu_op <= 2;
-            fpnew_pkg::CPKAB: fpu_op <= 13;
-            fpnew_pkg::CPKCD: fpu_op <= 14;
-          endcase // case (op_i)
-          fpu_op[4] <= op_mod_i;
-       end
-   
    logic         ready0;
    wire          ready;
    wire          underflow;
@@ -143,40 +103,99 @@ module fpnew_top #(
    assign status_o.UF = underflow; // Underflow
    assign status_o.NX = inexact; // Inexact
 
+   localparam FIFO_DATA_WIDTH = 212;
+   
+   wire          testmode_i = 1'b0;       // test_mode to bypass clock gating
+   // status flags
+   logic         full_o;           // queue is full
+   logic         empty_o;          // queue is empty
+   // as long as the queue is not full we can push new data
+   logic [FIFO_DATA_WIDTH-1:0] data_i;           // data to push into the queue
+   logic                       push_i;           // data is valid and can be pushed to the queue
+   // as long as the queue is not empty we can pop new elements
+   logic [FIFO_DATA_WIDTH-1:0] data_o;           // output data
+   logic                       pop_i;            // pop head from queue
+   
+fifo_v2 #(
+    .FALL_THROUGH(1'b0), // fifo is in fall-through mode
+    .DATA_WIDTH(FIFO_DATA_WIDTH),     // default data width if the fifo is of type logic
+    .DEPTH(8)            // depth can be arbitrary from 0 to 2**32
+) fpu_in_queue (
+    .clk_i,            // Clock
+    .rst_ni,           // Asynchronous reset active low
+    .flush_i,          // flush the queue
+    .testmode_i,       // test_mode to bypass clock gating
+    .full_o,           // queue is full
+    .empty_o,          // queue is empty
+    .data_i,           // data to push into the queue
+    .push_i,           // data is valid and can be pushed to the queue
+    .data_o,           // output data
+    .pop_i             // pop head from queue
+);
+   
+   always @(posedge clk_i)
+     begin
+        case (op_int)
+          fpnew_pkg::FMADD: fpu_op <= op_mod ? 5 : 4;
+          fpnew_pkg::FNMSUB: fpu_op <= op_mod ? 4 : 13;
+          fpnew_pkg::ADD: fpu_op <= op_mod ? 1 : 0;
+          fpnew_pkg::MUL: fpu_op <= 6;
+          fpnew_pkg::DIV: fpu_op <= 3;
+          fpnew_pkg::SQRT: fpu_op <= 11;
+          fpnew_pkg::SGNJ: fpu_op <= 7;
+          fpnew_pkg::MINMAX: fpu_op <= 6;
+          fpnew_pkg::CMP: fpu_op <= 15;
+          fpnew_pkg::CLASSIFY: fpu_op <= 8;
+          fpnew_pkg::F2F: fpu_op <= 9;
+          fpnew_pkg::F2I: fpu_op <= 10;
+          fpnew_pkg::I2F: fpu_op <= 2;
+          fpnew_pkg::CPKAB: fpu_op <= 13;
+          fpnew_pkg::CPKCD: fpu_op <= 14;
+        endcase // case (op_int)
+        fpu_op[4] <= op_mod;
+     end
+   
    always @(posedge clk_i)
      if (!rst_ni)
        begin
           out_valid_o <= 0;
-          in_ready_o <= 0;
           enable <= 0;
+          pop_i <= 0;
+          tag_o <= 0;
+          {guard, opa, opb, opc, int_fmt, src_fmt, dst_fmt, rnd_mode, tag_int, op_int, op_mod} <= 0;
        end
      else
        begin
+          pop_i <= 1'b0;
           ready0 <= ready;
           if (enable && ready && !ready0)
             begin
                out_valid_o <= 1;
+               tag_o <= tag_int;
                enable <= 0;               
             end
           else if (out_valid_o)
             begin
                out_valid_o <= 0;               
             end
-          if (in_valid_i)
+          else if (~enable)
             begin
-               enable <= 1;
-               out_valid_o <= 0;
-               in_ready_o <= 1;               
+               if (~empty_o)
+                 begin
+                    pop_i <= 1'b1;
+                    enable <= 1;
+                    {guard, opc, opb, opa, int_fmt, src_fmt, dst_fmt, rnd_mode, tag_int, op_int, op_mod} <= data_o;
+                 end
             end
-          else
-               in_ready_o <= 0;
           if (flush_i)
             enable <= 0;
-          
        end
    
    assign busy_o = !ready;
-
+   assign in_ready_o = ~full_o;
+   assign push_i = in_valid_i & ~full_o;
+   assign data_i = {in_ready_o, operands_i, int_fmt_i, src_fmt_i, dst_fmt_i, rnd_mode_i, tag_i, op_i, op_mod_i};
+   
 `ifndef VERILATOR
    
    wire trig_in_ack;
