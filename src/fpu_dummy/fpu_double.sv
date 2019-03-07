@@ -129,7 +129,8 @@ reg [7:0] mantissa_sq;
    wire [63:0] out_round, mul_round, unsigned_opa;
    wire [63:0] out_except_0, out_except_1;
    wire        shift_add_inexact, shift_sub_inexact, shift_mul_inexact, shift_div_inexact;
-   wire        underflow_1, overflow_1, inexact_1, exception_1, invalid_1, nan_0, nan_1;
+   wire        underflow_1, overflow_1, inexact_1, exception_1, invalid_1;
+   wire        nan_0, nan_1, snan_0, snan_1, inf_0, inf_1;
    wire [6:0]  norm_shift;
    
    function [51:44] sqlookup;
@@ -682,7 +683,8 @@ fpu_exceptions u3b(.clk(clk), .rst(rst), .enable(mul_enable), .rmode(rmode_reg),
                   .multiply(mul_enable), .divide(1'b0),
                   .out(out_except_1),
 	          .ex_enable(except_enable_1), .underflow(underflow_1), .overflow(overflow_1),
-	          .inexact(inexact_1), .exception(exception_1), .invalid(invalid_1), .NaN_out_trigger(nan_1));
+	          .inexact(inexact_1), .exception(exception_1), .invalid(invalid_1),
+                  .NaN_out_trigger(nan_1), .out_inf_trigger(inf_1), .SNaN_input(snan_1));
 		
 fpu_div u4(
 	   .clk(clk), .rst(rst), .enable(div_enable), .opa(diva_reg), .opb(divb_reg),
@@ -701,7 +703,8 @@ fpu_exceptions u6(.clk(clk), .rst(rst), .enable(op_enable), .rmode(rmode_reg),
                   .multiply(mul_enable), .divide(div_enable),
                   .out(out_except_0),
 	          .ex_enable(except_enable_0), .underflow(underflow_0), .overflow(overflow_0),
-	          .inexact(inexact_0), .exception(exception_0), .invalid(invalid_0), .NaN_out_trigger(nan_0));
+	          .inexact(inexact_0), .exception(exception_0), .invalid(invalid_0),
+                  .NaN_out_trigger(nan_0), .out_inf_trigger(inf_0), .SNaN_input(snan_0));
 
 fpu_normalise u7 (.clk, .int_in(opa), .fpu_op, .int_fmt, .norm_shift, .unsigned_opa);
 
@@ -894,7 +897,7 @@ begin
 	       end
              if (ready_1) begin
                 casez(fpu_op)
-                    15, 23, 25:
+                    8, 15, 23, 25:
                     {underflow,overflow,inexact,exception,invalid,divbyzero} <= 0;
                   default:
                     begin
@@ -911,10 +914,25 @@ begin
                   6: out <= mul_round;
                   13, 18, 20, 26: out <= /*except_enable ? out_except :*/ {(~out_round[63]),out_round[62:0]};
                   7, 23: casez (rnd_mode) /* meaning overloaded, see fpu_wrap.sv */
-                           3'b00?: out <= {opb[63],opa[62:0]};
+                           3'b000: out <= {opb[63],opa[62:0]}; /* this is a guess, no tests found in ISA suite */
+                           3'b001: out <= {opa[63]^opb[63],opa[62:0]};
+                           3'b010: out <= {(~opb[63]),opa[62:0]};
                            3'b011: out <= opa;
                            default: out <= 'HDEADBEEF;
                          endcase // casez (rnd_mode)
+                  8: casez({snan_0,inf_0,nan_0,out_round[63],|out_round[62:52],|out_round[51:0]})
+                       6'b0101??: out <= 1<<0;
+                       6'b00011?: out <= 1<<1;
+                       6'b000101: out <= 1<<2;
+                       6'b000100: out <= 1<<3;
+                       6'b000000: out <= 1<<4;
+                       6'b000001: out <= 1<<5;
+                       6'b00001?: out <= 1<<6;
+                       6'b0100??: out <= 1<<7;
+                       6'b1?????: out <= 1<<8;
+                       6'b0?1???: out <= 1<<9;
+                       default: out <= 'HDEADBEEF; /* should never happen */
+                       endcase
                   9: casez (rnd_mode) /* meaning overloaded, see fpu_wrap.sv */
                            3'b000: /* fle.d */ out <= (out_round[63] || !out_round[62:0]) && !nan_0;
                            3'b001: /* flt.d */ out <= out_round[63] && (|out_round[62:0]) && !nan_0;

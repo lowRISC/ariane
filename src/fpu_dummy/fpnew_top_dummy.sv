@@ -149,8 +149,6 @@ fifo_v2 #(
           fpnew_pkg::F2F: fpu_op <= 15;
           fpnew_pkg::F2I: fpu_op <= 10;
           fpnew_pkg::I2F: fpu_op <= 2;
-          fpnew_pkg::CPKAB: fpu_op <= 13;
-          fpnew_pkg::CPKCD: fpu_op <= 14;
         endcase // case (op_int)
         if (op_mod)
           fpu_op[4] <= 1;

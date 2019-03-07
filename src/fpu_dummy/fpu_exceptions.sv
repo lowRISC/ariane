@@ -47,13 +47,15 @@ module fpu_exceptions(
  input [1:0]       mantissa_in,
  input             add, subtract, multiply, divide,
  output reg [63:0] out,
- output reg ex_enable,
- output reg underflow,
- output reg overflow,
- output reg inexact,
- output reg exception,
- output reg invalid,
- output reg NaN_out_trigger
+ output reg        ex_enable,
+ output reg        underflow,
+ output reg        overflow,
+ output reg        inexact,
+ output reg        exception,
+ output reg        invalid,
+ output reg        NaN_out_trigger,
+ output reg        out_inf_trigger,
+ output reg        SNaN_input
 );
    
 reg		in_et_zero;
@@ -71,7 +73,6 @@ reg		opb_neg_inf;
 reg		opa_inf;
 reg		opb_inf;
 reg		NaN_input;
-reg		SNaN_input;
 reg		a_NaN;
 reg		div_by_0;
 reg		div_0_by_0;
@@ -84,7 +85,6 @@ reg		add_inf;
 reg		sub_inf;
 reg		addsub_inf_invalid;
 reg		addsub_inf;
-reg		out_inf_trigger;
 reg		out_pos_inf;
 reg		out_neg_inf;
 reg		round_nearest;
@@ -100,8 +100,7 @@ reg		overflow_trigger;
 reg		inexact_trigger;
 reg	 	except_trigger;
 reg		enable_trigger;
-reg		SNaN_trigger;
-
+reg             SNaN_trigger;
 
 wire	[10:0]  exp_2047 = 11'b11111111111;
 wire	[10:0]  exp_2046 = 11'b11111111110;
