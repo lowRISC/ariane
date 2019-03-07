@@ -143,7 +143,7 @@ fifo_v2 #(
           fpnew_pkg::DIV: fpu_op <= 3;
           fpnew_pkg::SQRT: fpu_op <= 11;
           fpnew_pkg::SGNJ: fpu_op <= 7;
-          fpnew_pkg::MINMAX: fpu_op <= 6;
+          fpnew_pkg::MINMAX: fpu_op <= 25;
           fpnew_pkg::CMP: fpu_op <= 9;
           fpnew_pkg::CLASSIFY: fpu_op <= 8;
           fpnew_pkg::F2F: fpu_op <= 15;
@@ -152,7 +152,8 @@ fifo_v2 #(
           fpnew_pkg::CPKAB: fpu_op <= 13;
           fpnew_pkg::CPKCD: fpu_op <= 14;
         endcase // case (op_int)
-        fpu_op[4] <= op_mod;
+        if (op_mod)
+          fpu_op[4] <= 1;
      end
    
    always @(posedge clk_i)

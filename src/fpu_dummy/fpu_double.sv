@@ -823,7 +823,7 @@ begin
 	       5'b00011: begin diva_reg <= opa; divb_reg <= opb; end
 	       5'b01011: begin diva_reg <= opa; divb_reg <= sqrt0; adda_reg <= mul_round; addb_reg <= sqrt0; end
 	       5'b10101: begin adda_reg <= mul_round; addb_reg <= opc; end
-	       5'b01001: begin adda_reg <= opa; addb_reg <= opb; end /* for compare */
+	       5'b?1001: begin adda_reg <= opa; addb_reg <= opb; end /* for compare, minmax */
 	       5'b10111: begin adda_reg <= opa; addb_reg <= opb; end
 	       5'b??0??: begin adda_reg <= opb; addb_reg <= opc; end
 	       5'b??1??: begin adda_reg <= opc; addb_reg <= mul_round; end
@@ -894,7 +894,7 @@ begin
 	       end
              if (ready_1) begin
                 casez(fpu_op)
-                    15, 23:
+                    15, 23, 25:
                     {underflow,overflow,inexact,exception,invalid,divbyzero} <= 0;
                   default:
                     begin
@@ -919,6 +919,11 @@ begin
                            3'b000: /* fle.d */ out <= (out_round[63] || !out_round[62:0]) && !nan_0;
                            3'b001: /* flt.d */ out <= out_round[63] && (|out_round[62:0]) && !nan_0;
                            3'b010: /* feq.d */ out <= (!out_round[62:0]) && !nan_0;
+                           default: out <= 'HDEADBEEF;
+                         endcase // casez (rnd_mode)
+                  25: casez (rnd_mode) /* meaning overloaded, see fpu_wrap.sv */
+                           3'b0?0: /* fmin.d */ out <= out_round[63] ? adda_reg : addb_reg;
+                           3'b0?1: /* fmax.d */ out <= out_round[63] ? addb_reg : adda_reg;
                            default: out <= 'HDEADBEEF;
                          endcase // casez (rnd_mode)
                   15: casez({src_fmt,dst_fmt})
