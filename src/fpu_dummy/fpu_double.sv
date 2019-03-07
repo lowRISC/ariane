@@ -31,19 +31,27 @@
 //// POSSIBILITY OF SUCH DAMAGE.                                 ////
 ////                                                             ////
 /////////////////////////////////////////////////////////////////////
+//
+// This version modified for RISCV use by Jonathan Kimmitt
+// of the LowRISC team.
 
-
-`timescale 1ns / 100ps
+// `timescale 1ns / 100ps
 /* FPU Operations (fpu_op):
 ========================
-0 = add
-1 = sub
-2 = convert integer to float
-3 = div
-4 = mul(add)
-5 = mul(sub)
-6 = mul(plain)
-7 = sgnj
+0 = fadd
+1 = fsub
+2 = fcvt_i2f
+3 = fdiv
+4 = fmadd, fnmsub
+5 = fmsub
+6 = fmul
+7 = fsgnj
+8 = fclassify
+9 = fcmp
+10 = fcvt_f2i (TBD, no tests found)
+11 = fsqrt
+15 = fcvt_f2f (placeholder)
+25 = minmax
 
 Rounding Modes (rmode):
 =======================
