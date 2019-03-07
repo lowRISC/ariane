@@ -809,7 +809,7 @@ module ariane #(
 `endif // VERILATOR
   //pragma translate_on
 
-// `ifdef GENESYSII
+`ifndef VERILATOR
 xlnx_ila_5 trace_ila (
   .clk(clk_i), // input wire clk
   .probe0(rst_ni),
@@ -872,7 +872,7 @@ xlnx_ila_5 trace_ila (
   .probe57(commit_stage_i.exception_o.tval),
   .probe58(commit_stage_i.exception_o.valid)
   );
-// `endif   
+`endif   
  
 endmodule // ariane
 

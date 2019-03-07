@@ -116,7 +116,7 @@ module fpnew_top #(
    logic [FIFO_DATA_WIDTH-1:0] data_o;           // output data
    logic                       pop_i;            // pop head from queue
    
-fifo_v2 #(
+fifo_v3 #(
     .FALL_THROUGH(1'b0), // fifo is in fall-through mode
     .DATA_WIDTH(FIFO_DATA_WIDTH),     // default data width if the fifo is of type logic
     .DEPTH(8)            // depth can be arbitrary from 0 to 2**32
@@ -130,7 +130,8 @@ fifo_v2 #(
     .data_i,           // data to push into the queue
     .push_i,           // data is valid and can be pushed to the queue
     .data_o,           // output data
-    .pop_i             // pop head from queue
+    .pop_i,            // pop head from queue
+    .usage_o()
 );
    
    always @(posedge clk_i)
