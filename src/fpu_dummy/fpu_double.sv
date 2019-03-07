@@ -129,7 +129,7 @@ reg [7:0] mantissa_sq;
    wire [63:0] out_round, mul_round, unsigned_opa;
    wire [63:0] out_except_0, out_except_1;
    wire        shift_add_inexact, shift_sub_inexact, shift_mul_inexact, shift_div_inexact;
-   wire        underflow_1, overflow_1, inexact_1, exception_1, invalid_1;
+   wire        underflow_1, overflow_1, inexact_1, exception_1, invalid_1, nan_0, nan_1;
    wire [6:0]  norm_shift;
    
    function [51:44] sqlookup;
@@ -682,7 +682,7 @@ fpu_exceptions u3b(.clk(clk), .rst(rst), .enable(mul_enable), .rmode(rmode_reg),
                   .multiply(mul_enable), .divide(1'b0),
                   .out(out_except_1),
 	          .ex_enable(except_enable_1), .underflow(underflow_1), .overflow(overflow_1),
-	          .inexact(inexact_1), .exception(exception_1), .invalid(invalid_1));
+	          .inexact(inexact_1), .exception(exception_1), .invalid(invalid_1), .NaN_out_trigger(nan_1));
 		
 fpu_div u4(
 	   .clk(clk), .rst(rst), .enable(div_enable), .opa(diva_reg), .opb(divb_reg),
@@ -701,7 +701,7 @@ fpu_exceptions u6(.clk(clk), .rst(rst), .enable(op_enable), .rmode(rmode_reg),
                   .multiply(mul_enable), .divide(div_enable),
                   .out(out_except_0),
 	          .ex_enable(except_enable_0), .underflow(underflow_0), .overflow(overflow_0),
-	          .inexact(inexact_0), .exception(exception_0), .invalid(invalid_0));
+	          .inexact(inexact_0), .exception(exception_0), .invalid(invalid_0), .NaN_out_trigger(nan_0));
 
 fpu_normalise u7 (.clk, .int_in(opa), .fpu_op, .int_fmt, .norm_shift, .unsigned_opa);
 
@@ -823,6 +823,7 @@ begin
 	       5'b00011: begin diva_reg <= opa; divb_reg <= opb; end
 	       5'b01011: begin diva_reg <= opa; divb_reg <= sqrt0; adda_reg <= mul_round; addb_reg <= sqrt0; end
 	       5'b10101: begin adda_reg <= mul_round; addb_reg <= opc; end
+	       5'b01001: begin adda_reg <= opa; addb_reg <= opb; end /* for compare */
 	       5'b10111: begin adda_reg <= opa; addb_reg <= opb; end
 	       5'b??0??: begin adda_reg <= opb; addb_reg <= opc; end
 	       5'b??1??: begin adda_reg <= opc; addb_reg <= mul_round; end
@@ -893,7 +894,7 @@ begin
 	       end
              if (ready_1) begin
                 casez(fpu_op)
-                    9, 23:
+                    15, 23:
                     {underflow,overflow,inexact,exception,invalid,divbyzero} <= 0;
                   default:
                     begin
@@ -910,11 +911,17 @@ begin
                   6: out <= mul_round;
                   13, 18, 20, 26: out <= /*except_enable ? out_except :*/ {(~out_round[63]),out_round[62:0]};
                   7, 23: casez (rnd_mode) /* meaning overloaded, see fpu_wrap.sv */
-                        3'b00?: out <= {opb[63],opa[62:0]};
-                        3'b011: out <= opa;
-                        default: out <= 'HDEADBEEF;
-                      endcase
-                  9: casez({src_fmt,dst_fmt})
+                           3'b00?: out <= {opb[63],opa[62:0]};
+                           3'b011: out <= opa;
+                           default: out <= 'HDEADBEEF;
+                         endcase // casez (rnd_mode)
+                  9: casez (rnd_mode) /* meaning overloaded, see fpu_wrap.sv */
+                           3'b000: /* fle.d */ out <= (out_round[63] || !out_round[62:0]) && !nan_0;
+                           3'b001: /* flt.d */ out <= out_round[63] && (|out_round[62:0]) && !nan_0;
+                           3'b010: /* feq.d */ out <= (!out_round[62:0]) && !nan_0;
+                           default: out <= 'HDEADBEEF;
+                         endcase // casez (rnd_mode)
+                  15: casez({src_fmt,dst_fmt})
                        6'b001000: /* fcvt.s.d */
                          out <= opa_reg;
                        6'b000001: /* fcvt.d.s */

@@ -52,7 +52,9 @@ module fpu_exceptions(
  output reg overflow,
  output reg inexact,
  output reg exception,
- output reg invalid);
+ output reg invalid,
+ output reg NaN_out_trigger
+);
    
 reg		in_et_zero;
 reg		opa_et_zero;
@@ -98,7 +100,6 @@ reg		overflow_trigger;
 reg		inexact_trigger;
 reg	 	except_trigger;
 reg		enable_trigger;
-reg		NaN_out_trigger;
 reg		SNaN_trigger;
 
 

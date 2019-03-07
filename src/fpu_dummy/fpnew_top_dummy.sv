@@ -144,9 +144,9 @@ fifo_v2 #(
           fpnew_pkg::SQRT: fpu_op <= 11;
           fpnew_pkg::SGNJ: fpu_op <= 7;
           fpnew_pkg::MINMAX: fpu_op <= 6;
-          fpnew_pkg::CMP: fpu_op <= 15;
+          fpnew_pkg::CMP: fpu_op <= 9;
           fpnew_pkg::CLASSIFY: fpu_op <= 8;
-          fpnew_pkg::F2F: fpu_op <= 9;
+          fpnew_pkg::F2F: fpu_op <= 15;
           fpnew_pkg::F2I: fpu_op <= 10;
           fpnew_pkg::I2F: fpu_op <= 2;
           fpnew_pkg::CPKAB: fpu_op <= 13;
