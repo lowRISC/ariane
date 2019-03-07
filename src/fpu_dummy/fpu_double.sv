@@ -882,7 +882,7 @@ begin
                        if (fpu_op == 11)
                          begin
                             sqrt0 <= out_round;
-                            if ((sqrt0 == out_round) || opa[63])
+                            if ((sqrt0 == out_round) || opa[63] || !opa[62:0])
 			      begin
 				 ready_0 <= 1;
 				 invalid_sqrt <= opa[63];
@@ -918,8 +918,9 @@ begin
                     end
                 endcase
                 case(fpu_op)
-                  0, 1, 2, 3, 4, 5, 11, 17, 18, 21: out <= except_enable_0 ? out_except_0 : out_round;
+                  0, 1, 2, 3, 4, 5, 17, 18, 21: out <= except_enable_0 ? out_except_0 : out_round;
                   6: out <= mul_round;
+                  11: out <=  except_enable_0 ? out_except_0 : !opa[62:0] ? 64'b0 : out_round;
                   13, 18, 20, 26: out <= /*except_enable ? out_except :*/ {(~out_round[63]),out_round[62:0]};
                   7, 23: casez (rnd_mode) /* meaning overloaded, see fpu_wrap.sv */
                            3'b000: out <= {opb[63],opa[62:0]}; /* this is a guess, no tests found in ISA suite */
