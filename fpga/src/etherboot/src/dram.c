@@ -649,9 +649,8 @@ int testrange(void volatile *aligned, size_t bufsize, ul loops, int narrow) {
     return(exit_code);
 }
 
-int main()
+int dram_main(int i)
 {
-  int i;
   //  enum {range=2048};  
   //  enum {range=4096};  
   //  enum {range=8192};  
@@ -671,13 +670,3 @@ int main()
         testrange((void volatile *) (DRAMBase+range), range, 1, 1);
       }
 }
-
-#if 1
-void external_interrupt(void)
-{
-  int i, claim, handled = 0;
-#ifdef VERBOSE
-  printf("Hello external interrupt! "__TIMESTAMP__"\n");
-#endif  
-}
-#endif  

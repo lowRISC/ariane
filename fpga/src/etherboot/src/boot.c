@@ -32,7 +32,7 @@ void just_jump (void)
   fun_ptr(read_csr(mhartid), _dtb);
 }
 
-void sd_main(int sw)
+int sd_main(int sw)
 {
   FIL fil;                // File object
   FRESULT fr;             // FatFs return code
@@ -97,6 +97,7 @@ void sd_main(int sw)
   LD_DWORD(NULL);
   ST_WORD(NULL, 0);
   ST_DWORD(NULL, 0);
+  return 0;
 }
 
 #define HELLO "Hello LowRISC! "__TIMESTAMP__": "

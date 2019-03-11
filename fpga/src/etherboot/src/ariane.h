@@ -25,7 +25,9 @@ enum {
     DRAMLength     = 0x40000000, // 1GByte of DDR (split between two chips on Genesys2)
 };
 
-void eth_main(void);
-void sd_main(int sw);
+int eth_main(int);
+int dram_main(int);
+int cache_main(int);
+int sd_main(int sw);
 
 #endif

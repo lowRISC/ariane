@@ -521,7 +521,7 @@ static void set_dummy_mac(void)
   eth_write(RFCS_OFFSET, 8); /* use 8 buffers */
 }
 
-void eth_main(void) {
+int eth_main(int unused) {
   uint64_t cnt = 0;
   set_dummy_mac();
   //  uip_ipaddr_t addr;
