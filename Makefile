@@ -332,6 +332,49 @@ verilate:
 sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)
 
+no_vhd_f := ${no_vhd} $(filter-out fpga/src/fpga_tb.sv, $(wildcard fpga/src/*.sv)) \
+		    $(wildcard fpga/src/ariane-ethernet/*.sv) \
+		    $(wildcard fpga/src/axi2apb/src/*.sv) \
+		    $(wildcard fpga/src/axi_slice/src/*.sv) \
+		    $(wildcard src/axi_mem_if/src/*.sv) \
+		    $(wildcard src/plic/*.sv) \
+		    $(filter-out src/register_interface/src/reg_test.sv, $(wildcard src/register_interface/src/*.sv)) \
+		    $(filter-out src/common_cells/src/stream_register.sv, $(wildcard src/common_cells/src/*.sv)) \
+		    ${extra_src}
+
+verilate_command_f := $(verilator)                                                         \
+                    $(filter-out %.vhd, $(ariane_pkg))                                     \
+	            $(no_vhd_f)                                                            \
+                    +define+$(defines)                                                     \
+                    src/util/sram.sv                                                       \
+                    +incdir+fpga/src                                                       \
+                    --unroll-count 256                                                     \
+                    -Werror-PINMISSING                                                     \
+                    -Werror-IMPLICIT                                                       \
+                    -Wno-fatal                                                             \
+                    -Wno-PINCONNECTEMPTY                                                   \
+                    -Wno-ASSIGNDLY                                                         \
+                    -Wno-DECLFILENAME                                                      \
+                    -Wno-UNOPTFLAT                                                         \
+                    -Wno-UNUSED                                                            \
+                    -Wno-style                                                             \
+                    -Wno-lint                                                              \
+                    --trace --trace-structs                                                \
+                    -LDFLAGS "-L$(RISCV)/lib -Wl,-rpath,$(RISCV)/lib -lfesvr"              \
+                    -CFLAGS "$(CFLAGS)" -Wall --cc  --vpi                                  \
+                    $(list_incdir) --top-module ariane_xilinx                              \
+                    --Mdir $(ver-library) -O3                                              \
+                    --exe fpga/src/fpga_tb.cpp
+
+# User Verilator, at some point in the future this will be auto-generated
+verilate-fpga:
+	@echo "[Verilator] Building FPGA Model"
+	$(verilate_command_f)
+	cd $(ver-library) && $(MAKE) -j${NUM_JOBS} -f Variane_testharness.mk
+
+sim-verilator-fpga: verilate-fpga
+	$(ver-library)/Variane_testharness $(elf-bin)
+
 # vcs-specific
 no_vhd := $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))
 vcs_lib := $(foreach i, ${no_vhd}, -v $(i))
@@ -350,10 +393,6 @@ vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate 
 sim-vcs:
 	@echo "[Vcs] Building Model"
 	$(vcs_command)
-
-no_vhd_f := ${no_vhd} $(filter-out fpga/src/fpga_tb.sv, $(wildcard fpga/src/*.sv)) \
-		    $(wildcard fpga/src/ariane-ethernet/*.sv) \
-		    ${extra_src}
 
 vcs_lib_f := $(foreach i, ${no_vhd_f}, -v $(i))
 vcs_command_f := vcs -q -full64 -sverilog -assert svaext +lint=PCWM +lint=TFIPC-L          \

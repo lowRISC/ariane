@@ -15,6 +15,12 @@ module dualmem_32K_64(clka, clkb, dina, dinb, addra, addrb, wea, web, douta, dou
    genvar r;
 
 `ifdef GENESYSII
+`ifndef verilator
+ `define RAMB16
+`endif
+`endif
+
+`ifdef RAMB16
    
    generate for (r = 0; r < 2; r=r+1)
      RAMB16_S36_S36

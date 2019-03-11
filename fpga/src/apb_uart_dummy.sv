@@ -55,30 +55,14 @@ module apb_uart (
     assign PREADY = 1'b1;
     assign PSLVERR = 1'b0;
 
-    // string buffer
-    byte buffer [$];
-
-    function void flush();
-        string s;
-        // dump the buffer out the whole buffer
-        foreach (buffer[i]) begin
-            s = $sformatf("%s%c",s, buffer[i]);
-        end
-
-        $display(s);
-
-        // clear buffer afterwards
-        buffer = {};
-    endfunction : flush
-
     // put a char into the buffer
     function void append(byte ch);
 
         // wait for the new line
         if (ch == 8'hA)
-            flush();
+            $display("");
         else
-            buffer.push_back(ch);
+            $write("%c", ch);
 
     endfunction : append
 

@@ -255,6 +255,7 @@ always @(posedge sd_clk_o)
    
    assign sd_status[3:0] = 4'b0;
 
+`ifndef verilator   
 xlnx_clk_sd sd_clk_div
      (
      // Clock in ports
@@ -272,6 +273,12 @@ xlnx_clk_sd sd_clk_div
       // Status and control signals
       .reset(~(sd_clk_rst&rstn)), // input reset
       .locked(sd_clk_locked));      // output locked
+`else
+   assign sd_clk_locked = sd_clk_rst&rstn;
+   assign sd_clk_dout = sd_clk_din;
+   assign sd_clk_o = msoc_clk;
+   assign sd_clk_drdy = sd_clk_locked;
+`endif
    
 sd_top sdtop(
     .sd_clk     (sd_clk_o),
