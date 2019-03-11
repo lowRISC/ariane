@@ -12,7 +12,10 @@
 // Date: 08.04.2017
 // Description: Scoreboard - keeps track of all decoded, issued and committed instructions
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module scoreboard #(
     parameter int unsigned NR_ENTRIES  = 8,

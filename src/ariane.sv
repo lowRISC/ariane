@@ -12,7 +12,10 @@
 // Date: 19.03.2017
 // Description: Ariane Top-level module
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 //pragma translate_off
 `ifdef QUESTA
  `define NOTRACE

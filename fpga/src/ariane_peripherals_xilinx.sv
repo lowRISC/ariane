@@ -24,12 +24,12 @@ module ariane_peripherals #(
     input  logic       clk_i           , // Clock
     input  logic       clk_200MHz_i    ,
     input  logic       rst_ni          , // Asynchronous reset active low
-    AXI_BUS.in         plic            ,
-    AXI_BUS.in         uart            ,
-    AXI_BUS.in         spi             ,
-    AXI_BUS.in         gpio            ,
+    AXI_BUS.Slave         plic            ,
+    AXI_BUS.Slave         uart            ,
+    AXI_BUS.Slave         spi             ,
+    AXI_BUS.Slave         gpio            ,
     input  logic       eth_clk_i       ,
-    AXI_BUS.in         ethernet        ,
+    AXI_BUS.Slave         ethernet        ,
     output logic [1:0] irq_o           ,
     // UART
     input  logic       rx_i            ,
@@ -588,7 +588,6 @@ framing_top eth_rgmii
         );
 
         assign s_axi_gpio_rlast = 1'b1;
-        assign s_axi_gpio_wlast = 1'b1;
     end
 endmodule
 

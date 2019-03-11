@@ -1,5 +1,8 @@
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module mult (
     input  logic                     clk_i,

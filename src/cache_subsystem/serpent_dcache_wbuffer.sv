@@ -48,8 +48,14 @@
 //    then, only the NC word is written into the write buffer and no further write requests are acknowledged until that
 //    word has been evicted from the write buffer.
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
+`ifndef __SERPENT_CACHE_PKG
+`define __SERPENT_CACHE_PKG
 import serpent_cache_pkg::*;
+`endif
 
 module serpent_dcache_wbuffer #(
     parameter logic [63:0] CachedAddrBeg = 64'h00_8000_0000, // begin of cached region

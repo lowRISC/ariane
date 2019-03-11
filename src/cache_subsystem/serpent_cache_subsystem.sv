@@ -18,8 +18,14 @@
 //              with a standard 64bit AXI interace instead of the openpiton
 //              L1.5 interface.
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
+`ifndef __SERPENT_CACHE_PKG
+`define __SERPENT_CACHE_PKG
 import serpent_cache_pkg::*;
+`endif
 
 module serpent_cache_subsystem #(
 `ifdef AXI64_CACHE_PORTS

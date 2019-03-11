@@ -24,8 +24,14 @@
 // 3) NC accesses to I/O space are expected to return 32bit from memory.
 //
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
+`ifndef __SERPENT_CACHE_PKG
+`define __SERPENT_CACHE_PKG
 import serpent_cache_pkg::*;
+`endif
 
 module serpent_icache  #(
     parameter logic [DCACHE_ID_WIDTH-1:0] RdTxId             = 0,                // ID to be used for read transactions

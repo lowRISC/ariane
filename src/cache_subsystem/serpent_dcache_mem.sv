@@ -25,8 +25,14 @@
 //        4) Read ports with same priority are RR arbited. but high prio ports (rd_prio_i[port_nr] = '1b1) will stall
 //           low prio ports (rd_prio_i[port_nr] = '1b0)
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
+`ifndef __SERPENT_CACHE_PKG
+`define __SERPENT_CACHE_PKG
 import serpent_cache_pkg::*;
+`endif
 
 module serpent_dcache_mem #(
         parameter int unsigned NumPorts     = 3

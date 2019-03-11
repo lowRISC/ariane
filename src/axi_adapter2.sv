@@ -19,7 +19,10 @@
  * correctly due to axi beat interleaving.
  */
 
+`ifndef __STD_CACHE_PKG
+`define __STD_CACHE_PKG
 import std_cache_pkg::*;
+`endif
 
 module axi_adapter2 #(
     parameter int unsigned DATA_WORDS          = 4, // data width in dwords, this is also the maximum burst length, must be >=2

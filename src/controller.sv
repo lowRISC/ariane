@@ -12,7 +12,10 @@
 // Date: 08.05.2017
 // Description: Flush controller
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module controller (
     input  logic            clk_i,

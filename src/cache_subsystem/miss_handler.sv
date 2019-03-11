@@ -15,8 +15,14 @@
 // --------------
 // MISS Handler
 // --------------
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
+`ifndef __STD_CACHE_PKG
+`define __STD_CACHE_PKG
 import std_cache_pkg::*;
+`endif
 
 module miss_handler #(
     parameter int unsigned NR_PORTS         = 3

@@ -48,8 +48,14 @@
 //           https://parallel.princeton.edu/openpiton/docs/micro_arch.pdf
 //
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
+`ifndef __SERPENT_CACHE_PKG
+`define __SERPENT_CACHE_PKG
 import serpent_cache_pkg::*;
+`endif
 
 module serpent_l15_adapter #(
   parameter logic [63:0] CachedAddrBeg = 64'h00_8000_0000, // begin of cached region

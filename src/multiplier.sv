@@ -14,7 +14,10 @@
 //              This unit relies on retiming features of the synthesizer
 //
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module multiplier (
     input  logic                     clk_i,

@@ -14,7 +14,10 @@
 // Description: Translation Lookaside Buffer, SV39
 //              fully set-associative
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module tlb #(
       parameter int unsigned TLB_ENTRIES = 4,

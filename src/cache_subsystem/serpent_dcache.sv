@@ -12,8 +12,14 @@
 // Date: 13.09.2018
 // Description: Instruction cache that is compatible with openpiton.
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
+`ifndef __SERPENT_CACHE_PKG
+`define __SERPENT_CACHE_PKG
 import serpent_cache_pkg::*;
+`endif
 
 module serpent_dcache #(
     // ID to be used for read and AMO transactions.

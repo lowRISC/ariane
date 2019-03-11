@@ -12,7 +12,10 @@
 // Date: 15.04.2017
 // Description: Commits to the architectural state resulting from the scoreboard.
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module commit_stage #(
     parameter int unsigned NR_COMMIT_PORTS = 2

@@ -17,7 +17,10 @@
 // Description:    Decodes RISC-V compressed instructions into their RV32
 //                 equivalent. This module is fully combinatorial.
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module compressed_decoder
 (

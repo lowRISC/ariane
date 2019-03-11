@@ -13,7 +13,10 @@
 // Date: 19.04.2017
 // Description: Instantiation of all functional units residing in the execute stage
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module ex_stage (
     input  logic                                   clk_i,    // Clock

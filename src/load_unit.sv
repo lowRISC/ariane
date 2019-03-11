@@ -13,7 +13,10 @@
 // Date: 15.08.2018
 // Description: Load Unit, takes care of all load requests
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module load_unit (
     input  logic                     clk_i,    // Clock

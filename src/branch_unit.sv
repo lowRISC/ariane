@@ -12,7 +12,10 @@
 // Date: 09.05.2017
 // Description: Branch target calculation and comparison
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module branch_unit (
     input  fu_data_t                  fu_data_i,

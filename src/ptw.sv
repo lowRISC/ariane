@@ -14,7 +14,10 @@
 // Description: Hardware-PTW
 
 /* verilator lint_off WIDTH */
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module ptw #(
         parameter int ASID_WIDTH = 1

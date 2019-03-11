@@ -12,7 +12,10 @@
 // Date: 14.05.2017
 // Description: Emits and re-aligns compressed and unaligned instructions
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module instr_realigner (
     input  logic                   clk_i,               // Clock

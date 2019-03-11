@@ -175,7 +175,7 @@ assign rst = ddr_sync_reset;
 // ---------------
 // AXI Xbar
 // ---------------
-axi_node_wrap_with_slices #(
+axi_xbar_rework #(
     // three ports from Ariane (instruction, data and bypass)
     .NB_SLAVE           ( NBSlave                    ),
     .NB_MASTER          ( ariane_soc::NB_PERIPHERALS ),
@@ -189,8 +189,17 @@ axi_node_wrap_with_slices #(
     .clk          ( clk        ),
     .rst_n        ( ndmreset_n ),
     .test_en_i    ( test_en    ),
-    .slave        ( slave      ),
-    .master       ( master     ),
+    .slave_0      (slave[0]),
+    .slave_1      (slave[1]),
+    .master_0     (master[0]),
+    .master_1     (master[1]),
+    .master_2     (master[2]),
+    .master_3     (master[3]),
+    .master_4     (master[4]),
+    .master_5     (master[5]),
+    .master_6     (master[6]),
+    .master_7     (master[7]),
+    .master_8     (master[8]),
     .start_addr_i ({
         ariane_soc::DebugBase,
         ariane_soc::ROMBase,

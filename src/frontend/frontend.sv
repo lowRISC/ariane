@@ -13,7 +13,10 @@
 // Description: Ariane Instruction Fetch Frontend
 
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module frontend #(
     parameter logic [63:0]     DmBaseAddress = 64'h0 // debug module base address

@@ -21,7 +21,7 @@ verilator      ?= verilator
 # traget option
 target-options ?=
 # additional definess
-defines        ?=
+defines        ?= GENESYSII
 # test name for torture runs (binary name)
 test-location  ?= output/test
 # set to either nothing or -log
@@ -119,7 +119,8 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		src/axi/src/axi_delayer.sv                                     \
 		src/tech_cells_generic/src/cluster_clock_inverter.sv           \
 		src/tech_cells_generic/src/pulp_clock_mux2.sv                  \
-		tb/ariane_testharness.sv                                       \
+
+tb_src :=       tb/ariane_testharness.sv                                       \
 		tb/ariane_peripherals.sv                                       \
 		tb/common/uart.sv                                              \
 		tb/common/SimDTM.sv                                            \
@@ -130,12 +131,12 @@ extra_src :=	src/util/axi_master_connect_rev.sv                             \
 		src/axi/src/axi_multicut.sv                                    \
 		src/axi/src/axi_join.sv                                        \
 		src/axi/src/axi_cut.sv                                         \
-		src/common_cells/src/deprecated/find_first_one.sv              \
-		src/axi_node/src/axi_node_wrap_with_slices.sv
 
 #		src/common_cells/src/stream_arbiter_flushable.sv               \
 		src/common_cells/src/stream_delay.sv                           \
 		src/common_cells/src/shift_reg.sv                              \
+		src/axi_node/src/axi_node_wrap_with_slices.sv                  \
+		src/common_cells/src/deprecated/find_first_one.sv              \
 
 src := $(addprefix $(root-dir), $(src))
 
@@ -332,10 +333,13 @@ sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)
 
 # vcs-specific
+no_vhd := $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))
+vcs_lib := $(foreach i, ${no_vhd}, -v $(i))
 vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
-	            $(filter-out %.vhd, $(ariane_pkg))                                     \
-	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
 	            +define+$(defines)                                                     \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+	            $(vcs_lib)                                                             \
+	            $(tb_src)                                                              \
 	            +incdir+src/axi_node                                                   \
 		    src/util/sram.sv                                                       \
 		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
@@ -343,10 +347,38 @@ vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate 
 	            tb/ariane_tb.sv                                                        \
 	            tb/common/mock_uart.sv
 
-#$(foreach i, ${src}, -v $(i))
 sim-vcs:
 	@echo "[Vcs] Building Model"
 	$(vcs_command)
+
+no_vhd_f := ${no_vhd} $(filter-out fpga/src/fpga_tb.sv, $(wildcard fpga/src/*.sv)) \
+		    $(wildcard fpga/src/ariane-ethernet/*.sv) \
+		    ${extra_src}
+
+vcs_lib_f := $(foreach i, ${no_vhd_f}, -v $(i))
+vcs_command_f := vcs -q -full64 -sverilog -assert svaext +lint=PCWM +lint=TFIPC-L          \
+                    -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps      \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+	            $(vcs_lib_f)                                                           \
+	            +define+$(defines)                                                     \
+	            +incdir+fpga/src                                                       \
+		    src/util/sram.sv                                                       \
+		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
+		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
+                    fpga/xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter_sim_netlist.v \
+		    fpga/xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter_sim_netlist.v \
+                    fpga/xilinx/xlnx_clk_sd/ip/xlnx_clk_sd.v fpga/xilinx/xlnx_clk_sd/ip/xlnx_clk_sd_clk_wiz.v \
+                    fpga/xilinx/xlnx_clk_gen/ip/xlnx_clk_gen.v fpga/xilinx/xlnx_clk_gen/ip/xlnx_clk_gen_clk_wiz.v \
+                    fpga/ariane.srcs/sources_1/ip/xlnx_blk_mem_gen_0/xlnx_blk_mem_gen_0_sim_netlist.v \
+                    fpga/src/fpga_tb.sv fpga/src/ariane_xilinx.sv \
+                    fpga/xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio_sim_netlist.v \
+                    $(XILINX_VIVADO)/data/verilog/src/glbl.v \
+                    -y $(XILINX_VIVADO)/data/verilog/src/retarget \
+                    -y $(XILINX_VIVADO)/data/verilog/src/unisims +libext+.v+
+
+sim-vcs-fpga:
+	@echo "[Vcs] Building Model"
+	$(vcs_command_f)
 
 $(addsuffix -verilator,$(riscv-asm-tests)): verilate
 	$(ver-library)/Variane_testharness $(riscv-test-dir)/$(subst -verilator,,$@)

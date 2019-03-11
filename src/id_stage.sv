@@ -13,7 +13,10 @@
 // Description: Description: Instruction decode, contains the logic for decode,
 //              issue and read operands.
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module id_stage (
     input  logic                  clk_i,     // Clock

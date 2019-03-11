@@ -12,9 +12,17 @@
 // Date: 12.02.2018
 // ------------------------------
 // Instruction Cache
-// ------------------------------
+// --------------
+`ifndef __ARIANE_PKG
+// ----------------
+`define __ARIANE_PKG
+// ----------------
 import ariane_pkg::*;
+`endif
+`ifndef __STD_CACHE_PKG
+`define __STD_CACHE_PKG
 import std_cache_pkg::*;
+`endif
 
 module std_icache (
     input  logic                     clk_i,

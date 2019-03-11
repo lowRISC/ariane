@@ -17,8 +17,14 @@
 //
 // Description: Cache controller
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
+`ifndef __STD_CACHE_PKG
+`define __STD_CACHE_PKG
 import std_cache_pkg::*;
+`endif
 
 module cache_ctrl #(
     parameter logic [63:0] CACHE_START_ADDR  = 64'h4000_0000

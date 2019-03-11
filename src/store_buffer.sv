@@ -13,7 +13,10 @@
 // Description: Store queue persists store requests and pushes them to memory
 //              if they are no longer speculative
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module store_buffer (
     input logic          clk_i,           // Clock

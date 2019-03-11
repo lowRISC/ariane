@@ -12,8 +12,14 @@
 // Date: 13.10.2017
 // Description: Nonblocking private L1 dcache
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
+`ifndef __STD_CACHE_PKG
+`define __STD_CACHE_PKG
 import std_cache_pkg::*;
+`endif
 
 module std_nbdcache #(
     parameter logic [63:0] CACHE_START_ADDR = 64'h8000_0000

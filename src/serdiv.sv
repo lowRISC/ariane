@@ -14,7 +14,10 @@
 // Date: 18.10.2018
 // Description: simple 64bit serial divider
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module serdiv #(
   parameter WIDTH       = 64

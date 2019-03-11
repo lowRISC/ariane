@@ -18,7 +18,10 @@
 // Description: Issues instruction from the scoreboard and fetches the operands
 //              This also includes all the forwarding logic
 //
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module decoder (
     input  logic [63:0]        pc_i,                    // PC from IF

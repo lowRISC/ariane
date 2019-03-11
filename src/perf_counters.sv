@@ -12,7 +12,10 @@
 // Date: 06.10.2017
 // Description: Performance counters
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
 
 module perf_counters #(
     int unsigned NR_EXTERNAL_COUNTERS = 1

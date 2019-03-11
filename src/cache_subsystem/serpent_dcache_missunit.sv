@@ -14,8 +14,14 @@
 // is that the port with the highest index issues writes instead of reads.
 
 
+`ifndef __ARIANE_PKG
+`define __ARIANE_PKG
 import ariane_pkg::*;
+`endif
+`ifndef __SERPENT_CACHE_PKG
+`define __SERPENT_CACHE_PKG
 import serpent_cache_pkg::*;
+`endif
 
 module serpent_dcache_missunit #(
     parameter logic [DCACHE_ID_WIDTH-1:0] AmoTxId  = 1, // TX id to be used for AMOs
