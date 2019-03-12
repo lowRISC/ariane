@@ -339,7 +339,8 @@ no_vhd_f := ${no_vhd} $(filter-out fpga/src/fpga_tb.sv, $(wildcard fpga/src/*.sv
 		    $(wildcard src/axi_mem_if/src/*.sv) \
 		    $(wildcard src/plic/*.sv) \
 		    $(filter-out src/register_interface/src/reg_test.sv, $(wildcard src/register_interface/src/*.sv)) \
-		    $(filter-out src/common_cells/src/stream_register.sv, $(wildcard src/common_cells/src/*.sv)) \
+		    $(filter-out src/common_cells/src/stream_register.sv src/common_cells/src/sram.sv, $(wildcard src/common_cells/src/*.sv)) \
+                    src/fpga-support/rtl/SyncSpRamBeNx64.sv src/OpenIP/util/slave_adapter.sv \
 		    ${extra_src}
 
 verilate_command_f := $(verilator)                                                         \

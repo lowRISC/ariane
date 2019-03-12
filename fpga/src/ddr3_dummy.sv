@@ -155,7 +155,10 @@ module xlnx_mig_7_ddr3 (
   );
 
    assign ui_clk_sync_rst = sys_rst;
-   
+
+`ifdef verilator
+   assign ui_clk = sys_clk_p;
+`else
 IBUFDS #(
       .DIFF_TERM("FALSE"),       // Differential Termination
       .IBUF_LOW_PWR("TRUE"),     // Low power="TRUE", Highest performance="FALSE" 
@@ -165,12 +168,30 @@ IBUFDS #(
       .I(sys_clk_p),  // Diff_p buffer input (connect directly to top-level port)
       .IB(sys_clk_n) // Diff_n buffer input (connect directly to top-level port)
    );
+`endif // !`ifdef verilator
+
+   localparam ID_WIDTH = 5;
+   localparam ADDR_WIDTH = 30;
+   localparam DATA_WIDTH = 64;
+   localparam USER_WIDTH = 1;
    
-xlnx_blk_mem_gen_0 dummy_main_mem (
-  .rsta_busy(),          // output wire rsta_busy
-  .rstb_busy(),          // output wire rstb_busy
-  .s_aclk(ui_clk),                // input wire s_aclk
-  .s_aresetn(aresetn),          // input wire s_aresetn
+AXI_BUS #(
+    .AXI_ID_WIDTH(ID_WIDTH),             // id width
+    .AXI_ADDR_WIDTH(ADDR_WIDTH),         // address width
+    .AXI_DATA_WIDTH(DATA_WIDTH),         // width of data
+    .AXI_USER_WIDTH(USER_WIDTH)          // width of user field, must > 0, let synthesizer trim it if not in use
+    )
+   outgoing_if ();
+
+slave_adapter  #(
+    .ID_WIDTH(ID_WIDTH),                 // id width
+    .ADDR_WIDTH(ADDR_WIDTH),             // address width
+    .DATA_WIDTH(DATA_WIDTH),             // width of data
+    .USER_WIDTH(USER_WIDTH)              // width of user field, must > 0, let synthesizer trim it if not in use
+    )
+ sadapt(
+  .clk(ui_clk),
+  .rstn(aresetn),
   .s_axi_awid(s_axi_awid),        // input wire [4 : 0] s_axi_awid
   .s_axi_awaddr(s_axi_awaddr),    // input wire [31 : 0] s_axi_awaddr
   .s_axi_awlen(s_axi_awlen),      // input wire [7 : 0] s_axi_awlen
@@ -199,7 +220,89 @@ xlnx_blk_mem_gen_0 dummy_main_mem (
   .s_axi_rresp(s_axi_rresp),      // output wire [1 : 0] s_axi_rresp
   .s_axi_rlast(s_axi_rlast),      // output wire s_axi_rlast
   .s_axi_rvalid(s_axi_rvalid),    // output wire s_axi_rvalid
-  .s_axi_rready(s_axi_rready)    // input wire s_axi_rready
+  .s_axi_rready(s_axi_rready),    // input wire s_axi_rready
+
+      .m_axi_awid           ( outgoing_if.aw_id      ),
+      .m_axi_awaddr         ( outgoing_if.aw_addr    ),
+      .m_axi_awlen          ( outgoing_if.aw_len     ),
+      .m_axi_awsize         ( outgoing_if.aw_size    ),
+      .m_axi_awburst        ( outgoing_if.aw_burst   ),
+      .m_axi_awlock         ( outgoing_if.aw_lock    ),
+      .m_axi_awcache        ( outgoing_if.aw_cache   ),
+      .m_axi_awprot         ( outgoing_if.aw_prot    ),
+      .m_axi_awqos          ( outgoing_if.aw_qos     ),
+      .m_axi_awuser         ( outgoing_if.aw_user    ),
+      .m_axi_awregion       ( outgoing_if.aw_region  ),
+      .m_axi_awvalid        ( outgoing_if.aw_valid   ),
+      .m_axi_awready        ( outgoing_if.aw_ready   ),
+      .m_axi_wdata          ( outgoing_if.w_data     ),
+      .m_axi_wstrb          ( outgoing_if.w_strb     ),
+      .m_axi_wlast          ( outgoing_if.w_last     ),
+      .m_axi_wuser          ( outgoing_if.w_user     ),
+      .m_axi_wvalid         ( outgoing_if.w_valid    ),
+      .m_axi_wready         ( outgoing_if.w_ready    ),
+      .m_axi_bid            ( outgoing_if.b_id       ),
+      .m_axi_bresp          ( outgoing_if.b_resp     ),
+      .m_axi_buser          ( outgoing_if.b_user     ),
+      .m_axi_bvalid         ( outgoing_if.b_valid    ),
+      .m_axi_bready         ( outgoing_if.b_ready    ),
+      .m_axi_arid           ( outgoing_if.ar_id      ),
+      .m_axi_araddr         ( outgoing_if.ar_addr    ),
+      .m_axi_arlen          ( outgoing_if.ar_len     ),
+      .m_axi_arsize         ( outgoing_if.ar_size    ),
+      .m_axi_arburst        ( outgoing_if.ar_burst   ),
+      .m_axi_arlock         ( outgoing_if.ar_lock    ),
+      .m_axi_arcache        ( outgoing_if.ar_cache   ),
+      .m_axi_arprot         ( outgoing_if.ar_prot    ),
+      .m_axi_arqos          ( outgoing_if.ar_qos     ),
+      .m_axi_aruser         ( outgoing_if.ar_user    ),
+      .m_axi_arregion       ( outgoing_if.ar_region  ),
+      .m_axi_arvalid        ( outgoing_if.ar_valid   ),
+      .m_axi_arready        ( outgoing_if.ar_ready   ),
+      .m_axi_rid            ( outgoing_if.r_id       ),
+      .m_axi_rdata          ( outgoing_if.r_data     ),
+      .m_axi_rresp          ( outgoing_if.r_resp     ),
+      .m_axi_rlast          ( outgoing_if.r_last     ),
+      .m_axi_ruser          ( outgoing_if.r_user     ),
+      .m_axi_rvalid         ( outgoing_if.r_valid    ),
+      .m_axi_rready         ( outgoing_if.r_ready    )
+                      );
+   
+logic                    mem_req, mem_we;
+logic [ADDR_WIDTH-1:0]   mem_addr;
+logic [DATA_WIDTH-1:0]   mem_rdata, mem_wdata;
+logic [DATA_WIDTH/8-1:0] mem_be;
+
+axi2mem #(
+    .AXI_ID_WIDTH   ( ID_WIDTH       ),
+    .AXI_ADDR_WIDTH ( ADDR_WIDTH     ),
+    .AXI_DATA_WIDTH ( DATA_WIDTH     ),
+    .AXI_USER_WIDTH ( USER_WIDTH     )
+) i_axi2mem (
+    .clk_i  ( ui_clk                  ),
+    .rst_ni ( aresetn                 ),
+    .slave  ( outgoing_if             ),
+    .req_o  ( mem_req                 ),
+    .we_o   ( mem_we                  ),
+    .addr_o ( mem_addr                ),
+    .be_o   ( mem_be                  ),
+    .data_o ( mem_wdata               ),
+    .data_i ( mem_rdata               )
 );
+
+   sram #(
+        .DATA_WIDTH ( DATA_WIDTH ),
+        .NUM_WORDS  ( 1 << (ADDR_WIDTH - 3) ),
+        .SIM_INIT   ( 4 ) // use readmemh
+    ) i_sram (
+        .clk_i      ( ui_clk                                                                  ),
+        .rst_ni     ( aresetn                                                                 ),
+        .req_i      ( mem_req                                                                 ),
+        .we_i       ( mem_we                                                                  ),
+        .addr_i     ( mem_addr[ADDR_WIDTH-1+$clog2(DATA_WIDTH/8):$clog2(DATA_WIDTH/8)]        ),
+        .wdata_i    ( mem_wdata                                                               ),
+        .be_i       ( mem_be                                                                  ),
+        .rdata_o    ( mem_rdata                                                               )
+    );
 
 endmodule
