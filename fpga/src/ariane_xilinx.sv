@@ -582,7 +582,7 @@ logic                        s_axi_rlast;
 logic                        s_axi_rvalid;
 logic                        s_axi_rready;
 
-system_cache_0 your_instance_name (
+xlnx_system_cache your_instance_name (
   .ACLK(ddr_clock_out),                     // input wire ACLK
   .ARESETN(ndmreset_n),                     // input wire ARESETN
   .S0_AXI_GEN_AWID(c_axi_awid),        // input wire [0 : 0] S0_AXI_GEN_AWID

@@ -16,6 +16,7 @@ ips := xlnx_axi_clock_converter.xci  \
        xlnx_ila_4.xci                \
        xlnx_ila_5.xci                \
        xlnx_ila_axi_0.xci            \
+       xlnx_system_cache.xci         \
        xlnx_proto_check.xci          \
        xlnx_mig_7_ddr3.xci
 

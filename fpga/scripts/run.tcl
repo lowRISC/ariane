@@ -28,6 +28,7 @@ read_ip xilinx/xlnx_clk_sd/ip/xlnx_clk_sd.xci
 read_ip xilinx/xlnx_ila/ip/xlnx_ila.xci
 read_ip xilinx/xlnx_ila_4/ip/xlnx_ila_4.xci
 read_ip xilinx/xlnx_ila_5/ip/xlnx_ila_5.xci
+read_ip xilinx/xlnx_system_cache/ip/xlnx_system_cache.xci
 read_ip xilinx/xlnx_ila_axi_0/ip/xlnx_ila_axi_0.xci
 read_ip xilinx/xlnx_proto_check/ip/xlnx_proto_check.xci
 

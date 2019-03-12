@@ -15,10 +15,6 @@ set_property -dict [list \
                         CONFIG.C_NUM_WAYS {4} \
                         CONFIG.C_CACHE_SIZE {262144} \
                         CONFIG.C_ENABLE_STATISTICS {0} \
-                        CONFIG.C_M0_AXI_DATA_WIDTH {32} \
-                        CONFIG.C_M1_AXI_DATA_WIDTH {32} \
-                        CONFIG.C_M2_AXI_DATA_WIDTH {32} \
-                        CONFIG.C_M3_AXI_DATA_WIDTH {32} \
                         CONFIG.C_M0_AXI_DATA_WIDTH {64} \
                         CONFIG.C_S0_AXI_GEN_DATA_WIDTH {64} \
                         CONFIG.C_M0_AXI_THREAD_ID_WIDTH {5} \
