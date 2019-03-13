@@ -38,7 +38,7 @@ endif
 
 # Sources
 # Package files -> compile first
-ariane_pkg := include/riscv_pkg.sv                          \
+ariane_pkg :=             include/riscv_pkg.sv                          \
 			  src/debug/dm_pkg.sv                           \
 			  include/ariane_pkg.sv                         \
 			  include/std_cache_pkg.sv                      \
@@ -49,7 +49,10 @@ ariane_pkg := include/riscv_pkg.sv                          \
 			  tb/ariane_soc_pkg.sv                          \
 			  include/ariane_axi_pkg.sv                     \
 			  src/fpu/src/fpnew_pkg.sv                      \
-			  src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
+			  src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv \
+                          src/OpenIP/axi/common.sv                      \
+                          src/OpenIP/axi/channel.sv 
+
 ariane_pkg := $(addprefix $(root-dir), $(ariane_pkg))
 
 # utility modules
@@ -100,8 +103,7 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		src/util/axi_slave_connect.sv                                  \
 		src/util/axi_slave_connect_rev.sv                              \
 		src/fpga-support/rtl/SyncSpRamBeNx64.sv                        \
-		src/OpenIP/util/simple_xbar_edited.sv                          \
-		src/common_cells/src/sync.sv                                   \
+                src/common_cells/src/sync.sv                                   \
 		src/common_cells/src/cdc_2phase.sv                             \
 		src/common_cells/src/spill_register.sv                         \
 		src/common_cells/src/sync_wedge.sv                             \
@@ -136,6 +138,23 @@ extra_src :=	src/util/axi_master_connect_rev.sv                             \
 #		src/common_cells/src/stream_arbiter_flushable.sv               \
 		src/common_cells/src/stream_delay.sv                           \
 		src/common_cells/src/shift_reg.sv                              \
+
+openip_xbar_src := \
+src/OpenIP/axi/mux.sv \
+src/OpenIP/axi/buf.sv \
+src/OpenIP/axi/regslice.sv \
+src/OpenIP/axi/crossbar.sv \
+src/OpenIP/axi/demux.sv \
+src/OpenIP/axi/join.sv \
+src/OpenIP/util/slave_adapter.sv \
+src/OpenIP/util/to_if.sv \
+src/OpenIP/util/round_robin_arbiter.sv \
+src/OpenIP/util/priority_arbiter.sv \
+src/OpenIP/util/onehot.sv \
+src/OpenIP/util/from_if.sv \
+src/OpenIP/util/regslice.sv \
+src/OpenIP/util/fifo.sv \
+src/OpenIP/util/axi_xbar_rework.sv \
 
 src := $(addprefix $(root-dir), $(src))
 
@@ -335,6 +354,7 @@ sim-verilator: verilate
 vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
 	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+                    $(foreach i, ${openip_xbar_src}, -v $(i))                              \
 	            +define+$(defines)                                                     \
 	            +incdir+src/axi_node                                                   \
 		    src/util/sram.sv                                                       \
@@ -343,7 +363,6 @@ vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate 
 	            tb/ariane_tb.sv                                                        \
 	            tb/common/mock_uart.sv
 
-#$(foreach i, ${src}, -v $(i))
 sim-vcs:
 	@echo "[Vcs] Building Model"
 	$(vcs_command)
