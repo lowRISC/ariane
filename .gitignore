@@ -31,3 +31,14 @@ stdout/
 work-dpi/
 tb/riscv-isa-sim/
 work-*/*
+.Xil/
+csrc/
+swave_compile_done
+test.fst
+tokens*.v
+trace_hart_00.dis
+ucli.key
+vc_hdrs.h
+vcdplus.vpd
+verilog.dump
+*~

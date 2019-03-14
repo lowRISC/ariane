@@ -46,3 +46,6 @@
 [submodule "src/fpga-support"]
 	path = src/fpga-support
 	url = https://github.com/lowRISC/fpga-support.git
+[submodule "riscv-tests"]
+	path = riscv-tests
+	url = https://github.com/jrrk/riscv-tests.git

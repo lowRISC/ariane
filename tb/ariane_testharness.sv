@@ -432,19 +432,21 @@ module ariane_testharness #(
     // ---------------
     // AXI Xbar
     // ---------------
-    axi_xbar_rework  #(
-        .NB_SLAVE           ( NB_SLAVE                   ),
-        .NB_MASTER          ( ariane_soc::NB_PERIPHERALS ),
-        .AXI_ADDR_WIDTH     ( AXI_ADDRESS_WIDTH          ),
-        .AXI_DATA_WIDTH     ( AXI_DATA_WIDTH             ),
-        .AXI_USER_WIDTH     ( AXI_USER_WIDTH             ),
-        .AXI_ID_WIDTH       ( AXI_ID_WIDTH               )
-    ) i_axi_xbar (
+    axi_xbar_rework_wrapper i_axi_xbar (
         .clk          ( clk_i      ),
         .rst_n        ( ndmreset_n ),
         .test_en_i    ( test_en    ),
-        .slave        ( slave      ),
-        .master       ( master     ),
+        .slave_0      (slave[0]),
+        .slave_1      (slave[1]),
+        .master_0     (master[0]),
+        .master_1     (master[1]),
+        .master_2     (master[2]),
+        .master_3     (master[3]),
+        .master_4     (master[4]),
+        .master_5     (master[5]),
+        .master_6     (master[6]),
+        .master_7     (master[7]),
+        .master_8     (master[8]),
         .start_addr_i ({
             ariane_soc::DebugBase,
             ariane_soc::ROMBase,

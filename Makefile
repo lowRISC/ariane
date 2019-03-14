@@ -50,8 +50,6 @@ ariane_pkg :=             include/riscv_pkg.sv                          \
 			  include/ariane_axi_pkg.sv                     \
 			  src/fpu/src/fpnew_pkg.sv                      \
 			  src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv \
-                          src/OpenIP/axi/common.sv                      \
-                          src/OpenIP/axi/channel.sv 
 
 ariane_pkg := $(addprefix $(root-dir), $(ariane_pkg))
 
@@ -82,7 +80,6 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		$(wildcard src/frontend/*.sv)                                  \
 		$(filter-out src/cache_subsystem/std_no_dcache.sv,             \
 		$(wildcard src/cache_subsystem/*.sv))                          \
-		$(wildcard bootrom/*.sv)                                       \
 		$(wildcard src/clint/*.sv)                                     \
 		$(filter-out fpga/src/axi2apb/src/axi2apb_wrap.sv, $(wildcard fpga/src/axi2apb/src/*.sv))                          \
 		$(filter-out fpga/src/axi_slice/src/axi_slice_wrap.sv, $(wildcard fpga/src/axi_slice/src/*.sv))                        \
@@ -91,6 +88,7 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		$(wildcard src/axi_mem_if/src/*.sv)                            \
 		$(filter-out src/debug/dm_pkg.sv, $(wildcard src/debug/*.sv))  \
 		$(wildcard src/debug/debug_rom/*.sv)                           \
+                src/OpenIP/util/axi_xbar_rework_wrapper.sv                     \
 		src/register_interface/src/apb_to_reg.sv                       \
 		src/common_cells/src/deprecated/generic_fifo.sv                \
 		src/common_cells/src/deprecated/pulp_sync.sv                   \
@@ -138,10 +136,10 @@ extra_src :=	src/util/axi_master_connect_rev.sv                             \
 #		src/common_cells/src/stream_arbiter_flushable.sv               \
 		src/common_cells/src/stream_delay.sv                           \
 		src/common_cells/src/shift_reg.sv                              \
+src/OpenIP/axi/buf.sv \
 
 openip_xbar_src := \
 src/OpenIP/axi/mux.sv \
-src/OpenIP/axi/buf.sv \
 src/OpenIP/axi/regslice.sv \
 src/OpenIP/axi/crossbar.sv \
 src/OpenIP/axi/demux.sv \
@@ -154,14 +152,22 @@ src/OpenIP/util/onehot.sv \
 src/OpenIP/util/from_if.sv \
 src/OpenIP/util/regslice.sv \
 src/OpenIP/util/fifo.sv \
-src/OpenIP/util/axi_xbar_rework.sv \
+src/OpenIP/util/axi_xbar_rework_wrapper.sv \
 
 src := $(addprefix $(root-dir), $(src))
 
 uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
 uart_src := $(addprefix $(root-dir), $(uart_src))
 
-fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(extra_src)
+fpga_src :=  $(wildcard fpga/src/*.sv) \
+	$(wildcard fpga/src/ariane-ethernet/*.sv) \
+	$(wildcard fpga/src/bootrom/*.sv) \
+        src/OpenIP/axi/common.sv                                               \
+        src/OpenIP/axi/channel.sv                                              \
+	$(extra_src) \
+        src/OpenIP/util/simple_xbar.sv
+# ${openip_xbar_src}
+
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
 
 # look for testbenches
@@ -320,8 +326,13 @@ check-benchmarks:
 verilate_command := $(verilator)                                                           \
                     $(filter-out %.vhd, $(ariane_pkg))                                     \
                     $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+                    src/OpenIP/axi/common.sv                                               \
+                    src/OpenIP/util/simple_xbar.sv                                         \
                     +define+$(defines)                                                     \
+                    +define+SIMULATION                                                     \
+                    +define+SIMPLE_XBAR                                                    \
                     src/util/sram.sv                                                       \
+                    fpga/src/bootrom/bootrom.sv                                            \
                     +incdir+src/axi_node                                                   \
                     --unroll-count 256                                                     \
                     -Werror-PINMISSING                                                     \
@@ -353,6 +364,23 @@ sim-verilator: verilate
 # vcs-specific
 vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+                    $(wildcard fpga/src/bootrom/*.sv) \
+	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+                    src/OpenIP/util/simple_xbar.sv                                         \
+	            +define+$(defines)                                                     \
+	            +define+SIMPLE_XBAR                                                    \
+	            +incdir+src/axi_node                                                   \
+		    src/util/sram.sv                                                       \
+		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
+		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
+	            tb/ariane_tb.sv                                                        \
+	            tb/common/mock_uart.sv
+
+vcs_command_xbar := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+                    src/OpenIP/axi/common.sv                                               \
+                    src/OpenIP/axi/channel.sv                                              \
+                    $(wildcard bootrom/*.sv)                                               \
 	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
                     $(foreach i, ${openip_xbar_src}, -v $(i))                              \
 	            +define+$(defines)                                                     \
@@ -363,9 +391,26 @@ vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate 
 	            tb/ariane_tb.sv                                                        \
 	            tb/common/mock_uart.sv
 
+vcs_command_orig := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+                    src/OpenIP/util/simple_xbar.sv                                         \
+	            +define+$(defines)                                                     \
+	            +define+SIMPLE_XBAR                                                    \
+	            +incdir+src/axi_node                                                   \
+		    src/util/sram.sv                                                       \
+		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
+		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
+	            tb/ariane_tb.sv                                                        \
+	            tb/common/mock_uart.sv
+
 sim-vcs:
 	@echo "[Vcs] Building Model"
 	$(vcs_command)
+
+sim-vcs-orig:
+	@echo "[Vcs] Building Model"
+	$(vcs_command_orig)
 
 $(addsuffix -verilator,$(riscv-asm-tests)): verilate
 	$(ver-library)/Variane_testharness $(riscv-test-dir)/$(subst -verilator,,$@)
