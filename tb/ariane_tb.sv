@@ -63,7 +63,9 @@ module ariane_tb;
 
     // Clock process
     initial begin
+`ifdef VCDPLUS       
        $vcdpluson;
+`endif       
         clk_i = 1'b0;
         rst_ni = 1'b0;
         repeat(8)

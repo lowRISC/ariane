@@ -58,7 +58,6 @@ util := $(wildcard src/util/*.svh)                            \
         src/util/instruction_tracer_pkg.sv                    \
         src/util/instruction_tracer_if.sv                     \
         src/tech_cells_generic/src/cluster_clock_gating.sv    \
-        tb/common/mock_uart.sv                                \
         src/util/sram.sv
 util := $(addprefix $(root-dir), $(util))
 # Test packages
@@ -88,6 +87,7 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		$(wildcard src/axi_mem_if/src/*.sv)                            \
 		$(filter-out src/debug/dm_pkg.sv, $(wildcard src/debug/*.sv))  \
 		$(wildcard src/debug/debug_rom/*.sv)                           \
+                $(wildcard src/fpga-support/rtl/uart_sv/*.sv)                  \
                 src/OpenIP/util/axi_xbar_rework_wrapper.sv                     \
 		src/register_interface/src/apb_to_reg.sv                       \
 		src/common_cells/src/deprecated/generic_fifo.sv                \
@@ -155,9 +155,6 @@ src/OpenIP/util/fifo.sv \
 src/OpenIP/util/axi_xbar_rework_wrapper.sv \
 
 src := $(addprefix $(root-dir), $(src))
-
-uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
-uart_src := $(addprefix $(root-dir), $(uart_src))
 
 fpga_src :=  $(wildcard fpga/src/*.sv) \
 	$(wildcard fpga/src/ariane-ethernet/*.sv) \
@@ -241,7 +238,6 @@ $(library)/.build-srcs: $(util) $(library)
 	vcom$(questa_version) $(compile_flag_vhd) -work $(library) -pedanticerrors $(filter %.vhd,$(ariane_pkg))
 	vlog$(questa_version) $(compile_flag) -work $(library) $(filter %.sv,$(util)) $(list_incdir) -suppress 2583
 	# Suppress message that always_latch may not be checked thoroughly by QuestaSim.
-	vcom$(questa_version) $(compile_flag_vhd) -work $(library) -pedanticerrors $(filter %.vhd,$(uart_src))
 	vcom$(questa_version) $(compile_flag_vhd) -work $(library) -pedanticerrors $(filter %.vhd,$(src))
 	vlog$(questa_version) $(compile_flag) -work $(library) -pedanticerrors $(filter %.sv,$(src)) $(list_incdir) -suppress 2583
 	touch $(library)/.build-srcs
@@ -362,6 +358,9 @@ sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)
 
 # vcs-specific
+#		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
+		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
+
 vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
                     $(wildcard fpga/src/bootrom/*.sv) \
@@ -369,12 +368,10 @@ vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate 
                     src/OpenIP/util/simple_xbar.sv                                         \
 	            +define+$(defines)                                                     \
 	            +define+SIMPLE_XBAR                                                    \
+	            +define+SIMULATION                                                     \
 	            +incdir+src/axi_node                                                   \
 		    src/util/sram.sv                                                       \
-		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
-		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
 	            tb/ariane_tb.sv                                                        \
-	            tb/common/mock_uart.sv
 
 vcs_command_xbar := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
@@ -389,7 +386,6 @@ vcs_command_xbar := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_gene
 		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
 		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
 	            tb/ariane_tb.sv                                                        \
-	            tb/common/mock_uart.sv
 
 vcs_command_orig := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
@@ -402,11 +398,14 @@ vcs_command_orig := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_gene
 		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
 		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
 	            tb/ariane_tb.sv                                                        \
-	            tb/common/mock_uart.sv
 
 sim-vcs:
 	@echo "[Vcs] Building Model"
 	$(vcs_command)
+
+sim-vcs-debug:
+	@echo "[Vcs] Building Model"
+	$(vcs_command) +define+VCDPLUS
 
 sim-vcs-orig:
 	@echo "[Vcs] Building Model"
@@ -488,9 +487,8 @@ check-torture:
 	grep 'All signatures match for $(test-location)' $(riscv-torture-dir)/$(test-location).log
 	diff -s $(riscv-torture-dir)/$(test-location).spike.sig $(riscv-torture-dir)/$(test-location).rtlsim.sig
 
-fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(util) $(uart_src)
+fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(util)
 	@echo "[FPGA] Generate sources"
-	@echo read_vhdl        {$(uart_src)}   > fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(ariane_pkg)} >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(util)}       >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(src)} 	   >> fpga/scripts/add_sources.tcl

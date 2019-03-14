@@ -33,8 +33,11 @@ interface uart_bus #(
   integer           file;
 
   initial begin
-    tx   = 1'bZ;
-    file = $fopen("uart", "w");
+     tx   = 1'b1;
+     stringa = 0;
+     parity = 0;
+     charnum = 0;
+     file = $fopen("uart", "w");
   end
 
   always begin
@@ -61,6 +64,11 @@ interface uart_bus #(
       // STOP BIT
       #BIT_PERIOD;
 
+      case (character)
+        8'h0A: $display("\\n");
+        8'h0D: $write("\\r");
+        default: $write("%c", character);
+      endcase
       $fwrite(file, "%c", character);
       stringa[(255-charnum)*8 +: 8] = character;
       if (character == 8'h0A || charnum == 254) begin // line feed or max. chars reached

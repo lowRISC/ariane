@@ -252,7 +252,7 @@ module ariane_peripherals #(
             .PRDATA  ( uart_prdata     ),
             .PREADY  ( uart_pready     ),
             .PSLVERR ( uart_pslverr    ),
-            .INT     ( irq_sources[2]  ),
+            .INT     ( irq_sources[0]  ),
             .OUT1N   (                 ), // keep open
             .OUT2N   (                 ), // keep open
             .RTSN    (                 ), // no flow control

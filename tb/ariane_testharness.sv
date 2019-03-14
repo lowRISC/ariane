@@ -417,7 +417,7 @@ module ariane_testharness #(
     sram #(
         .DATA_WIDTH ( AXI_DATA_WIDTH ),
         .NUM_WORDS  ( NUM_WORDS      ),
-        .SIM_INIT   ( 4 ) // use readmemh
+        .PRELOAD    ( 1 ) // use readmemh (only if `define PRELOAD)
     ) i_sram (
         .clk_i      ( clk_i                                                                       ),
         .rst_ni     ( rst_ni                                                                      ),
@@ -508,7 +508,7 @@ module ariane_testharness #(
       .AxiAddrWidth ( AXI_ADDRESS_WIDTH   ),
       .AxiDataWidth ( AXI_DATA_WIDTH      ),
       .AxiIdWidth   ( AXI_ID_WIDTH_SLAVES ),
-      .InclUART     ( 1'b0                ),
+      .InclUART     ( 1'b1                ),
       .InclSPI      ( 1'b0                ),
       .InclEthernet ( 1'b0                )
     ) i_ariane_peripherals (
