@@ -120,6 +120,7 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		src/tech_cells_generic/src/cluster_clock_inverter.sv           \
 		src/tech_cells_generic/src/pulp_clock_mux2.sv                  \
 		tb/ariane_testharness.sv                                       \
+		tb/ariane_main_memory.sv                                       \
 		tb/ariane_peripherals.sv                                       \
 		tb/common/uart.sv                                              \
 		tb/common/SimDTM.sv                                            \
@@ -363,12 +364,25 @@ sim-verilator: verilate
 
 vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
-                    $(wildcard fpga/src/bootrom/*.sv) \
+                    $(wildcard fpga/src/bootrom/*.sv)                                      \
 	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
                     src/OpenIP/util/simple_xbar.sv                                         \
 	            +define+$(defines)                                                     \
 	            +define+SIMPLE_XBAR                                                    \
 	            +define+SIMULATION                                                     \
+	            +incdir+src/axi_node                                                   \
+		    src/util/sram.sv                                                       \
+	            tb/ariane_tb.sv                                                        \
+
+vcs_command_ddr := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+                    $(wildcard fpga/src/bootrom/*.sv)                                      \
+	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+                    src/OpenIP/util/simple_xbar.sv                                         \
+	            +define+$(defines)                                                     \
+	            +define+SIMPLE_XBAR                                                    \
+	            +define+SIMULATION                                                     \
+	            +define+SIMULATE_DDR                                                   \
 	            +incdir+src/axi_node                                                   \
 		    src/util/sram.sv                                                       \
 	            tb/ariane_tb.sv                                                        \
@@ -406,6 +420,10 @@ sim-vcs:
 sim-vcs-debug:
 	@echo "[Vcs] Building Model"
 	$(vcs_command) +define+VCDPLUS
+
+sim-vcs-ddr-debug:
+	@echo "[Vcs] Building Model"
+	$(vcs_command_ddr) +define+VCDPLUS
 
 sim-vcs-orig:
 	@echo "[Vcs] Building Model"
