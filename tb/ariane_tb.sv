@@ -13,6 +13,7 @@
 // Description: Top level testbench module. Instantiates the top level DUT, configures
 //              the virtual interfaces and starts the test passed by +UVM_TEST+
 
+`timescale 1ps/100fs
 
 import ariane_pkg::*;
 `ifndef VCS
@@ -40,6 +41,13 @@ module ariane_tb;
     localparam int unsigned RTC_CLOCK_PERIOD = 30.517us;
 
     localparam NUM_WORDS = 2**25;
+
+    wire  sys_clk_p;
+    wire  sys_clk_n;
+    reg   sys_rst_n;
+    reg   sys_clk_i;
+    reg   clk_ref_i;
+
     logic clk_i;
     logic rst_ni;
     logic rtc_i;
@@ -55,16 +63,20 @@ module ariane_tb;
         .StallRandomOutput ( 1'b1      ),
         .StallRandomInput  ( 1'b1      )
     ) dut (
-        .clk_i,
-        .rst_ni,
-        .rtc_i,
-        .exit_o
+           .sys_clk_p,
+           .sys_clk_n,
+           .sys_rst_n,
+           .clk_i,
+           .rst_ni,
+           .rtc_i,
+           .exit_o
     );
 
     // Clock process
     initial begin
 `ifdef VCDPLUS       
-       $vcdpluson;
+       $vcdpluson(0, dut.i_ariane_peripherals.gen_uart.i_apb_uart);
+       $vcdpluson(0, dut.i_main_mem.u_ip_top.i_xlnx_axi_clock_converter_ddr);       
 `endif       
         clk_i = 1'b0;
         rst_ni = 1'b0;
@@ -79,6 +91,7 @@ module ariane_tb;
             //    $fatal(1, "Simulation reached maximum cycle count of %d", max_cycles);
 
             cycles++;
+            if (cycles % 1000 == 0) $vcdplusflush();
         end
     end
 
@@ -104,5 +117,49 @@ module ariane_tb;
             $finish();
         end
     end
+
+//**************************************************************************//
+   //***************************************************************************
+   // The following parameters are multiplier and divisor factors for PLLE2.
+   // Based on the selected design frequency these parameters vary.
+   //***************************************************************************
+   parameter CLKIN_PERIOD          = 5000;
+                                     // Input Clock Period
+
+   //***************************************************************************
+   // Referece clock frequency parameters
+   //***************************************************************************
+   parameter REFCLK_FREQ           = 200.0;
+                                     // IODELAYCTRL reference clock frequency
+  localparam real REFCLK_PERIOD = (1000000.0/(2*REFCLK_FREQ));
+  localparam RESET_PERIOD = 200000; //in pSec  
+
+  //**************************************************************************//
+  // DDR3 Reset Generation
+  //**************************************************************************//
+  initial begin
+    sys_rst_n = 1'b0;
+    #RESET_PERIOD
+      sys_rst_n = 1'b1;
+   end
+
+   assign sys_rst = sys_rst_n;
+
+  //**************************************************************************//
+  // DDR3 Clock Generation
+  //**************************************************************************//
+
+  initial
+    sys_clk_i = 1'b0;
+  always
+    sys_clk_i = #(CLKIN_PERIOD/2.0) ~sys_clk_i;
+
+  assign sys_clk_p = sys_clk_i;
+  assign sys_clk_n = ~sys_clk_i;
+
+  initial
+    clk_ref_i = 1'b0;
+  always
+    clk_ref_i = #REFCLK_PERIOD ~clk_ref_i;
 
 endmodule

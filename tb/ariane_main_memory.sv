@@ -24,6 +24,9 @@ module ariane_main_memory #(
     parameter bit          StallRandomOutput   = 1'b0,
     parameter bit          StallRandomInput    = 1'b0
 ) (
+   input wire  sys_clk_p,
+   input wire  sys_clk_n,
+   input wire  sys_rst_n,
    input logic clk_i,
    input logic rst_ni,
    input logic ndmreset_n,

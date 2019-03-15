@@ -23,10 +23,13 @@ module ariane_testharness #(
     parameter bit          StallRandomOutput = 1'b0,
     parameter bit          StallRandomInput  = 1'b0
 ) (
-    input  logic                           clk_i,
-    input  logic                           rtc_i,
-    input  logic                           rst_ni,
-    output logic [31:0]                    exit_o
+   input wire          sys_clk_p,
+   input wire          sys_clk_n,
+   input wire          sys_rst_n,
+   input logic         clk_i,
+   input logic         rtc_i,
+   input logic         rst_ni,
+   output logic [31:0] exit_o
 );
 
     // disable test-enable
@@ -251,7 +254,11 @@ module ariane_testharness #(
     // Memory
     // ---------------
 
+`ifdef SIMULATE_DDR
+   ariane_main_memory_ddr
+`else
    ariane_main_memory
+`endif     
      #(
        .AXI_ID_WIDTH_SLAVES ( AXI_ID_WIDTH_SLAVES ),
        .AXI_ADDRESS_WIDTH ( AXI_ADDRESS_WIDTH     ),
@@ -261,6 +268,9 @@ module ariane_testharness #(
        .StallRandomOutput ( StallRandomOutput     ),
        .StallRandomInput  ( StallRandomInput      )
        ) i_main_mem (
+                     .sys_clk_p,
+                     .sys_clk_n,
+                     .sys_rst_n,
                      .clk_i,
                      .rst_ni,
                      .ndmreset_n,
