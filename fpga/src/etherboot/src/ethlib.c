@@ -633,6 +633,7 @@ void ethboot(void)
 
   printf("Goodbye, booter ...\n");
   asm volatile ("fence.i");
+  asm volatile ("fence");
   asm volatile ("mret");
 }
 

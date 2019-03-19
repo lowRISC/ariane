@@ -29,7 +29,8 @@ module ariane_testharness #(
    input logic         clk_i,
    input logic         rtc_i,
    input logic         rst_ni,
-   output logic [31:0] exit_o
+   output logic [31:0] exit_o,
+   AXI_BUS.out         axi_ddr_buf
 );
 
     // disable test-enable
@@ -254,27 +255,17 @@ module ariane_testharness #(
     // Memory
     // ---------------
 
-`ifdef SIMULATE_DDR
-   ariane_main_memory_ddr
-`else
-   ariane_main_memory
-`endif     
-     #(
-       .AXI_ID_WIDTH_SLAVES ( AXI_ID_WIDTH_SLAVES ),
-       .AXI_ADDRESS_WIDTH ( AXI_ADDRESS_WIDTH     ),
-       .AXI_DATA_WIDTH    ( AXI_DATA_WIDTH        ),
-       .AXI_USER_WIDTH    ( AXI_USER_WIDTH        ),
-       .NUM_WORDS         ( NUM_WORDS             ),
-       .StallRandomOutput ( StallRandomOutput     ),
-       .StallRandomInput  ( StallRandomInput      )
-       ) i_main_mem (
-                     .sys_clk_p,
-                     .sys_clk_n,
-                     .sys_rst_n,
-                     .clk_i,
-                     .rst_ni,
-                     .ndmreset_n,
-                     .master(master[ariane_soc::DRAM]));
+   axi_cut #(
+            .ADDR_WIDTH ( AXI_ADDRESS_WIDTH   ),
+            .DATA_WIDTH ( AXI_DATA_WIDTH      ),
+            .ID_WIDTH   ( AXI_ID_WIDTH_SLAVES ),
+            .USER_WIDTH ( AXI_USER_WIDTH      )
+        ) i_axi_slice_wrap_master (
+            .clk_i      ( clk_i                    ),
+            .rst_ni     ( ndmreset_n               ),
+            .in         ( master[ariane_soc::DRAM] ), // from the node
+            .out        ( axi_ddr_buf              )  // to IO ports
+        );
    
     // ---------------
     // AXI Xbar

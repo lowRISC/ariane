@@ -57,7 +57,25 @@ module ariane_tb;
 
     logic [31:0] exit_o;
 
+    localparam int unsigned AXI_ID_WIDTH      = 4;
+    localparam int unsigned AXI_USER_WIDTH    = 1;
+    localparam int unsigned AXI_ADDRESS_WIDTH = 64;
+    localparam int unsigned AXI_DATA_WIDTH    = 64;
+
+    localparam NB_SLAVE = 2;
+    localparam AXI_ID_WIDTH_SLAVES = AXI_ID_WIDTH + $clog2(NB_SLAVE);
+
+   AXI_BUS #(
+                 .ID_WIDTH   (AXI_ID_WIDTH_SLAVES),
+                 .ADDR_WIDTH (AXI_ADDRESS_WIDTH),
+                 .DATA_WIDTH (AXI_DATA_WIDTH)
+                 ) axi_ddr_buf ();
+    
     ariane_testharness #(
+        .AXI_ID_WIDTH   (AXI_ID_WIDTH),
+        .AXI_ADDRESS_WIDTH (AXI_ADDRESS_WIDTH),
+        .AXI_DATA_WIDTH (AXI_DATA_WIDTH),
+        .AXI_USER_WIDTH (AXI_USER_WIDTH),
         .NUM_WORDS         ( NUM_WORDS ),
         .InclSimDTM        ( 1'b1      ),
         .StallRandomOutput ( 1'b1      ),
@@ -69,14 +87,30 @@ module ariane_tb;
            .clk_i,
            .rst_ni,
            .rtc_i,
-           .exit_o
+           .exit_o,
+           .axi_ddr_buf
     );
 
+   ariane_main_memory
+     #(
+       .AXI_ID_WIDTH_SLAVES ( AXI_ID_WIDTH_SLAVES ),
+       .AXI_ADDRESS_WIDTH ( AXI_ADDRESS_WIDTH     ),
+       .AXI_DATA_WIDTH    ( AXI_DATA_WIDTH        ),
+       .AXI_USER_WIDTH    ( AXI_USER_WIDTH        ),
+       .NUM_WORDS         ( NUM_WORDS             )
+       ) i_main_mem (
+                     .sys_clk_p,
+                     .sys_clk_n,
+                     .sys_rst_n,
+                     .clk_i,
+                     .rst_ni,
+                     .master(axi_ddr_buf));
+   
     // Clock process
     initial begin
 `ifdef VCDPLUS       
        $vcdpluson(0, dut.i_ariane_peripherals.gen_uart.i_apb_uart);
-       $vcdpluson(0, dut.i_main_mem.u_ip_top.i_xlnx_axi_clock_converter_ddr);       
+       $vcdpluson(0, i_main_mem.i_axi_delayer);       
 `endif       
         clk_i = 1'b0;
         rst_ni = 1'b0;
@@ -161,5 +195,5 @@ module ariane_tb;
     clk_ref_i = 1'b0;
   always
     clk_ref_i = #REFCLK_PERIOD ~clk_ref_i;
-
+       
 endmodule

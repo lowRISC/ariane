@@ -2,17 +2,14 @@
 # 
 # 
 #include <smp.h>
-#define DRAM_BASE 0x87FE0000
+#define DRAM_BASE 0xBFFE0000
 
   .section .text.init
   .option norvc
   .globl _prog_start
 _prog_start:
   smp_pause(s1, s2)
-# Hack alert. This stack location is in the SD-Card buffer region because
-# we can't be sure the DDR has fired up yet. Normally this would not matter
-# but we want to be able to trigger on any protocol delays > 100 cycles.        
-  li sp, 0x20008FF8
+  li sp, DRAM_BASE
   la t0, init_uart
   jalr ra, t0
   la t0, print_uart

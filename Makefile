@@ -121,6 +121,7 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))      \
 		src/tech_cells_generic/src/pulp_clock_mux2.sv                  \
 		tb/ariane_testharness.sv                                       \
 		tb/ariane_peripherals.sv                                       \
+		src/axi/src/axi_cut.sv                                         \
 		tb/common/uart.sv                                              \
 		tb/common/SimDTM.sv                                            \
 		tb/common/SimJTAG.sv
@@ -129,14 +130,14 @@ extra_src :=	src/util/axi_master_connect_rev.sv                             \
 		src/axi/src/axi_to_axi_lite.sv                                 \
 		src/axi/src/axi_multicut.sv                                    \
 		src/axi/src/axi_join.sv                                        \
-		src/axi/src/axi_cut.sv                                         \
 		src/common_cells/src/deprecated/find_first_one.sv              \
 		src/axi_node/src/axi_node_wrap_with_slices.sv
 
 #		src/common_cells/src/stream_arbiter_flushable.sv               \
 		src/common_cells/src/stream_delay.sv                           \
 		src/common_cells/src/shift_reg.sv                              \
-src/OpenIP/axi/buf.sv \
+		src/axi/src/axi_multicut.sv                                    \
+                src/OpenIP/axi/buf.sv \
 
 openip_xbar_src := \
 src/OpenIP/axi/mux.sv \
@@ -505,8 +506,6 @@ vlogan_command_ddr := vlogan -work xil_defaultlib -q -full64 -sverilog -assert s
 	            +incdir+$(ddr_path)/imports                                            \
 		    src/util/sram.sv                                                       \
 	            tb/ariane_tb.sv                                                        \
-                    tb/ariane_main_memory_ddr.sv                                           \
-                    tb/ariane_main_memory_ddr_wrapper.sv                                   \
 
 vcs_command_ddr := vcs -q -full64 -sverilog -assert svaext +lint=PCWM +lint=TFIPC-L +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 xil_defaultlib.ariane_tb xil_defaultlib.glbl

@@ -29,6 +29,7 @@ void just_jump (void)
   extern uint8_t _dtb[];
   void (*fun_ptr)(uint64_t, void *) = (void*)DRAMBase;
   asm volatile ("fence.i");
+  asm volatile ("fence");
   fun_ptr(read_csr(mhartid), _dtb);
 }
 

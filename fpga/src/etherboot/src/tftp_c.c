@@ -29,6 +29,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include "uart.h"
 #include "ariane.h"
 #include "hash-md5.h"
+#include "encoding.h"
 
 #define CMD_RRQ (int16_t)1
 #define CMD_WRQ (int16_t)2
@@ -110,7 +111,7 @@ void myputn(int wid, unsigned n)
   write_serial(n % 10 + '0');
 }
 
-enum {verbose=0, md5sum = 0};
+enum {verbose=0, md5sum = 1};
 static char *file_ptr, *strt_ptr;
 
 void file_open(const char *path)
@@ -127,9 +128,10 @@ void file_write(void *data, int siz)
 
 void file_close(void)
 {
+  extern char _dtb[];
   uint8_t *hash_value;
   int siz = file_ptr - strt_ptr;
-  void (*fun_ptr)(void) = (void*)strt_ptr;
+  void (*fun_ptr)(int, void *) = (void*)strt_ptr;
   printf("File length = %d\n", siz);
   if (md5sum)
     {
@@ -137,7 +139,8 @@ void file_close(void)
       printf("md5(%p,%d) = %s\n", strt_ptr, siz, hash_value);
     }
   asm volatile ("fence.i");
-  fun_ptr();
+  asm volatile ("fence");
+  fun_ptr(read_csr(mhartid), _dtb);
 }
 
 // Send an ACK packet. Return bytes sent.

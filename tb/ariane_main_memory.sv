@@ -29,7 +29,6 @@ module ariane_main_memory #(
    input wire  sys_rst_n,
    input logic clk_i,
    input logic rst_ni,
-   input logic ndmreset_n,
    AXI_BUS.in master);
    
   
@@ -70,7 +69,7 @@ module ariane_main_memory #(
         .FixedDelayOutput  ( 0                  )
     ) i_axi_delayer (
         .clk_i      ( clk_i                             ),
-        .rst_ni     ( ndmreset_n                        ),
+        .rst_ni     ( rst_ni                            ),
         .aw_valid_i ( master.aw_valid ),
         .aw_chan_i  ( aw_chan_i                         ),
         .aw_ready_o ( master.aw_ready ),
@@ -186,7 +185,7 @@ module ariane_main_memory #(
         .AXI_USER_WIDTH ( AXI_USER_WIDTH      )
     ) i_axi2mem (
         .clk_i  ( clk_i      ),
-        .rst_ni ( ndmreset_n ),
+        .rst_ni ( rst_ni     ),
         .slave  ( dram       ),
         .req_o  ( req        ),
         .we_o   ( we         ),
