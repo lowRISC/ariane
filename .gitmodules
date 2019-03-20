@@ -43,3 +43,6 @@
 [submodule "src/fpu"]
 	path = src/fpu
 	url = https://github.com/lowRISC/fpnew.git
+[submodule "src/OpenIP"]
+	path = src/OpenIP
+	url = https://github.com/lowRISC/OpenIP.git
