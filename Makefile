@@ -62,7 +62,7 @@ ariane_pkg := include/riscv_pkg.sv                          \
 			  tb/ariane_soc_pkg.sv                          \
 			  include/ariane_axi_pkg.sv                     \
 			  src/fpu/src/fpnew_pkg.sv                      \
-			  src/fpu/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
+
 ariane_pkg := $(addprefix $(root-dir), $(ariane_pkg))
 
 # utility modules

@@ -40,3 +40,6 @@
 [submodule "src/riscv-dbg"]
 	path = src/riscv-dbg
 	url = https://github.com/pulp-platform/riscv-dbg.git
+[submodule "src/fpu"]
+	path = src/fpu
+	url = https://github.com/lowRISC/fpnew.git
