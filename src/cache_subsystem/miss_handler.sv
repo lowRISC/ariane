@@ -354,7 +354,7 @@ module miss_handler #(
                     be_o.vldrty = INVALIDATE_ON_FLUSH ? '1 : '0;
                     we_o        = 1'b1;
                     // finished with flushing operation, go back to idle
-                    if (cnt_q[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET] == DCACHE_NUM_WORDS-1) begin
+                    if (cnt_q[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET] == std_cache_pkg::DCACHE_NUM_WORDS-1) begin
                         // only acknowledge if the flush wasn't triggered by an atomic
                         flush_ack_o = ~serve_amo_q;
                         state_d     = IDLE;
@@ -372,7 +372,7 @@ module miss_handler #(
                 be_o.vldrty = '1;
                 cnt_d       = cnt_q + (1'b1 << DCACHE_BYTE_OFFSET);
                 // finished initialization
-                if (cnt_q[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET] == DCACHE_NUM_WORDS-1)
+                if (cnt_q[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET] == std_cache_pkg::DCACHE_NUM_WORDS-1)
                     state_d = IDLE;
             end
             // ----------------------

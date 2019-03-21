@@ -507,22 +507,21 @@ module ariane_testharness #(
     // ---------------
     // AXI Xbar
     // ---------------
-    axi_node_intf_wrap #(
-        .NB_SLAVE           ( ariane_soc::NrSlaves       ),
-        .NB_MASTER          ( ariane_soc::NB_PERIPHERALS ),
-        .NB_REGION          ( ariane_soc::NrRegion       ),
-        .AXI_ADDR_WIDTH     ( AXI_ADDRESS_WIDTH          ),
-        .AXI_DATA_WIDTH     ( AXI_DATA_WIDTH             ),
-        .AXI_USER_WIDTH     ( AXI_USER_WIDTH             ),
-        .AXI_ID_WIDTH       ( ariane_soc::IdWidth        )
-        // .MASTER_SLICE_DEPTH ( 0                          ),
-        // .SLAVE_SLICE_DEPTH  ( 0                          )
-    ) i_axi_xbar (
+    axi_xbar_rework_wrapper i_axi_xbar (
         .clk          ( clk_i      ),
         .rst_n        ( ndmreset_n ),
         .test_en_i    ( test_en    ),
-        .slave        ( slave      ),
-        .master       ( master     ),
+        .slave_0      (slave[0]),
+        .slave_1      (slave[1]),
+        .master_0     (master[0]),
+        .master_1     (master[1]),
+        .master_2     (master[2]),
+        .master_3     (master[3]),
+        .master_4     (master[4]),
+        .master_5     (master[5]),
+        .master_6     (master[6]),
+        .master_7     (master[7]),
+        .master_8     (master[8]),
         .start_addr_i ({
             ariane_soc::DebugBase,
             ariane_soc::ROMBase,
@@ -544,8 +543,7 @@ module ariane_testharness #(
             ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
             ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
             ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1
-        }),
-        .valid_rule_i (ariane_soc::ValidRule)
+        })
     );
 
     // ---------------

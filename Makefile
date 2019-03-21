@@ -51,7 +51,7 @@ endif
 
 # Sources
 # Package files -> compile first
-ariane_pkg := include/riscv_pkg.sv                          \
+ariane_pkg :=             include/riscv_pkg.sv                          \
 			  src/riscv-dbg/src/dm_pkg.sv                   \
 			  include/ariane_pkg.sv                         \
 			  include/std_cache_pkg.sv                      \
@@ -62,6 +62,7 @@ ariane_pkg := include/riscv_pkg.sv                          \
 			  tb/ariane_soc_pkg.sv                          \
 			  include/ariane_axi_pkg.sv                     \
 			  src/fpu/src/fpnew_pkg.sv                      \
+		          src/OpenIP/util/simple_xbar.sv                \
 
 ariane_pkg := $(addprefix $(root-dir), $(ariane_pkg))
 
@@ -69,7 +70,6 @@ ariane_pkg := $(addprefix $(root-dir), $(ariane_pkg))
 util := $(wildcard src/util/*.svh)                          \
         src/util/instruction_tracer_pkg.sv                  \
         src/util/instruction_tracer_if.sv                   \
-        src/tech_cells_generic/src/cluster_clock_gating.sv  \
         tb/common/mock_uart.sv                              \
         src/util/sram.sv
 
@@ -116,6 +116,7 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         $(wildcard src/axi_node/src/*.sv)                                      \
         $(wildcard src/axi_riscv_atomics/src/*.sv)                             \
         $(wildcard src/axi_mem_if/src/*.sv)                                    \
+        src/OpenIP/util/axi_xbar_rework_wrapper.sv                             \
         src/riscv-dbg/src/dmi_cdc.sv                                           \
         src/riscv-dbg/src/dmi_jtag.sv                                          \
         src/riscv-dbg/src/dmi_jtag_tap.sv                                      \
@@ -159,6 +160,7 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         src/common_cells/src/lfsr_16bit.sv                                     \
         src/common_cells/src/counter.sv                                        \
         src/common_cells/src/shift_reg.sv                                      \
+        src/tech_cells_generic/src/cluster_clock_gating.sv                     \
         src/tech_cells_generic/src/cluster_clock_inverter.sv                   \
         src/tech_cells_generic/src/pulp_clock_mux2.sv                          \
         tb/ariane_testharness.sv                                               \
@@ -169,10 +171,10 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
 
 src := $(addprefix $(root-dir), $(src))
 
-uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
+uart_src := $(wildcard fpga/src/apb_uart/src/*.sv)
 uart_src := $(addprefix $(root-dir), $(uart_src))
 
-fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv)
+fpga_src := $(filter-out fpga/src/spixip.sv, $(wildcard fpga/src/*.sv)) $(wildcard fpga/src/bootrom/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv src/util/sram.sv)
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
 
 # look for testbenches
@@ -449,19 +451,47 @@ check-torture:
 	grep 'All signatures match for $(test-location)' $(riscv-torture-dir)/$(test-location).log
 	diff -s $(riscv-torture-dir)/$(test-location).spike.sig $(riscv-torture-dir)/$(test-location).rtlsim.sig
 
-fpga_filter := $(addprefix $(root-dir), bootrom/bootrom.sv)
+fpga_filter := $(addprefix $(root-dir), bootrom/bootrom.sv \
+	tb/ariane_peripherals.sv \
+	tb/ariane_testharness.sv \
+	fpga/src/axi2apb/src/axi2apb_wrap.sv \
+	fpga/src/axi_slice/src/axi_slice_wrap.sv \
+	src/axi_node/src/axi_node_intf_wrap.sv \
+	src/axi_riscv_atomics/src/axi_riscv_lrsc_wrap.sv \
+	src/common_cells/src/deprecated/find_first_one.sv \
+	src/util/axi_master_connect_rev.sv \
+	src/util/axi_slave_connect_rev.sv \
+	src/axi/src/axi_to_axi_lite.sv \
+	)
 
-fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(util) $(uart_src)
+fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(uart_src)
 	@echo "[FPGA] Generate sources"
-	@echo read_vhdl        {$(uart_src)}    > fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(ariane_pkg)} >> fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(util)}       >> fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(fpga_src)}   >> fpga/scripts/add_sources.tcl
+	@echo read_verilog -sv {$(uart_src) $(ariane_pkg) $(util) $(filter-out $(fpga_filter), $(src)) $(fpga_src) } > fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"
 	cd fpga && make BOARD="genesys2" XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20"
 
 .PHONY: fpga
+
+fpga_stub :=    fpga/xilinx/xlnx_proto_check/ip/xlnx_proto_check_stub.v \
+                fpga/xilinx/xlnx_ila_axi_0/ip/xlnx_ila_axi_0_stub.v \
+                fpga/xilinx/xlnx_clk_sd/ip/xlnx_clk_sd_stub.v \
+                fpga/xilinx/xlnx_ila_4/ip/xlnx_ila_4_stub.v \
+                fpga/xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter_stub.v \
+                fpga/xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio_stub.v \
+                fpga/xilinx/xlnx_mig_7_ddr3/ip/xlnx_mig_7_ddr3_stub.v \
+                fpga/xilinx/xlnx_ila_5/ip/xlnx_ila_5_stub.v \
+                fpga/xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi_stub.v \
+                fpga/xilinx/xlnx_ila/ip/xlnx_ila_stub.v \
+                fpga/xilinx/xlnx_clk_gen/ip/xlnx_clk_gen_stub.v \
+                fpga/xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter_stub.v \
+
+fpga-sim-vcs: $(ariane_pkg) $(fpga_src) $(uart_src)
+	@echo "[FPGA] sv-elaborate"
+	vcs -full64 -sverilog -timescale=1ns/1ps -assert svaext +incdir+fpga/src +define+GENESYSII $(ariane_pkg) \
+	$(filter-out $(fpga_filter), $(src)) $(fpga_src) $(fpga_stub) $(uart_src) \
+	-y $(XILINX_VIVADO)/data/verilog/src/unisims +libext+.v                \
+	-y $(XILINX_VIVADO)/data/verilog/src/retarget                          \
+	$(XILINX_VIVADO)/data/verilog/src/glbl.v                               \
 
 build-spike:
 	cd tb/riscv-isa-sim && mkdir -p build && cd build && ../configure --prefix=`pwd`/../install --with-fesvr=$(RISCV) --enable-commitlog && make -j8 install

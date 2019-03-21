@@ -1,24 +1,12 @@
-[submodule "src/axi_mem_if"]
-	path = src/axi_mem_if
-	url = https://github.com/pulp-platform/axi_mem_if.git
-[submodule "src/axi_node"]
-	path = src/axi_node
-	url = https://github.com/pulp-platform/axi_node.git
 [submodule "src/fpga-support"]
 	path = src/fpga-support
 	url = https://github.com/pulp-platform/fpga-support.git
 [submodule "src/common_cells"]
 	path = src/common_cells
 	url = https://github.com/pulp-platform/common_cells.git
-[submodule "src/axi"]
-	path = src/axi
-	url = https://github.com/pulp-platform/axi.git
 [submodule "src/register_interface"]
 	path = src/register_interface
 	url = https://github.com/pulp-platform/register_interface.git
-[submodule "fpga/src/apb_uart"]
-	path = fpga/src/apb_uart
-	url = https://github.com/pulp-platform/apb_uart.git
 [submodule "fpga/src/apb_node"]
 	path = fpga/src/apb_node
 	url = https://github.com/pulp-platform/apb_node.git
@@ -37,9 +25,24 @@
 [submodule "src/axi_riscv_atomics"]
 	path = src/axi_riscv_atomics
 	url = https://github.com/pulp-platform/axi_riscv_atomics.git
-[submodule "src/riscv-dbg"]
-	path = src/riscv-dbg
-	url = https://github.com/pulp-platform/riscv-dbg.git
 [submodule "src/fpu"]
 	path = src/fpu
 	url = https://github.com/lowRISC/fpnew.git
+[submodule "src/OpenIP"]
+	path = src/OpenIP
+	url = https://github.com/lowRISC/OpenIP.git
+[submodule "fpga/src/apb_uart"]
+	path = fpga/src/apb_uart
+	url = https://github.com/lowRISC/apb_uart
+[submodule "src/riscv-dbg"]
+	path = src/riscv-dbg
+	url = https://github.com/lowRISC/riscv-dbg-1.git
+[submodule "src/axi_node"]
+	path = src/axi_node
+	url = https://github.com/lowRISC/axi_node
+[submodule "src/axi_mem_if"]
+	path = src/axi_mem_if
+	url = https://github.com/lowRISC/axi_mem_if
+[submodule "src/axi"]
+	path = src/axi
+	url = https://github.com/lowRISC/axi

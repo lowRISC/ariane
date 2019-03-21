@@ -60,7 +60,7 @@ module tag_cmp #(
         assign hit_way_o[j] = (sel_tag == rdata_i[j].tag) ? rdata_i[j].valid : 1'b0;
     end
 
-    always_comb begin
+    always @* begin
 
         gnt_o     = '0;
         id_d      = '0;

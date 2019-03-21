@@ -589,7 +589,6 @@ sd_bus sd1
         );
 
         assign s_axi_gpio_rlast = 1'b1;
-        assign s_axi_gpio_wlast = 1'b1;
     end
 endmodule
 
