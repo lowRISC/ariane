@@ -493,6 +493,9 @@ fpga-sim-vcs: $(ariane_pkg) $(fpga_src) $(uart_src)
 	-y $(XILINX_VIVADO)/data/verilog/src/retarget                          \
 	$(XILINX_VIVADO)/data/verilog/src/glbl.v                               \
 
+src/OpenIP/util/simple_xbar.sv:
+	make -C src/OpenIP/util
+
 build-spike:
 	cd tb/riscv-isa-sim && mkdir -p build && cd build && ../configure --prefix=`pwd`/../install --with-fesvr=$(RISCV) --enable-commitlog && make -j8 install
 
