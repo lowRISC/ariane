@@ -29,6 +29,7 @@ read_ip xilinx/xlnx_ila_4/ip/xlnx_ila_4.xci
 read_ip xilinx/xlnx_ila_5/ip/xlnx_ila_5.xci
 read_ip xilinx/xlnx_ila_axi_0/ip/xlnx_ila_axi_0.xci
 read_ip xilinx/xlnx_proto_check/ip/xlnx_proto_check.xci
+read_ip xilinx/xlnx_axi_bram_ctrl/ip/xlnx_axi_bram_ctrl.xci
 
 source scripts/add_sources.tcl
 

@@ -98,7 +98,7 @@ interface AXI_BUS #(
     input ar_id, ar_addr, ar_len, ar_size, ar_burst, ar_lock, ar_cache, ar_prot, ar_qos, ar_region, ar_user, ar_valid, output ar_ready,
     output r_id, r_data, r_resp, r_last, r_user, r_valid, input r_ready
   );
-
+/*
   /// The interface as an output (issuing requests, initiator, master).
   modport out (
     output aw_id, aw_addr, aw_len, aw_size, aw_burst, aw_lock, aw_cache, aw_prot, aw_qos, aw_atop, aw_region, aw_user, aw_valid, input aw_ready,
@@ -116,7 +116,7 @@ interface AXI_BUS #(
     input ar_id, ar_addr, ar_len, ar_size, ar_burst, ar_lock, ar_cache, ar_prot, ar_qos, ar_region, ar_user, ar_valid, output ar_ready,
     output r_id, r_data, r_resp, r_last, r_user, r_valid, input r_ready
   );
-
+*/
 endinterface
 
 

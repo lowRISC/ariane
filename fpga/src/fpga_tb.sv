@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module fpga_tb;
    
    logic         sys_clk_p   ;
@@ -45,6 +47,34 @@ module fpga_tb;
    logic         rx          ;
    logic         tx          ;
 
+   initial
+     begin
+        $vcdpluson;
+          sw = 0;
+          sys_clk_p = 0;
+          cpu_resetn = 0;
+        forever
+          begin
+             #2.5
+               sys_clk_p = 1;
+             #2.5
+               sys_clk_p = 0;
+             #2.5
+               sys_clk_p = 1;
+             #2.5
+               sys_clk_p = 0;
+             cpu_resetn = 1;
+          end
+     end
+
+   assign sys_clk_n = ~sys_clk_p;
+   assign rx = tx;
+   assign tck = 0;
+   assign tms = 0;
+   assign tdi = 0;
+   assign trst_n = 1;
+   assign sd_detect = 0;
+   
 ariane_xilinx dut (
  .sys_clk_p,
  .sys_clk_n,

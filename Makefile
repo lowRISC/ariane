@@ -101,6 +101,7 @@ ifdef spike-tandem
 endif
 
 # this list contains the standalone components
+
 src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         $(filter-out src/fpu/src/fpnew_pkg.sv, $(wildcard src/fpu/src/*.sv))   \
         $(filter-out src/fpu/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv,    \
@@ -464,6 +465,7 @@ fpga_filter := $(addprefix $(root-dir), bootrom/bootrom.sv \
 	src/axi/src/axi_to_axi_lite.sv \
 	)
 
+
 fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(uart_src)
 	@echo "[FPGA] Generate sources"
 	@echo read_verilog -sv {$(uart_src) $(ariane_pkg) $(util) $(filter-out $(fpga_filter), $(src)) $(fpga_src) } > fpga/scripts/add_sources.tcl
@@ -472,27 +474,39 @@ fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(uart_src)
 
 .PHONY: fpga
 
-fpga_stub :=    fpga/xilinx/xlnx_proto_check/ip/xlnx_proto_check_stub.v \
-                fpga/xilinx/xlnx_ila_axi_0/ip/xlnx_ila_axi_0_stub.v \
-                fpga/xilinx/xlnx_clk_sd/ip/xlnx_clk_sd_stub.v \
-                fpga/xilinx/xlnx_ila_4/ip/xlnx_ila_4_stub.v \
-                fpga/xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter_stub.v \
-                fpga/xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio_stub.v \
-                fpga/xilinx/xlnx_mig_7_ddr3/ip/xlnx_mig_7_ddr3_stub.v \
-                fpga/xilinx/xlnx_ila_5/ip/xlnx_ila_5_stub.v \
-                fpga/xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi_stub.v \
-                fpga/xilinx/xlnx_ila/ip/xlnx_ila_stub.v \
-                fpga/xilinx/xlnx_clk_gen/ip/xlnx_clk_gen_stub.v \
-                fpga/xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter_stub.v \
+fpga_stub := \
+fpga/xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter_sim_netlist.v \
+fpga/xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter_sim_netlist.v \
+fpga/xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio_sim_netlist.v \
+fpga/xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi_sim_netlist.v \
+fpga/xilinx/xlnx_clk_gen/ip/xlnx_clk_gen_sim_netlist.v \
+fpga/xilinx/xlnx_clk_sd/ip/xlnx_clk_sd_sim_netlist.v \
+fpga/xilinx/xlnx_ila_4/ip/xlnx_ila_4_sim_netlist.v \
+fpga/xilinx/xlnx_ila_5/ip/xlnx_ila_5_sim_netlist.v \
+fpga/xilinx/xlnx_ila_axi_0/ip/xlnx_ila_axi_0_sim_netlist.v \
+fpga/xilinx/xlnx_ila/ip/xlnx_ila_sim_netlist.v \
+fpga/xilinx/xlnx_mig_7_ddr3/ip/xlnx_mig_7_ddr3_sim_netlist.v \
+fpga/xilinx/xlnx_proto_check/ip/xlnx_proto_check_sim_netlist.v \
 
 fpga-sim-vcs: $(ariane_pkg) $(fpga_src) $(uart_src)
 	@echo "[FPGA] sv-elaborate"
-	vcs -full64 -sverilog -timescale=1ns/1ps -assert svaext +incdir+fpga/src +define+GENESYSII $(ariane_pkg) \
+	rm -f vcdplus.vpd test.fst
+	vcs -full64 -sverilog -debug_access -timescale=1ns/1ps -assert svaext +incdir+fpga/src \
+	+define+$(defines) +define+GENESYSII $(ariane_pkg) \
 	$(filter-out $(fpga_filter), $(src)) $(fpga_src) $(fpga_stub) $(uart_src) \
 	-y $(XILINX_VIVADO)/data/verilog/src/unisims +libext+.v                \
 	-y $(XILINX_VIVADO)/data/verilog/src/retarget                          \
 	$(XILINX_VIVADO)/data/verilog/src/glbl.v                               \
-
+        $(XILINX_VIVADO)/data/verilog/src/xeclib/PHY_CONTROL.v                 \
+        $(XILINX_VIVADO)/data/verilog/src/xeclib/IN_FIFO.v                     \
+        $(XILINX_VIVADO)/data/verilog/src/xeclib/OUT_FIFO.v                    \
+        $(XILINX_VIVADO)/data/verilog/src/xeclib/PHASER_IN_PHY.v               \
+        $(XILINX_VIVADO)/data/verilog/src/xeclib/PHASER_OUT_PHY.v              \
+        $(XILINX_VIVADO)/data/verilog/src/xeclib/ISERDESE2.v                   \
+        $(XILINX_VIVADO)/data/verilog/src/xeclib/OSERDESE2.v                   \
+	|& tee $@.log
+	./simv +vcs+finish+10000000000
+	vpd2vcd vcdplus.vpd|vcd2fst - test.fst
 
 $(PWD)/src/OpenIP/util/simple_xbar.sv:
 	make -C src/OpenIP/util
