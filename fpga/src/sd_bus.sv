@@ -33,7 +33,7 @@ module sd_bus
 //----------------------------------------------------------------------------//
 
    wire       tx_rd, rx_wr_en;
-   wire       sd_data_busy, data_crc_ok, sd_dat_oe;
+   wire       sd_dat_oe;
    wire [3:0] sd_dat_to_mem, sd_dat_to_host, sd_dat_to_host_maj;
    wire       sd_cmd_to_mem, sd_cmd_to_host, sd_cmd_to_host_maj, sd_cmd_oe;
    wire       sd_clk_o;       
@@ -44,7 +44,6 @@ module sd_bus
    reg [15:0] sd_blkcnt_reg;
    reg [11:0] sd_blksize_reg;
    
-   reg [15:0] clock_divider_sd_clk_reg;
    reg [2:0]  sd_cmd_setting_reg;
    reg [5:0]  sd_cmd_i_reg;
    reg [31:0] sd_cmd_arg_reg;
@@ -57,7 +56,6 @@ module sd_bus
    reg [15:0] sd_blkcnt;
    reg [11:0] sd_blksize;
    
-   reg [15:0] clock_divider_sd_clk;
    reg [2:0]  sd_cmd_setting;
    reg [5:0]  sd_cmd_i;
    reg [31:0] sd_cmd_arg;
@@ -314,6 +312,102 @@ sd_top sdtop(
     .sd_cmd_oe(sd_cmd_oe),
     .sd_xfr_addr(sd_xfr_addr)
     );
+
+`ifndef SIMULATION
+xlnx_ila_sd sd_ila (
+.clk(msoc_clk), // input wire clk   
+.probe0	(1'b0),
+.probe1 (rstn),
+.probe2 (1'b0),
+.probe3 (1'b0),
+.probe4 (1'b0),
+.probe5 (data_in_rx),
+.probe6 (data_out_tx),
+.probe7 (douta),
+.probe8 (doutb),
+.probe9 (rx_wr),
+.probe10 (rx_wr_en),
+.probe11 (sd_align),
+.probe12 (sd_align_reg),
+.probe13 (sd_blkcnt),
+.probe14 (sd_blkcnt_reg),
+.probe15 (sd_blksize),
+.probe16 (sd_blksize_reg),
+.probe17 (sd_clk_daddr),
+.probe18 (sd_clk_dclk),
+.probe19 (sd_clk_den),
+.probe20 (sd_clk_din),
+.probe21 (sd_clk_dout),
+.probe22 (sd_clk_drdy),
+.probe23 (sd_clk_dwe),
+.probe24 (sd_clk_locked),
+.probe25 (sd_clk_rst),
+.probe26 (sd_cmd_arg),
+.probe27 (sd_cmd_arg_reg),
+.probe28 (sd_cmd_crc_ok),
+.probe29 (sd_cmd_crc_val),
+.probe30 (sd_cmd_i),
+.probe31 (sd_cmd_index_ok),
+.probe32 (sd_cmd_i_reg),
+.probe33 (sd_cmd_oe),
+.probe34 (sd_cmd_packet),
+.probe35 (sd_cmd_packet_reg),
+.probe36 (sd_cmd_response),
+.probe37 (sd_cmd_response_reg),
+.probe38 (sd_cmd_resp_sel),
+.probe39 (sd_cmd_rst),
+.probe40 (sd_cmd_setting),
+.probe41 (sd_cmd_setting_reg),
+.probe42 (sd_cmd_start),
+.probe43 (sd_cmd_start_reg),
+.probe44 (sd_cmd_timeout),
+.probe45 (sd_cmd_timeout_reg),
+.probe46 (1'b0),
+.probe47 (sd_cmd_to_host_maj),
+.probe48 (sd_cmd_wait),
+.probe49 (sd_cmd_wait_reg),
+.probe50 (4'b0),
+.probe51 (sd_data_finish),
+.probe52 (sd_data_rst),
+.probe53 (sd_data_start),
+.probe54 (sd_data_start_reg),
+.probe55 (sd_data_wait),
+.probe56 (sd_data_wait_reg),
+.probe57 (sd_dat_oe),
+.probe58 (4'b0),
+.probe59 (sd_dat_to_host_maj),
+.probe60 (sd_dat_to_mem),
+.probe61 (sd_detect_reg),
+.probe62 (sd_irq),
+.probe63 (sd_irq_en_reg),
+.probe64 (sd_irq_stat_reg),
+.probe65 (sd_reset),
+.probe66 (sd_status),
+.probe67 (sd_status_reg),
+.probe68 (sd_transf_cnt),
+.probe69 (sd_transf_cnt_reg),
+.probe70 (sd_xfr_addr),
+.probe71 (sd_xfr_addr_prev),
+.probe72 (spisd_addr),
+.probe73 (spisd_addr_prev_15),
+.probe74 (spisd_be),
+.probe75 (spisd_rddata),
+.probe76 (spisd_wrdata),
+.probe77 (swapbein),
+.probe78 (1'b0),
+.probe79 (msoc_clk),
+.probe80 (1'b0),
+.probe81 (sd_clk_o),
+.probe82 (1'b0),
+.probe83 (sd_cmd_finish),
+.probe84 (sd_cmd_to_mem),
+.probe85 (1'b0),
+.probe86 (sd_detect),
+.probe87 (spisd_we),
+.probe88 (spisd_en),
+.probe89 (tx_rd)
+  );
+`endif   
    
 endmodule // chip_top
 `default_nettype wire

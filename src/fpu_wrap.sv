@@ -47,9 +47,9 @@ generate
     //-----------------------------------
     // FPnew config from FPnew package
     //-----------------------------------
-    localparam OPBITS  =  fpnew_pkg::OP_WIDTH;
-    localparam FMTBITS =  $clog2(fpnew_pkg::NUM_FP_FORMATS);
-    localparam IFMTBITS = $clog2(fpnew_pkg::NUM_INT_FORMATS);
+    localparam OPBITS  =  fpnew_pkg::OP_BITS;
+    localparam FMTBITS =  fpnew_pkg::FP_FORMAT_BITS;
+    localparam IFMTBITS = fpnew_pkg::INT_FORMAT_BITS;
 
     // Features (enabled formats, vectors etc.)
     localparam fpnew_pkg::fpu_features_t FPU_FEATURES = '{

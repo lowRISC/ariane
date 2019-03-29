@@ -649,7 +649,7 @@ int testrange(void volatile *aligned, size_t bufsize, ul loops, int narrow) {
     return(exit_code);
 }
 
-int dram_main()
+void dram_main(void)
 {
   int i;
   //  enum {range=2048};  

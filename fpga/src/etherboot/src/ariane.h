@@ -27,5 +27,10 @@ enum {
 
 void eth_main(void);
 void sd_main(int sw);
+void dram_main(void);
+void cache_main(void);
+uint32_t hwrnd(void);
+void gpio_leds(uint32_t arg);
+uint32_t gpio_sw(void);
 
 #endif

@@ -145,11 +145,43 @@ module plic #(
         assert(ID_BITWIDTH < 10      )                  else $error("ID_BITWIDTH has to be smaller than 10");
         assert(PARAMETER_BITWIDTH > 0)                  else $error("PARAMETER_BITWIDTH has to be larger than 1");
         assert(PARAMETER_BITWIDTH < 8)                  else $error("PARAMETER_BITWIDTH has to be smaller than 8");
-        assert(NUM_SOURCES > 0       )                  else $error("Num od Gateways has to be larger than 1");
+        assert(NUM_SOURCES > 0       )                  else $error("Num of Gateways has to be larger than 1");
         assert(NUM_SOURCES < 512     )                  else $error("Num of Gateways has to be smaller than 512");
         assert(NUM_TARGETS > 0       )                  else $error("Num Target slices has to be larger than 1");
         assert(NUM_TARGETS < 15872   )                  else $error("Num target slices has to be smaller than 15872");
     end
     `endif
     //pragma translate_on
+
+`ifndef SIMULATION
+xlnx_ila_plic plic_ila (
+.clk(clk_i), // input wire clk   
+.probe0(eip_targets_o),
+.probe1({gateway_claimed[2],gateway_claimed[1],gateway_claimed[0]}),
+.probe2({gateway_completed[2],gateway_completed[1],gateway_completed[0]}),
+.probe3(gateway_ids[0]),
+.probe4(gateway_ids[1]),
+.probe5(gateway_ids[2]),
+.probe6({gateway_irq_pendings[2],gateway_irq_pendings[1],gateway_irq_pendings[0]}),
+.probe7(gateway_priorities[0]),
+.probe8(gateway_priorities[1]),
+.probe9(gateway_priorities[2]),
+.probe10(identifier_of_largest_priority_per_target[0]),
+.probe11(identifier_of_largest_priority_per_target[1]),
+.probe12({irq_enableds[0][1],irq_enableds[0][0]}),
+.probe13({irq_enableds[1][1],irq_enableds[1][0]}),
+.probe14({irq_enableds[2][1],irq_enableds[2][0]}),
+.probe15(irq_sources_i),
+.probe16(rst_ni),
+.probe17(target_irq_claims[0]),
+.probe18(target_irq_claims[1]),
+.probe19(target_irq_completes[0]),
+.probe20(target_irq_completes[1]),
+.probe21(target_irq_completes_id[0]),
+.probe22(target_irq_completes_id[1]),
+.probe23(target_thresholds[0]),
+.probe24(target_thresholds[1])
+  );
+`endif   
+
 endmodule

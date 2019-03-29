@@ -448,148 +448,71 @@ sd_bus sd1
     end
 
     // 5. GPIO
-    assign gpio.b_user = 1'b0;
-    assign gpio.r_user = 1'b0;
 
     if (InclGPIO) begin : gen_gpio
 
-        logic [31:0] s_axi_gpio_awaddr;
-        logic [7:0]  s_axi_gpio_awlen;
-        logic [2:0]  s_axi_gpio_awsize;
-        logic [1:0]  s_axi_gpio_awburst;
-        logic [3:0]  s_axi_gpio_awcache;
-        logic        s_axi_gpio_awvalid;
-        logic        s_axi_gpio_awready;
-        logic [31:0] s_axi_gpio_wdata;
-        logic [3:0]  s_axi_gpio_wstrb;
-        logic        s_axi_gpio_wlast;
-        logic        s_axi_gpio_wvalid;
-        logic        s_axi_gpio_wready;
-        logic [1:0]  s_axi_gpio_bresp;
-        logic        s_axi_gpio_bvalid;
-        logic        s_axi_gpio_bready;
-        logic [31:0] s_axi_gpio_araddr;
-        logic [7:0]  s_axi_gpio_arlen;
-        logic [2:0]  s_axi_gpio_arsize;
-        logic [1:0]  s_axi_gpio_arburst;
-        logic [3:0]  s_axi_gpio_arcache;
-        logic        s_axi_gpio_arvalid;
-        logic        s_axi_gpio_arready;
-        logic [31:0] s_axi_gpio_rdata;
-        logic [1:0]  s_axi_gpio_rresp;
-        logic        s_axi_gpio_rlast;
-        logic        s_axi_gpio_rvalid;
-        logic        s_axi_gpio_rready;
+logic                    gpio_en, gpio_we, gpio_int_n, gpio_pme_n, gpio_mdio_i, gpio_mdio_o, gpio_mdio_oe;
+logic [AxiAddrWidth-1:0] gpio_addr;
+logic [AxiDataWidth-1:0] gpio_wrdata, gpio_rdata;
+logic [AxiDataWidth/8-1:0] gpio_be;
 
-        // system-bus is 64-bit, convert down to 32 bit
-        xlnx_axi_dwidth_converter i_xlnx_axi_dwidth_converter_gpio (
-            .s_axi_aclk     ( clk_i              ),
-            .s_axi_aresetn  ( rst_ni             ),
-            .s_axi_awid     ( gpio.aw_id         ),
-            .s_axi_awaddr   ( gpio.aw_addr[31:0] ),
-            .s_axi_awlen    ( gpio.aw_len        ),
-            .s_axi_awsize   ( gpio.aw_size       ),
-            .s_axi_awburst  ( gpio.aw_burst      ),
-            .s_axi_awlock   ( gpio.aw_lock       ),
-            .s_axi_awcache  ( gpio.aw_cache      ),
-            .s_axi_awprot   ( gpio.aw_prot       ),
-            .s_axi_awregion ( gpio.aw_region     ),
-            .s_axi_awqos    ( gpio.aw_qos        ),
-            .s_axi_awvalid  ( gpio.aw_valid      ),
-            .s_axi_awready  ( gpio.aw_ready      ),
-            .s_axi_wdata    ( gpio.w_data        ),
-            .s_axi_wstrb    ( gpio.w_strb        ),
-            .s_axi_wlast    ( gpio.w_last        ),
-            .s_axi_wvalid   ( gpio.w_valid       ),
-            .s_axi_wready   ( gpio.w_ready       ),
-            .s_axi_bid      ( gpio.b_id          ),
-            .s_axi_bresp    ( gpio.b_resp        ),
-            .s_axi_bvalid   ( gpio.b_valid       ),
-            .s_axi_bready   ( gpio.b_ready       ),
-            .s_axi_arid     ( gpio.ar_id         ),
-            .s_axi_araddr   ( gpio.ar_addr[31:0] ),
-            .s_axi_arlen    ( gpio.ar_len        ),
-            .s_axi_arsize   ( gpio.ar_size       ),
-            .s_axi_arburst  ( gpio.ar_burst      ),
-            .s_axi_arlock   ( gpio.ar_lock       ),
-            .s_axi_arcache  ( gpio.ar_cache      ),
-            .s_axi_arprot   ( gpio.ar_prot       ),
-            .s_axi_arregion ( gpio.ar_region     ),
-            .s_axi_arqos    ( gpio.ar_qos        ),
-            .s_axi_arvalid  ( gpio.ar_valid      ),
-            .s_axi_arready  ( gpio.ar_ready      ),
-            .s_axi_rid      ( gpio.r_id          ),
-            .s_axi_rdata    ( gpio.r_data        ),
-            .s_axi_rresp    ( gpio.r_resp        ),
-            .s_axi_rlast    ( gpio.r_last        ),
-            .s_axi_rvalid   ( gpio.r_valid       ),
-            .s_axi_rready   ( gpio.r_ready       ),
+axi2mem #(
+    .AXI_ID_WIDTH   ( AxiIdWidth      ),
+    .AXI_ADDR_WIDTH ( AxiAddrWidth    ),
+    .AXI_DATA_WIDTH ( AxiDataWidth    ),
+    .AXI_USER_WIDTH ( AxiUserWidth    )
+) i_axi2gpio (
+    .clk_i  ( clk_i                   ),
+    .rst_ni ( rst_ni                  ),
+    .slave  ( gpio                    ),
+    .req_o  ( gpio_en                 ),
+    .we_o   ( gpio_we                 ),
+    .addr_o ( gpio_addr               ),
+    .be_o   ( gpio_be                 ),
+    .data_o ( gpio_wrdata             ),
+    .data_i ( gpio_rdata              )
+);
 
-            .m_axi_awaddr   ( s_axi_gpio_awaddr  ),
-            .m_axi_awlen    ( s_axi_gpio_awlen   ),
-            .m_axi_awsize   ( s_axi_gpio_awsize  ),
-            .m_axi_awburst  ( s_axi_gpio_awburst ),
-            .m_axi_awlock   (                    ),
-            .m_axi_awcache  ( s_axi_gpio_awcache ),
-            .m_axi_awprot   (                    ),
-            .m_axi_awregion (                    ),
-            .m_axi_awqos    (                    ),
-            .m_axi_awvalid  ( s_axi_gpio_awvalid ),
-            .m_axi_awready  ( s_axi_gpio_awready ),
-            .m_axi_wdata    ( s_axi_gpio_wdata   ),
-            .m_axi_wstrb    ( s_axi_gpio_wstrb   ),
-            .m_axi_wlast    ( s_axi_gpio_wlast   ),
-            .m_axi_wvalid   ( s_axi_gpio_wvalid  ),
-            .m_axi_wready   ( s_axi_gpio_wready  ),
-            .m_axi_bresp    ( s_axi_gpio_bresp   ),
-            .m_axi_bvalid   ( s_axi_gpio_bvalid  ),
-            .m_axi_bready   ( s_axi_gpio_bready  ),
-            .m_axi_araddr   ( s_axi_gpio_araddr  ),
-            .m_axi_arlen    ( s_axi_gpio_arlen   ),
-            .m_axi_arsize   ( s_axi_gpio_arsize  ),
-            .m_axi_arburst  ( s_axi_gpio_arburst ),
-            .m_axi_arlock   (                    ),
-            .m_axi_arcache  ( s_axi_gpio_arcache ),
-            .m_axi_arprot   (                    ),
-            .m_axi_arregion (                    ),
-            .m_axi_arqos    (                    ),
-            .m_axi_arvalid  ( s_axi_gpio_arvalid ),
-            .m_axi_arready  ( s_axi_gpio_arready ),
-            .m_axi_rdata    ( s_axi_gpio_rdata   ),
-            .m_axi_rresp    ( s_axi_gpio_rresp   ),
-            .m_axi_rlast    ( s_axi_gpio_rlast   ),
-            .m_axi_rvalid   ( s_axi_gpio_rvalid  ),
-            .m_axi_rready   ( s_axi_gpio_rready  )
-        );
-
-        xlnx_axi_gpio i_xlnx_axi_gpio (
-            .s_axi_aclk    ( clk_i                  ),
-            .s_axi_aresetn ( rst_ni                 ),
-            .s_axi_awaddr  ( s_axi_gpio_awaddr[8:0] ),
-            .s_axi_awvalid ( s_axi_gpio_awvalid     ),
-            .s_axi_awready ( s_axi_gpio_awready     ),
-            .s_axi_wdata   ( s_axi_gpio_wdata       ),
-            .s_axi_wstrb   ( s_axi_gpio_wstrb       ),
-            .s_axi_wvalid  ( s_axi_gpio_wvalid      ),
-            .s_axi_wready  ( s_axi_gpio_wready      ),
-            .s_axi_bresp   ( s_axi_gpio_bresp       ),
-            .s_axi_bvalid  ( s_axi_gpio_bvalid      ),
-            .s_axi_bready  ( s_axi_gpio_bready      ),
-            .s_axi_araddr  ( s_axi_gpio_araddr[8:0] ),
-            .s_axi_arvalid ( s_axi_gpio_arvalid     ),
-            .s_axi_arready ( s_axi_gpio_arready     ),
-            .s_axi_rdata   ( s_axi_gpio_rdata       ),
-            .s_axi_rresp   ( s_axi_gpio_rresp       ),
-            .s_axi_rvalid  ( s_axi_gpio_rvalid      ),
-            .s_axi_rready  ( s_axi_gpio_rready      ),
-            .gpio_io_i     ( '0                     ),
-            .gpio_io_o     ( leds_o                 ),
-            .gpio_io_t     (                        ),
-            .gpio2_io_i    ( dip_switches_i         )
-        );
-
-        assign s_axi_gpio_rlast = 1'b1;
-        assign s_axi_gpio_wlast = 1'b1;
+       logic               rdfifo;       
+       wire [31:0]         fifo_out;
+       wire [11:0]         rdcount, wrcount;       
+       wire                full, empty, rderr, wrerr;
+      
+ lowrisc_hwrng rng
+  (
+   .clk_i,
+   .rst_ni,
+   .rdfifo,
+   .rdcount,
+   .wrcount,
+   .fifo_out,
+   .full,
+   .empty,
+   .rderr,
+   .wrerr
+   );
+       
+       always @(posedge clk_i)
+         if (gpio_en)
+           case(gpio_addr[4:3])
+             2'b00:
+               begin
+                  gpio_rdata <= dip_switches_i;
+                  if (gpio_we)
+                    leds_o <= gpio_wrdata;
+               end
+             2'b10:
+               begin
+                  rdfifo <= gpio_we;
+                  gpio_rdata <= fifo_out;
+               end
+             2'b11:
+               begin
+                  gpio_rdata <= {full, empty, rderr, wrerr, 7'b0, rdcount[8:0], 7'b0, wrcount[8:0]};
+               end
+             default:;
+             endcase
+             
     end
 endmodule
 

@@ -22,7 +22,7 @@ FATFS FatFs;   // Work area (file system object) for logical drive
 // 4K size read burst
 #define SD_READ_SIZE 4096
 
-char md5buf[SD_READ_SIZE];
+//char md5buf[SD_READ_SIZE];
 
 void just_jump (void)
 {
@@ -32,6 +32,7 @@ void just_jump (void)
   asm volatile ("fence");
   fun_ptr(read_csr(mhartid), _dtb);
 }
+
 
 void sd_main(int sw)
 {
@@ -60,8 +61,10 @@ void sd_main(int sw)
     fr = f_read(&fil, boot_file_buf+fsize, SD_READ_SIZE, &br);  // Read a chunk of source file
     if (!fr)
       {
+        int cnt = fsize / SD_READ_SIZE;
 	write_serial('\b');
-	write_serial("|/-\\"[(fsize/SD_READ_SIZE)&3]);
+	write_serial("|/-\\"[cnt&3]);
+        gpio_leds(cnt);
 	fsize += br;
       }
   } while(!(fr || br == 0));

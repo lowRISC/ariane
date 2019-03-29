@@ -17,6 +17,7 @@ OBJS_S = $(SRCS_ASM:.S=.o)
 
 MAIN = etherboot.elf
 MAIN_BIN = $(MAIN:.elf=.bin)
+MAIN_DIS = $(MAIN:.elf=.dis)
 MAIN_IMG = $(MAIN:.elf=.img)
 MAIN_SV = $(MAIN:.elf=.sv)
 
@@ -32,6 +33,8 @@ $(MAIN): ariane.dtb $(OBJS_C) src/main.o $(OBJS_S) linker.lds
 %.bin: %.elf
 	$(CROSSCOMPILE)objcopy -O binary $< $@
 
+%.dis: %.elf
+	$(CROSSCOMPILE)objdump -d -l -S $< > $@
 %.o: %.c
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 	@echo "CC    <= $<"
@@ -50,7 +53,7 @@ $(MAIN): ariane.dtb $(OBJS_C) src/main.o $(OBJS_S) linker.lds
 clean:
 	$(RM) $(OBJS_C) $(OBJS_S) $(MAIN) $(MAIN_BIN) $(MAIN_IMG) *.dtb
 
-all: $(MAIN) $(MAIN_BIN) $(MAIN_IMG) $(MAIN_SV)
+all: $(MAIN) $(MAIN_BIN) $(MAIN_IMG) $(MAIN_DIS) $(MAIN_SV)
 	@echo "zero stage etherboot loader has been compiled!"
 
 dram.elf: $(OBJS_C) src/dram.o $(OBJS_S) linker.lds
