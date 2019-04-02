@@ -13,6 +13,7 @@ set_property -dict [list CONFIG.PRIM_IN_FREQ {200.000} \
                         CONFIG.CLKOUT2_USED {true} \
                         CONFIG.CLKOUT3_USED {true} \
                         CONFIG.CLKOUT4_USED {true} \
+                        CONFIG.RESET_TYPE {ACTIVE_HIGH} \
                         CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {50} \
                         CONFIG.CLKOUT2_REQUESTED_OUT_FREQ {125} \
                         CONFIG.CLKOUT3_REQUESTED_OUT_FREQ {125} \

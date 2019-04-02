@@ -10,7 +10,7 @@ create_ip -name ila -vendor xilinx.com -library ip -module_name $ipName
 set_property -dict [list  CONFIG.C_NUM_OF_PROBES {8} \
                           CONFIG.C_PROBE3_WIDTH {4} \
                           CONFIG.C_PROBE6_WIDTH {4} \
-                          CONFIG.C_DATA_DEPTH {16384}  \
+                          CONFIG.C_DATA_DEPTH {1024}  \
                           CONFIG.C_INPUT_PIPE_STAGES {1} \
                     ] [get_ips $ipName]
 

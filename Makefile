@@ -106,11 +106,11 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         $(filter-out src/fpu/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv,    \
         $(wildcard src/fpu/src/fpu_div_sqrt_mvp/hdl/*.sv))                     \
         $(wildcard src/frontend/*.sv)                                          \
-        $(filter-out src/cache_subsystem/std_no_dcache.sv,                     \
+        $(filter-out src/cache_subsystem/std_no_dcache.sv src/cache_subsystem/std_nbdcache.sv src/cache_subsystem/miss_handler.sv,                     \
         $(wildcard src/cache_subsystem/*.sv))                                  \
         $(wildcard bootrom/*.sv)                                               \
         $(wildcard src/clint/*.sv)                                             \
-        $(wildcard fpga/src/axi2apb/src/*.sv)                                  \
+        $(filter-out fpga/src/axi2apb/src/axi2apb_wrap.sv, $(wildcard fpga/src/axi2apb/src/*.sv)) \
         $(wildcard fpga/src/axi_slice/src/*.sv)                                \
         $(wildcard src/plic/*.sv)                                              \
         $(wildcard src/axi_node/src/*.sv)                                      \
@@ -164,8 +164,6 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         tb/ariane_testharness.sv                                               \
         tb/ariane_peripherals.sv                                               \
         tb/common/uart.sv                                                      \
-        fpga/xilinx/xlnx_ila_plic/ip/xlnx_ila_plic_stub.v                      \
-        fpga/xilinx/xlnx_ila_5/ip/xlnx_ila_5_stub.v                            \
         tb/common/SimDTM.sv                                                    \
         tb/common/SimJTAG.sv
 
@@ -346,6 +344,8 @@ verilate_command := $(verilator)                                                
                     $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))                         \
                     +define+$(defines)                                                                 \
                     src/util/sram.sv                                                                   \
+                    fpga/xilinx/xlnx_ila_plic/ip/xlnx_ila_plic_stub.v                                  \
+                    fpga/xilinx/xlnx_ila_5/ip/xlnx_ila_5_stub.v                                        \
                     +incdir+src/axi_node                                                               \
                     $(if $(verilator_threads), --threads $(verilator_threads))                         \
                     --unroll-count 256                                                                 \
@@ -375,6 +375,199 @@ verilate:
 
 sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)
+
+ddr_path = fpga/xlnx_mig_7_ddr3_ex
+ddr_user_design = xlnx_mig_7_ddr3_ex.srcs/sources_1/ip/xlnx_mig_7_ddr3/xlnx_mig_7_ddr3/user_design/rtl
+ddr_sim_files = \
+fpga/xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter_sim_netlist.v \
+$(ddr_path)/imports/ddr3_model.sv \
+$(ddr_path)/imports/example_top.v \
+$(ddr_path)/imports/mig_7series_v4_1_axi4_tg.v \
+$(ddr_path)/imports/mig_7series_v4_1_axi4_wrapper.v \
+$(ddr_path)/imports/mig_7series_v4_1_cmd_prbs_gen_axi.v \
+$(ddr_path)/imports/mig_7series_v4_1_data_gen_chk.v \
+$(ddr_path)/imports/mig_7series_v4_1_tg.v \
+$(ddr_path)/imports/sim_tb_top.v \
+$(ddr_path)/imports/wiredly.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_ctrl_addr_decode.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_ctrl_read.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_ctrl_reg_bank.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_ctrl_reg.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_ctrl_top.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_ctrl_write.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_ar_channel.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_aw_channel.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_b_channel.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_cmd_arbiter.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_cmd_fsm.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_cmd_translator.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_fifo.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_incr_cmd.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_r_channel.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_simple_fifo.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_w_channel.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_wrap_cmd.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_axi_mc_wr_cmd_fsm.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_a_upsizer.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_axic_register_slice.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_axi_register_slice.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_axi_upsizer.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_carry_and.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_carry_latch_and.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_carry_latch_or.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_carry_or.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_command_fifo.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_comparator_sel_static.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_comparator_sel.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_comparator.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_r_upsizer.v \
+$(ddr_path)/$(ddr_user_design)/axi/mig_7series_v4_1_ddr_w_upsizer.v \
+$(ddr_path)/$(ddr_user_design)/clocking/mig_7series_v4_1_clk_ibuf.v \
+$(ddr_path)/$(ddr_user_design)/clocking/mig_7series_v4_1_infrastructure.v \
+$(ddr_path)/$(ddr_user_design)/clocking/mig_7series_v4_1_iodelay_ctrl.v \
+$(ddr_path)/$(ddr_user_design)/clocking/mig_7series_v4_1_tempmon.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_arb_mux.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_arb_row_col.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_arb_select.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_bank_cntrl.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_bank_common.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_bank_compare.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_bank_mach.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_bank_queue.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_bank_state.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_col_mach.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_mc.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_rank_cntrl.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_rank_common.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_rank_mach.v \
+$(ddr_path)/$(ddr_user_design)/controller/mig_7series_v4_1_round_robin_arb.v \
+$(ddr_path)/$(ddr_user_design)/ecc/mig_7series_v4_1_ecc_buf.v \
+$(ddr_path)/$(ddr_user_design)/ecc/mig_7series_v4_1_ecc_dec_fix.v \
+$(ddr_path)/$(ddr_user_design)/ecc/mig_7series_v4_1_ecc_gen.v \
+$(ddr_path)/$(ddr_user_design)/ecc/mig_7series_v4_1_ecc_merge_enc.v \
+$(ddr_path)/$(ddr_user_design)/ecc/mig_7series_v4_1_fi_xor.v \
+$(ddr_path)/$(ddr_user_design)/ip_top/mig_7series_v4_1_memc_ui_top_axi.v \
+$(ddr_path)/$(ddr_user_design)/ip_top/mig_7series_v4_1_mem_intfc.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_byte_group_io.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_byte_lane.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_calib_top.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_if_post_fifo.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_mc_phy.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_mc_phy_wrapper.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_of_pre_fifo.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_4lanes.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_ck_addr_cmd_delay.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_dqs_found_cal_hr.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_dqs_found_cal.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_init.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_ocd_cntlr.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_ocd_data.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_ocd_edge.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_ocd_lim.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_ocd_mux.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_ocd_po_cntlr.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_ocd_samp.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_oclkdelay_cal.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_prbs_rdlvl.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_rdlvl.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_tempmon.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_top.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_wrcal.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_wrlvl_off_delay.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_phy_wrlvl.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_prbs_gen.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_ddr_skip_calib_tap.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_poc_cc.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_poc_edge_store.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_poc_meta.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_poc_pd.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_poc_tap_base.v \
+$(ddr_path)/$(ddr_user_design)/phy/mig_7series_v4_1_poc_top.v \
+$(ddr_path)/$(ddr_user_design)/ui/mig_7series_v4_1_ui_cmd.v \
+$(ddr_path)/$(ddr_user_design)/ui/mig_7series_v4_1_ui_rd_data.v \
+$(ddr_path)/$(ddr_user_design)/ui/mig_7series_v4_1_ui_top.v \
+$(ddr_path)/$(ddr_user_design)/ui/mig_7series_v4_1_ui_wr_data.v \
+$(ddr_path)/$(ddr_user_design)/xlnx_mig_7_ddr3_mig_sim.v \
+$(ddr_path)/$(ddr_user_design)/xlnx_mig_7_ddr3.v \
+
+vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+	            $(filter-out src/fpu_wrap.sv fpga/src/axi_slice/src/axi_slice_wrap.sv, $(filter-out %.vhd, $(src)))             \
+	            +define+$(defines)                                                     \
+	            +define+SIMPLE_XBAR                                                    \
+	            +define+SIMULATION                                                     \
+	            +incdir+src/axi_node                                                   \
+		    src/util/sram.sv                                                       \
+	            tb/ariane_tb.sv                                                        \
+
+vlogan_command_ddr := vlogan -work xil_defaultlib -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+                    $(wildcard fpga/src/bootrom/*.sv)                                      \
+	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+                    -y $(XILINX_VIVADO)/data/verilog/src/unisims +libext+.v                \
+                    -y $(XILINX_VIVADO)/data/verilog/src/retarget                          \
+                    $(XILINX_VIVADO)/data/verilog/src/glbl.v                               \
+                    $(ddr_sim_files)                                                       \
+                    +define+$(defines)                                                     \
+	            +define+SIMPLE_XBAR                                                    \
+	            +define+SIMULATION                                                     \
+	            +define+SIMULATE_DDR                                                   \
+	            +incdir+$(ddr_path)/imports                                            \
+		    src/util/sram.sv                                                       \
+	            tb/ariane_tb.sv                                                        \
+
+vcs_command_ddr := vcs -q -full64 -sverilog -assert svaext +lint=PCWM +lint=TFIPC-L +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
+xil_defaultlib.ariane_tb xil_defaultlib.glbl
+
+vcs_command_xbar := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+                    $(wildcard bootrom/*.sv)                                               \
+	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+                    $(foreach i, ${openip_xbar_src}, -v $(i))                              \
+	            +define+$(defines)                                                     \
+	            +incdir+src/axi_node                                                   \
+		    src/util/sram.sv                                                       \
+		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
+		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
+	            tb/ariane_tb.sv                                                        \
+
+vcs_command_orig := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+	            $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))             \
+	            +define+$(defines)                                                     \
+	            +define+SIMPLE_XBAR                                                    \
+	            +incdir+src/axi_node                                                   \
+		    src/util/sram.sv                                                       \
+		    fpga/xilinx/xlnx_ila_4/ip/sim/xlnx_ila_4.v                             \
+		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
+	            tb/ariane_tb.sv                                                        \
+
+sim-vcs:
+	@echo "[Vcs] Building Model"
+	$(vcs_command)
+
+sim-vcs-debug:
+	@echo "[Vcs] Building Model"
+	$(vcs_command) +define+VCDPLUS
+
+sim-vcs-ddr:
+	@echo "[Vcs] Building Model"
+	rm -rf vcs_lib csrc simv.daidir AN.DB vcdplus.vpd test.fst*
+	mkdir -p vcs_lib/xil_defaultlib
+	$(vlogan_command_ddr) -PP +vcsd
+	$(vcs_command_ddr)
+
+sim-vcs-ddr-debug:
+	@echo "[Vcs] Building Model"
+	rm -rf vcs_lib csrc simv.daidir AN.DB vcdplus.vpd test.fst*
+	mkdir -p vcs_lib/xil_defaultlib
+	$(vlogan_command_ddr) +define+VCDPLUS
+	$(vcs_command_ddr)
+
+sim-vcs-orig:
+	@echo "[Vcs] Building Model"
+	$(vcs_command_orig)
 
 $(addsuffix -verilator,$(riscv-asm-tests)): verilate
 	$(ver-library)/Variane_testharness $(riscv-test-dir)/$(subst -verilator,,$@)
@@ -462,7 +655,7 @@ fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(util) $(uart_src)
 	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(fpga_src)}   >> fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"
-	cd fpga && make BOARD="genesys2" XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20"
+	cd fpga && make BOARD="nexys_video" XILINX_PART="xc7a200tsbg484-1" XILINX_BOARD="digilentinc.com:nexys_video:part0:1.1" CLK_PERIOD_NS="20"
 
 .PHONY: fpga
 

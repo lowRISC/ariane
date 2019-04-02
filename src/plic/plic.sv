@@ -153,7 +153,7 @@ module plic #(
     `endif
     //pragma translate_on
 
-`ifndef SIMULATION
+`ifdef XLNX_ILA_PLIC
 xlnx_ila_plic plic_ila (
 .clk(clk_i), // input wire clk   
 .probe0(eip_targets_o),

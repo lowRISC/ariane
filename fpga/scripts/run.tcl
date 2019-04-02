@@ -14,8 +14,8 @@
 
 # Author: Florian Zaruba <zarubaf@iis.ee.ethz.ch>
 
-# hard-coded to Genesys 2 for the moment
-add_files -fileset constrs_1 -norecurse constraints/genesys-2.xdc
+# hard-coded to Nexys-video for the moment
+add_files -fileset constrs_1 -norecurse constraints/nexys_video.xdc
 
 read_ip xilinx/xlnx_mig_7_ddr3/ip/xlnx_mig_7_ddr3.xci
 read_ip xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter.xci
@@ -37,7 +37,7 @@ source scripts/add_sources.tcl
 
 set_property top ${project}_xilinx [current_fileset]
 
-if {$::env(BOARD) eq "genesys2"} {
+if {$::env(BOARD) eq "nexys_video"} {
     read_verilog -sv {src/genesysii.svh ../src/common_cells/include/common_cells/registers.svh}
     set file "src/genesysii.svh"
     set registers "../src/common_cells/include/common_cells/registers.svh"
