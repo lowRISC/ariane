@@ -164,10 +164,11 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         tb/ariane_testharness.sv                                               \
         tb/ariane_peripherals.sv                                               \
         tb/common/uart.sv                                                      \
-        fpga/xilinx/xlnx_ila_plic/ip/xlnx_ila_plic_stub.v                      \
-        fpga/xilinx/xlnx_ila_5/ip/xlnx_ila_5_stub.v                            \
         tb/common/SimDTM.sv                                                    \
         tb/common/SimJTAG.sv
+
+#       fpga/xilinx/xlnx_ila_plic/ip/xlnx_ila_plic_stub.v                      \
+        fpga/xilinx/xlnx_ila_5/ip/xlnx_ila_5_stub.v                            \
 
 src := $(addprefix $(root-dir), $(src))
 
