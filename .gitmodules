@@ -43,3 +43,6 @@
 [submodule "src/fpu"]
 	path = src/fpu
 	url = https://github.com/lowRISC/fpnew.git
+[submodule "src/rv_plic"]
+	path = src/rv_plic
+	url = https://github.com/jrrk/rv_plic.git
