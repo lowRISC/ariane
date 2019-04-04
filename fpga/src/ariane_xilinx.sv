@@ -545,13 +545,18 @@ axi_riscv_atomics_wrap #(
 );
 
 `ifdef PROTOCOL_CHECKER
-logic pc_status;
-// assign led[0] = pc_status;
-// assign led[7:1] = '0;
-
+   wire [159:0]              pc_status;
+   wire                      pc_asserted;
+   
+xlnx_ila_pc your_instance_name (
+	                        .clk(clk),           // input wire clk
+	                        .probe0(pc_status),  // input wire [159:0]  probe1
+	                        .probe1(pc_asserted) // input wire [0:0]  probe0  
+);
+   
 xlnx_protocol_checker i_xlnx_protocol_checker (
-  .pc_status(),
-  .pc_asserted(pc_status),
+  .pc_status,
+  .pc_asserted,
   .aclk(clk),
   .aresetn(ndmreset_n),
   .pc_axi_awid     (dram.aw_id),

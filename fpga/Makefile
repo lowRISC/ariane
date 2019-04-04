@@ -17,8 +17,9 @@ ips := xlnx_axi_clock_converter.xci  \
        xlnx_ila_sd.xci               \
        xlnx_ila_plic.xci             \
        xlnx_ila_rng.xci              \
+       xlnx_ila_pc.xci               \
        xlnx_ila_axi_0.xci            \
-       xlnx_proto_check.xci          \
+       xlnx_protocol_checker.xci     \
        xlnx_mig_7_ddr3.xci
 
 ips := $(addprefix $(work-dir)/, $(ips))
