@@ -60,7 +60,7 @@ set_property -dict [list  CONFIG.C_NUM_OF_PROBES {90} \
                           CONFIG.C_PROBE75_WIDTH {64} \
                           CONFIG.C_PROBE76_WIDTH {64} \
                           CONFIG.C_PROBE77_WIDTH {32} \
-                          CONFIG.C_DATA_DEPTH {4096}  \
+                          CONFIG.C_DATA_DEPTH {1024}  \
                           CONFIG.C_INPUT_PIPE_STAGES {1} \
                     ] [get_ips $ipName]
 
