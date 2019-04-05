@@ -42,12 +42,14 @@ module ariane #(
 `ifdef PITON_ARIANE
   // L15 (memory side)
   output wt_cache_pkg::l15_req_t       l15_req_o,
-  input  wt_cache_pkg::l15_rtrn_t      l15_rtrn_i
+  input  wt_cache_pkg::l15_rtrn_t      l15_rtrn_i,
 `else
   // memory side, AXI Master
   output ariane_axi::req_t             axi_req_o,
-  input  ariane_axi::resp_t            axi_resp_i
+  input  ariane_axi::resp_t            axi_resp_i,
 `endif
+  input wire trig_in,
+  output wire trig_in_ack
 );
 
   // ------------------------------------------
@@ -797,6 +799,8 @@ module ariane #(
 `ifndef SIMULATION
 xlnx_ila_5 trace_ila (
   .clk(clk_i), // input wire clk
+  .trig_in(trig_in),// input wire trig_in
+  .trig_in_ack(trig_in_ack),// output wire trig_in_ack
   .probe0(rst_ni),
   .probe1(flush_unissued_instr_ctrl_id),
   .probe2(flush_ctrl_ex),

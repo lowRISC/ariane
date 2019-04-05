@@ -53,7 +53,9 @@ module ariane_peripherals #(
     inout wire         sd_cmd,
     output reg         sd_reset,
     output logic [7:0] leds_o          ,
-    input  logic [7:0] dip_switches_i
+    input  logic [7:0] dip_switches_i  ,
+    output wire        trig_out,
+    input wire         trig_out_ack
 );
 
     // ---------------
@@ -179,7 +181,9 @@ module ariane_peripherals #(
       .resp_o        ( plic_resp   ),
       .le_i          ( '0          ), // 0:level 1:edge
       .irq_sources_i ( irq_sources ),
-      .eip_targets_o ( irq_o       )
+      .eip_targets_o ( irq_o       ),
+      .trig_out(trig_out), // output wire trig_out
+      .trig_out_ack(trig_out_ack) // input wire trig_out_ack
     );
 
     // ---------------

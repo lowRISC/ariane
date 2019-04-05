@@ -347,6 +347,9 @@ axi_adapter #(
 ariane_axi::req_t    axi_ariane_req;
 ariane_axi::resp_t   axi_ariane_resp;
 
+// For cross-triggering ILA
+wire trig_ila, trig_ila_ack;
+
 ariane #(
     .CachedAddrBeg ( CacheStartAddr   )
 ) i_ariane (
@@ -359,7 +362,9 @@ ariane #(
     .time_irq_i   ( timer_irq           ),
     .debug_req_i  ( debug_req_irq       ),
     .axi_req_o    ( axi_ariane_req      ),
-    .axi_resp_i   ( axi_ariane_resp     )
+    .axi_resp_i   ( axi_ariane_resp     ),
+    .trig_in      ( trig_ila            ), // output wire trig_ila
+    .trig_in_ack  ( trig_ila_ack        ) // input wire trig_ila_ack
 );
 
 axi_master_connect i_axi_master_connect_ariane (.axi_req_i(axi_ariane_req), .axi_resp_o(axi_ariane_resp), .master(slave[0]));
@@ -430,6 +435,7 @@ bootram i_bootram (
 // ---------------
 // Peripherals
 // ---------------
+
 ariane_peripherals #(
     .AxiAddrWidth ( AxiAddrWidth     ),
     .AxiDataWidth ( AxiDataWidth     ),
@@ -473,7 +479,9 @@ ariane_peripherals #(
     .sd_cmd,
     .sd_reset,
     .leds_o         ( led                         ),
-    .dip_switches_i ( sw                          )
+    .dip_switches_i ( sw                          ),
+    .trig_out(trig_ila), // output wire trig_ila
+    .trig_out_ack(trig_ila_ack) // input wire trig_ila_ack
 );
 
 
