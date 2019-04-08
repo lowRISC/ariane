@@ -48,8 +48,9 @@ module ariane #(
   output ariane_axi::req_t             axi_req_o,
   input  ariane_axi::resp_t            axi_resp_i,
 `endif
-  input wire trig_in,
-  output wire trig_in_ack
+  output wire                          valid_fence_i_r_o,
+  input wire                           trig_in,
+  output wire                          trig_in_ack
 );
 
   // ------------------------------------------
@@ -459,6 +460,7 @@ module ariane #(
     .fence_o                ( fence_commit_controller       ),
     .sfence_vma_o           ( sfence_vma_commit_controller  ),
     .flush_commit_o         ( flush_commit                  ),
+    .valid_fence_i_r_o,
     .*
   );
 
@@ -859,7 +861,8 @@ xlnx_ila_5 trace_ila (
   .probe55(resolved_branch.cf_type),
   .probe56(commit_stage_i.exception_o.cause),
   .probe57(commit_stage_i.exception_o.tval),
-  .probe58(commit_stage_i.exception_o.valid)
+  .probe58(commit_stage_i.exception_o.valid),
+  .probe59(valid_fence_i_r_o)
   );
 `endif   
 

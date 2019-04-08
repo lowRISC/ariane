@@ -223,8 +223,13 @@ module decoder (
 
                     case (instr.stype.funct3)
                         // FENCE
-                        // Currently implemented as a whole DCache flush boldly ignoring other things
-                        3'b000: instruction_o.op  = FENCE;
+                        // Mostly implemented as a whole DCache flush boldly ignoring other things
+                        3'b000: casez({instr.stype.imm,instr.stype.rs2})
+                                  12'h082:
+                                    instruction_o.op  = FENCE_I_R;
+                                  default:
+                                    instruction_o.op  = FENCE;
+                                endcase
                         // FENCE.I
                         3'b001: begin
                             if (instr.instr[31:20] != '0)

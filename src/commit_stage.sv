@@ -53,7 +53,8 @@ module commit_stage #(
     output logic                                    fence_i_o,          // flush I$ and pipeline
     output logic                                    fence_o,            // flush D$ and pipeline
     output logic                                    flush_commit_o,     // request a pipeline flush
-    output logic                                    sfence_vma_o        // flush TLBs and pipeline
+    output logic                                    sfence_vma_o,       // flush TLBs and pipeline
+    output logic                                    valid_fence_i_r_o   // valid fence i,r in commit stage
 );
 
 // ila_0 i_ila_commit (
@@ -90,6 +91,7 @@ module commit_stage #(
         commit_ack_o[1]    = 1'b0;
 
         amo_valid_commit_o = 1'b0;
+        valid_fence_i_r_o  = 1'b0;
 
         we_gpr_o[0]        = 1'b0;
         we_gpr_o[1]        = 1'b0;
@@ -196,6 +198,16 @@ module commit_stage #(
                     commit_ack_o[0] = no_st_pending_i;
                     // tell the controller to flush the D$
                     fence_o = no_st_pending_i;
+                end
+                // ------------------
+                // FENCE_I_R Logic
+                // ------------------
+                // fence i,r is executed after reading device memory that might not be idempotent
+                if (commit_instr_i[0].op == FENCE_I_R) begin
+                   commit_ack_o = 1'b1;
+                   // flush the pipeline
+                   flush_commit_o = 1'b1;
+                   valid_fence_i_r_o = 1'b1;
                 end
             end
             // ------------------

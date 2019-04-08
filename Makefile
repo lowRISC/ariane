@@ -118,8 +118,8 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         $(wildcard src/axi_mem_if/src/*.sv)                                    \
         src/rv_plic/rtl/rv_plic_target.sv                                      \
         src/rv_plic/rtl/rv_plic_gateway.sv                                     \
-        src/rv_plic/plic_regmap.sv                                             \
-        src/rv_plic/plic_top.sv                                                \
+        src/rv_plic/rtl/plic_regmap.sv                                         \
+        src/rv_plic/rtl/plic_top.sv                                            \
         src/riscv-dbg/src/dmi_cdc.sv                                           \
         src/riscv-dbg/src/dmi_jtag.sv                                          \
         src/riscv-dbg/src/dmi_jtag_tap.sv                                      \

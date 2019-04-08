@@ -338,7 +338,7 @@ package ariane_pkg;
                                // set lower than operations
                                SLTS, SLTU,
                                // CSR functions
-                               MRET, SRET, DRET, ECALL, WFI, FENCE, FENCE_I, SFENCE_VMA, CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
+                               MRET, SRET, DRET, ECALL, WFI, FENCE, FENCE_I, FENCE_I_R, SFENCE_VMA, CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
                                // LSU functions
                                LD, SD, LW, LWU, SW, LH, LHU, SH, LB, SB, LBU,
                                // Atomic Memory Operations
