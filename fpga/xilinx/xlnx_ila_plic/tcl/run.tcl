@@ -7,7 +7,7 @@ create_project $ipName . -force -part $partNumber
 set_property board_part $boardName [current_project]
 
 create_ip -name ila -vendor xilinx.com -library ip -module_name $ipName
-set_property -dict [list  CONFIG.C_NUM_OF_PROBES {31} \
+set_property -dict [list  CONFIG.C_NUM_OF_PROBES {28} \
                           CONFIG.C_PROBE0_WIDTH {93} \
                           CONFIG.C_PROBE1_WIDTH {93} \
                           CONFIG.C_PROBE2_WIDTH {31} \
@@ -30,15 +30,12 @@ set_property -dict [list  CONFIG.C_NUM_OF_PROBES {31} \
                           CONFIG.C_PROBE19_WIDTH {60} \
                           CONFIG.C_PROBE20_WIDTH {30} \
                           CONFIG.C_PROBE21_WIDTH {2} \
-                          CONFIG.C_PROBE22_WIDTH {2} \
-                          CONFIG.C_PROBE23_WIDTH {6} \
-                          CONFIG.C_PROBE24_WIDTH {6} \
+                          CONFIG.C_PROBE22_WIDTH {10} \
+                          CONFIG.C_PROBE23_WIDTH {10} \
+                          CONFIG.C_PROBE24_WIDTH {2} \
                           CONFIG.C_PROBE25_WIDTH {1} \
-                          CONFIG.C_PROBE26_WIDTH {1} \
+                          CONFIG.C_PROBE26_WIDTH {2} \
                           CONFIG.C_PROBE27_WIDTH {2} \
-                          CONFIG.C_PROBE28_WIDTH {2} \
-                          CONFIG.C_PROBE29_WIDTH {10} \
-                          CONFIG.C_PROBE30_WIDTH {10} \
                           CONFIG.C_DATA_DEPTH {8192}  \
                           CONFIG.C_INPUT_PIPE_STAGES {1} \
                           CONFIG.C_EN_STRG_QUAL {1} \
