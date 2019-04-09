@@ -25,4 +25,5 @@
 `define WT_DCACHE
 
 // PLIC ila
+`define XLNX_ILA_TRACE   
 `define XLNX_ILA_PLIC   

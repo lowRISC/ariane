@@ -92,10 +92,10 @@ set_property -dict [list \
                         CONFIG.C_PROBE57_WIDTH {64} \
                         CONFIG.C_PROBE58_WIDTH {1} \
                         CONFIG.C_DATA_DEPTH {2048} \
-                        CONFIG.C_NUM_OF_PROBES {60} \
+                        CONFIG.C_NUM_OF_PROBES {59} \
                         CONFIG.C_ADV_TRIGGER {false} \
                         CONFIG.C_TRIGOUT_EN {false} \
-                        CONFIG.C_TRIGIN_EN {true} \
+                        CONFIG.C_TRIGIN_EN {false} \
                         CONFIG.C_EN_STRG_QUAL {1} \
                         CONFIG.ALL_PROBE_SAME_MU_CNT {3} \
                         CONFIG.C_INPUT_PIPE_STAGES {0}] [get_ips $ipName]

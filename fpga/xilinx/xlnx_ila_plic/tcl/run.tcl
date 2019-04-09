@@ -39,7 +39,7 @@ set_property -dict [list  CONFIG.C_NUM_OF_PROBES {28} \
                           CONFIG.C_DATA_DEPTH {8192}  \
                           CONFIG.C_INPUT_PIPE_STAGES {1} \
                           CONFIG.C_EN_STRG_QUAL {1} \
-                          CONFIG.C_TRIGOUT_EN {true} \
+                          CONFIG.C_TRIGOUT_EN {false} \
                           CONFIG.C_TRIGIN_EN {false} \
                           CONFIG.ALL_PROBE_SAME_MU_CNT {3} ] [get_ips $ipName]
 
