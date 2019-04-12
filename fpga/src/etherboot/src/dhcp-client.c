@@ -240,9 +240,9 @@ void dhcp_input(dhcp_t *dhcp, u_int8_t *mac, int *offcount, int *ackcount)
                 printf("Router address:  %d.%d.%d.%d\n", uip_ipaddr_to_quad(&router));
                 printf("Net mask address:  %d.%d.%d.%d\n", uip_ipaddr_to_quad(&netmask));
                 uip_setnetmask(&netmask);
-                printf("Lease time = %d\n", lease);
-                printf("domain = \"%s\"\n", domain);
-                printf("server = \"%s\"\n", hostname);
+                printf("Lease time = %dh:%dm:%ds\n", lease/3600, (lease/60)%60, lease%60);
+                printf("Domain = \"%s\"\n", domain);
+                printf("Client Hostname = \"%s\"\n", hostname);
               }
             else
               printf("ACK SKIPPED\n");

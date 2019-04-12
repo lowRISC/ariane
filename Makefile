@@ -176,7 +176,11 @@ src := $(addprefix $(root-dir), $(src))
 uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
 uart_src := $(addprefix $(root-dir), $(uart_src))
 
-fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv)
+fpga_src :=  $(wildcard fpga/src/*.sv) \
+             $(wildcard fpga/src/bootrom/*.sv) \
+             $(wildcard fpga/src/ariane-ethernet/*.sv) \
+             $(wildcard fpga/src/spi_mem_programmer/*.sv)
+
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
 
 # look for testbenches

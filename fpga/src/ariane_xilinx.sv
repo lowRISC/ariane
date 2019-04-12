@@ -82,8 +82,12 @@ module ariane_xilinx (
   input  logic        tdi         ,
   output logic        tdo         ,
   input  logic        rx          ,
-  output logic        tx
+  output logic        tx          ,
+  // Quad-SPI
+  inout wire          QSPI_CSN    ,
+  inout wire [3:0]    QSPI_D
 );
+
 // 24 MByte in 8 byte words
 localparam NumWords = (24 * 1024 * 1024) / 8;
 localparam NBSlave = 2; // debug, ariane
@@ -484,7 +488,9 @@ ariane_peripherals #(
     .dip_switches_i ( sw                          ),
     .valid_fence_i_r_i ( valid_fence_i_r ),
     .trig_out(trig_ila), // output wire trig_ila
-    .trig_out_ack(trig_ila_ack) // input wire trig_ila_ack
+    .trig_out_ack(trig_ila_ack), // input wire trig_ila_ack
+    .QSPI_CSN,
+    .QSPI_D
 );
 
 

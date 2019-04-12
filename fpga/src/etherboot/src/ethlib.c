@@ -568,7 +568,7 @@ void eth_main(void) {
         if (!saved_peer_ip)
           {
             dhcp_main(mac_addr.addr);
-            cnt = 10000000;       
+            cnt = 2500000;       
           }
         else if (dhcp_ack_cnt)
           {

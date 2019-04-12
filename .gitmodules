@@ -46,3 +46,6 @@
 [submodule "src/rv_plic"]
 	path = src/rv_plic
 	url = https://github.com/jrrk/rv_plic.git
+[submodule "fpga/src/spi_mem_programmer"]
+	path = fpga/src/spi_mem_programmer
+	url = https://github.com/jrrk/spi_mem_programmer.git
