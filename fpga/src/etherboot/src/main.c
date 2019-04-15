@@ -1,9 +1,11 @@
+#include <string.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include "uart.h"
 #include "mini-printf.h"
 #include "ariane.h"
 #include "qspi.h"
+#include "elfriscv.h"
 #include "eth.h"
 
 static const uint8_t pattern[] = {0x55, 0xAA, 0x33, 0xcc};
@@ -55,13 +57,10 @@ void puthex(unsigned n, int w)
   write_serial("0123456789ABCDEF"[n&15]);
 }
 
-void qspi_main(int sw)
-{
-  uint64_t rslt, rslt2;
-  uint32_t i, j, data[2];
-  uint8_t *buf = (uint8_t *)0x80000000;
-  for (i = 0; i < 0x01000000; i += 8)
+void qspi_read4(uint32_t i, uint8_t *buf)
       {
+        uint64_t rslt, rslt2;
+        uint32_t j, data[2];
         int data_in_count = 5;
         int data_out_count = 8;
         uint32_t off = i + 0x00B00000;
@@ -69,9 +68,40 @@ void qspi_main(int sw)
         data[1] = (off << 8) | (data_in_count << 4) | data_out_count;
         rslt = qspi_send(CMD_4READ, 2, 0, data);
         rslt2 = qspi_send(CMD_4READ, 2, 0, data);
-        for (j = 0; j < 8; j++) buf[i+j] = rslt2 >> (7-j)*8;
+        for (j = 0; j < 8; j++) buf[j] = rslt2 >> (7-j)*8;
         rslt ^= rslt2;
       }
+
+void qspi_elfn(void *dst, uint32_t off, uint32_t sz)
+{
+  uint32_t i;
+  uint8_t last[sizeof(uint64_t)];
+  uint8_t *ptr = (uint8_t *)dst;
+  // Read file into memory from QSPI flash
+  uint32_t len = 0;   // Read count
+  for (i = 0; i < sz-8; i += 8)
+    {
+      qspi_read4(off+i, ptr);
+      ptr += sizeof(uint64_t);
+      len += sizeof(uint64_t);
+      gpio_leds(len >> 12);
+    }
+  qspi_read4(off+i, last);
+  memcpy(ptr, last, sz-i);
+}
+  
+void qspi_main(int sw)
+{
+  uint8_t *buf = (uint8_t *)0x80000000;
+  uint32_t i, j, br;
+  // read elf
+  printf("load elf to DDR memory\n");
+  br = load_elf(qspi_elfn);
+  if (br)
+    {
+    printf("elf read failed with code %d", br);
+    return;
+    }
   for (i = 0; i < 0x01000000; i += 0x00100000)
       {
         puthex(i, 8);

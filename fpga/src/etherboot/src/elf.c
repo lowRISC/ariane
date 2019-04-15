@@ -67,42 +67,35 @@
 #define IS_ELF64(hdr) (IS_ELF(hdr) && (hdr).e_ident[4] == 2)
 #endif
 
-int load_elf(const uint8_t *elf, const uint32_t elf_size) {
-  // sanity checks
-  if(elf_size <= sizeof(Elf64_Ehdr))
-    return 1;                   /* too small */
-
-  const Elf64_Ehdr *eh = (const Elf64_Ehdr *)elf;
-  if(!IS_ELF64(*eh))
+int load_elf(void (*elfn)(void *dst, uint32_t off, uint32_t sz)) {
+  Elf64_Ehdr eh;
+  elfn(&eh, 0, sizeof(eh));
+  if(!IS_ELF64(eh))
     return 2;                   /* not a elf64 file */
 
-  const Elf64_Phdr *ph = (const Elf64_Phdr *)(elf + eh->e_phoff);
-  if(elf_size < eh->e_phoff + eh->e_phnum*sizeof(*ph))
-    return 3;                   /* internal damaged */
-
   uint32_t i;
-  for(i=0; i<eh->e_phnum; i++) {
-    if(ph[i].p_type == PT_LOAD && ph[i].p_memsz) { /* need to load this physical section */
+  for(i=0; i<eh.e_phnum; i++) {
+    Elf64_Phdr ph;
+    elfn(&ph, eh.e_phoff + i*sizeof(ph), sizeof(ph));
+    if(ph.p_type == PT_LOAD && ph.p_memsz) { /* need to load this physical section */
       printf("Section[%d]: ", i);
-      if(ph[i].p_filesz) {                         /* has data */
-	uint8_t *paddr = (uint8_t *)ph[i].p_paddr;
-	const uint8_t *elf_offset = elf + ph[i].p_offset;
-	size_t len = ph[i].p_filesz;
-	size_t extent = ph[i].p_offset + len;
-        if(elf_size < extent)
-	  {
-	    printf("len required = %X, actual = %x\n", extent, elf_size);
-	    return 3;             /* internal damaged */
-	  }
-	printf("memcpy(%x,0x%x,0x%x);\n", paddr, elf_offset, len);
-        memcpy(paddr, elf_offset, len);
+      if(ph.p_filesz) {                         /* has data */
+	uint8_t *paddr = (uint8_t *)ph.p_paddr;
+	size_t len = ph.p_filesz;
+        if ((size_t)paddr < 0x80000000 || ((size_t)paddr >= 0x88000000))
+          {
+            printf("paddr sanity error %p\n", paddr);
+            return 3;
+          }
+	printf("elfn(%x,0x%x,0x%x);\n", paddr, ph.p_offset, len);
+        elfn(paddr, ph.p_offset, len);
 #ifdef VERBOSE_MD5
         hash_buf(paddr, len);
 #endif        
       }
-      if(ph[i].p_memsz > ph[i].p_filesz) { /* zero padding */
-	uint8_t *bss = (uint8_t *)ph[i].p_paddr + ph[i].p_filesz;
-	size_t len = ph[i].p_memsz - ph[i].p_filesz;
+      if(ph.p_memsz > ph.p_filesz) { /* zero padding */
+	uint8_t *bss = (uint8_t *)ph.p_paddr + ph.p_filesz;
+	size_t len = ph.p_memsz - ph.p_filesz;
 	printf("memset(%x,0,0x%x);\n", bss, len);
         memset(bss, 0, len);
 #ifdef VERBOSE_MD5

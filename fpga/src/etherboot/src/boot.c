@@ -33,13 +33,38 @@ void just_jump (void)
   fun_ptr(read_csr(mhartid), _dtb);
 }
 
+static int sd_len_err;
+static FIL fil;                // File object
+
+void sd_elfn(void *dst, uint32_t off, uint32_t sz)
+{
+  FRESULT fr;             // FatFs return code
+  uint8_t *ptr = (uint8_t *)dst;
+  // Read file into memory from DOS filing system
+  uint32_t br, len = 0;   // Read count
+  do {
+    fr = f_read(&fil, ptr, SD_READ_SIZE, &br);  // Read a chunk of source file
+    if (!fr)
+      {
+        int cnt = len / SD_READ_SIZE;
+	write_serial('\b');
+	write_serial("|/-\\"[cnt&3]);
+        gpio_leds(cnt);
+	ptr += br;
+	len += br;
+      }
+  } while(!(fr || br == 0));
+  if (len < sz)
+    {
+      printf("len required = %X, actual = %x\n", sz, len);
+      sd_len_err = 1; /* internal damaged */
+    }
+}
 
 void sd_main(int sw)
 {
-  FIL fil;                // File object
   FRESULT fr;             // FatFs return code
-  uint8_t *boot_file_buf = (uint8_t *)(DRAMBase) + ((uint64_t)DRAMLength) - MAX_FILE_SIZE; // at the end of DDR space
-
+  uint32_t br;
   // Register work area to the default drive
   if(f_mount(&FatFs, "", 1)) {
     printf("Fail to mount SD driver!\n");
@@ -54,22 +79,16 @@ void sd_main(int sw)
     return;
   }
 
-  // Read file into memory
-  uint32_t fsize = 0;           // file size count
-  uint32_t br;                  // Read count
-  do {
-    fr = f_read(&fil, boot_file_buf+fsize, SD_READ_SIZE, &br);  // Read a chunk of source file
-    if (!fr)
-      {
-        int cnt = fsize / SD_READ_SIZE;
-	write_serial('\b');
-	write_serial("|/-\\"[cnt&3]);
-        gpio_leds(cnt);
-	fsize += br;
-      }
-  } while(!(fr || br == 0));
-  fsize = fil.fsize;
-
+  // read elf
+  printf("load elf to DDR memory\n");
+  sd_len_err = 0;
+  br = load_elf(sd_elfn);
+  if (br || sd_len_err)
+    {
+    printf("elf read failed with code %d", br);
+    return;
+    }
+  
   // Close the file
   if(f_close(&fil)) {
     printf("fail to close file!");
@@ -80,20 +99,11 @@ void sd_main(int sw)
     return;
   }
 
-  printf("Loaded %d bytes to memory address %x from boot.bin of %d bytes.\n", fsize, boot_file_buf, fsize);
 #ifdef VERBOSE_MD5
   uint8_t *hashbuf;
   hashbuf = hash_buf(boot_file_buf, fsize);
   printf("hash = %s\n", hashbuf);
 #endif 
-  // read elf
-  printf("load elf to DDR memory\n");
-  br = load_elf(boot_file_buf, fsize);
-  if (br)
-    {
-    printf("elf read failed with code %d", br);
-    return;
-    }
   printf("Boot the loaded program...\n");
   just_jump();
   /* unreachable code to prevent warnings */
