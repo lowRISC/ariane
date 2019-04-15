@@ -35,30 +35,40 @@ void just_jump (void)
 
 static int sd_len_err;
 static FIL fil;                // File object
+static uint32_t sd_seek;
 
 void sd_elfn(void *dst, uint32_t off, uint32_t sz)
 {
   FRESULT fr;             // FatFs return code
-  uint8_t *ptr = (uint8_t *)dst;
   // Read file into memory from DOS filing system
-  uint32_t br, len = 0;   // Read count
-  do {
-    fr = f_read(&fil, ptr, SD_READ_SIZE, &br);  // Read a chunk of source file
-    if (!fr)
+  uint32_t len;   // Read count
+  if (off != sd_seek)
+    {
+      fr = f_lseek (&fil, off);
+      if (fr)
+        {
+          sd_len_err = fr;
+          return;
+        }
+    }
+  else
+    sd_seek = ~0;
+  fr = f_read(&fil, dst, sz, &len);  // Read a chunk of source file
+  if (fr) sd_len_err = fr;
+  else
       {
-        int cnt = len / SD_READ_SIZE;
+        int cnt = off / SD_READ_SIZE;
 	write_serial('\b');
 	write_serial("|/-\\"[cnt&3]);
         gpio_leds(cnt);
-	ptr += br;
-	len += br;
       }
-  } while(!(fr || br == 0));
   if (len < sz)
     {
       printf("len required = %X, actual = %x\n", sz, len);
       sd_len_err = 1; /* internal damaged */
     }
+  else
+    sd_seek = off+sz;
 }
 
 void sd_main(int sw)
@@ -82,6 +92,7 @@ void sd_main(int sw)
   // read elf
   printf("load elf to DDR memory\n");
   sd_len_err = 0;
+  sd_seek = 0;
   br = load_elf(sd_elfn);
   if (br || sd_len_err)
     {
