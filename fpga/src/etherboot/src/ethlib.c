@@ -33,13 +33,15 @@
 
 // An ethernet loader program
 //#define VERBOSE
+//#define UDP_DEBUG
+
 #include "encoding.h"
 #include "misc.h"
 #include "elfriscv.h"
 #include "uart.h"
 #include "ariane.h"
 #include "eth.h"
-//#include "minion_lib.h"
+#include "qspi.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -61,9 +63,6 @@ const uip_ipaddr_t uip_all_zeroes_addr = { { 0x0, /* rest is 0 */ } };
 uip_lladdr_t uip_lladdr;
 
 volatile uint64_t *const eth_base = (volatile uint64_t *)EthernetBase;
-
-//#define VERBOSE
-//#define UDP_DEBUG
 
 void *mysbrk_(size_t len)
 {
@@ -490,26 +489,28 @@ uint32_t __bswap_32(uint32_t x)
       (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24)) ;
 }
 
-static void set_dummy_mac(void)
+void set_dummy_mac(void)
 {
+  enum {oem_mac_addr = 0x20}; // The address of the OEM MAC address in OTP qspi flash
   uint32_t macaddr_lo, macaddr_hi;
+  uint32_t i, data = ((sizeof(mac_addr)+1) << 24) | oem_mac_addr; // +1 for dummy byte
+  uint64_t rslt = qspi_send(CMD_OTPR, 1, 0, &data);
 #ifndef SIMULATION  
   printf("Setup MAC addr\n");
 #endif
 #if 0  
-  mac_addr.addr[0] = (uint8_t)0xEE;
-  mac_addr.addr[1] = (uint8_t)0xE1;
-  mac_addr.addr[2] = (uint8_t)0xE2;
-  mac_addr.addr[3] = (uint8_t)0xE3;
-  mac_addr.addr[4] = (uint8_t)0xE4;
-  mac_addr.addr[5] = (uint8_t)0xE0;
-#else
   mac_addr.addr[0] = (uint8_t)0x00;
   mac_addr.addr[1] = (uint8_t)0x18;
   mac_addr.addr[2] = (uint8_t)0x3E;
   mac_addr.addr[3] = (uint8_t)0x02;
   mac_addr.addr[4] = (uint8_t)0xE3;
   mac_addr.addr[5] = (uint8_t)0x7F;
+#else
+  for (i = 0; i < 6; i++)
+    {
+      mac_addr.addr[i] = (uint8_t)(rslt >> ((5-i)*8));
+      printf("QSPI OEM[%d] = %x\n", i, mac_addr.addr[i]);
+    }  
 #endif  
   memcpy (&macaddr_lo, mac_addr.addr+2, sizeof(uint32_t));
   memcpy (&macaddr_hi, mac_addr.addr+0, sizeof(uint16_t));
@@ -523,7 +524,6 @@ static void set_dummy_mac(void)
 
 void eth_main(void) {
   uint64_t cnt = 0;
-  set_dummy_mac();
   //  uip_ipaddr_t addr;
   uint64_t lo = eth_read(MACLO_OFFSET);
   uint64_t hi = eth_read(MACHI_OFFSET) & MACHI_MACADDR_MASK;

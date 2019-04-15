@@ -29,7 +29,7 @@ all: $(mcs)
 
 # Generate mcs from bitstream
 $(mcs): $(bit)
-	$(VIVADO) $(VIVADOFLAGS) -source scripts/write_cfgmem.tcl -tclargs $@ $^
+	$(VIVADO) $(VIVADOFLAGS) -source scripts/write_cfgmem.tcl -tclargs $@ $^ ../../ariane-sdk-rng-tools/riscv-pk/build/bbl.bin
 
 $(bit): $(ips)
 	mkdir -p $(work-dir)

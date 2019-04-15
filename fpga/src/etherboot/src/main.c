@@ -3,20 +3,8 @@
 #include "uart.h"
 #include "mini-printf.h"
 #include "ariane.h"
-
-// QSPI commands
-#define CMD_RDID 0x9F
-#define CMD_MIORDID 0xAF
-#define CMD_RDSR 0x05
-#define CMD_RFSR 0x70
-#define CMD_RDVECR 0x65
-#define CMD_WRVECR 0x61
-#define CMD_WREN 0x06
-#define CMD_SE 0xD8
-#define CMD_BE 0xC7
-#define CMD_PP 0x02
-#define CMD_QCFR 0x0B
-#define CMD_OTPR 0x4B
+#include "qspi.h"
+#include "eth.h"
 
 static const uint8_t pattern[] = {0x55, 0xAA, 0x33, 0xcc};
 
@@ -61,44 +49,85 @@ uint64_t qspi_send(uint8_t cmd, uint8_t len, uint8_t quad, uint32_t *data)
   return swp[4];
 }
 
+void puthex(unsigned n, int w)
+{
+  if (w > 1) puthex(n>>4, w-1);
+  write_serial("0123456789ABCDEF"[n&15]);
+}
+
+void qspi_main(int sw)
+{
+  uint64_t rslt, rslt2;
+  uint32_t i, j, data[2];
+  uint8_t *buf = (uint8_t *)0x80000000;
+  for (i = 0; i < 0x01000000; i += 8)
+      {
+        int data_in_count = 5;
+        int data_out_count = 8;
+        uint32_t off = i + 0x00B00000;
+        data[0] = (CMD_4READ << 8) | (off >> 24); // Should locate start of BBL
+        data[1] = (off << 8) | (data_in_count << 4) | data_out_count;
+        rslt = qspi_send(CMD_4READ, 2, 0, data);
+        rslt2 = qspi_send(CMD_4READ, 2, 0, data);
+        for (j = 0; j < 8; j++) buf[i+j] = rslt2 >> (7-j)*8;
+        if (rslt != rslt2)
+          {
+            uint8_t compare;
+            printf("QSPI read consistency failure\n");
+            for (j = 0; j < 8; j++)
+              {
+                compare = rslt >> (7-j)*8;
+                printf("%x : %x\n", compare, buf[i+j]);
+              }
+          }
+        rslt ^= rslt2;
+      }
+  for (i = 0; i < 0x01000000; i += 0x00100000)
+      {
+        puthex(i, 8);
+        printf(" ");
+        for (j = 0; j < 16; j++)
+          {
+            puthex(buf[i+j], 2);
+            printf(" ");
+          }
+        printf("\n");
+      }
+  just_jump();
+}
+
 int main()
 {
-  uint32_t i, rnd, sw, sw2, data[32];
-  
-    init_uart();
-    print_uart("Hello World!\r\n");
-    for (i = 0; i < 5; i++)
-      {
-        volatile uint64_t *swp = (volatile uint64_t *)GPIOBase;
-        printf("swp[%d] = %X\n", i, swp[i]);
-      }
-    if (0) printf("QSPI ID = %x\n", qspi_send(CMD_RDID, 0, 0, data));
-    for (i = 0; i < 6; i++)
-      {
-        //        data[0] = (2 << 24) | i; // Random factory init string
-        data[0] = (2 << 24) | (0x20 + i); // OEM Base address of MAC address (6 bytes)
-        printf("QSPI OEM[%d] = %x\n", i, qspi_send(CMD_OTPR, 1, 0, data));
-      }
-    for (i = 0; i < 4; i++)
-      {
-        gpio_leds(pattern[i]);
-        sw = gpio_sw();
-        sw2 = gpio_sw();
-        printf("Switch setting = %X,%X\n", sw, sw2);
-        rnd = hwrnd();
-        printf("Random seed = %X\n", rnd);
-        sw = sw2 & 0xFF;
-      }
-    switch (sw >> 6)
-      {
-      case 0x0: printf("SD boot\n"); sd_main(sw); break;
-      case 0x1: printf("DRAM test\n"); dram_main(); break;
-      case 0x2: printf("TFTP boot\n"); eth_main(); break;
-      case 0x3: printf("Cache test\n"); cache_main(); break;
-      }
-    while (1)
+  uint32_t i, rnd, sw, sw2;
+  init_uart();
+  print_uart("Hello World!\r\n");
+  for (i = 0; i < 5; i++)
     {
-        // do nothing
+      volatile uint64_t *swp = (volatile uint64_t *)GPIOBase;
+      printf("swp[%d] = %X\n", i, swp[i]);
+    }
+  set_dummy_mac();
+  for (i = 0; i < 4; i++)
+    {
+      gpio_leds(pattern[i]);
+      sw = gpio_sw();
+      sw2 = gpio_sw();
+      printf("Switch setting = %X,%X\n", sw, sw2);
+      rnd = hwrnd();
+      printf("Random seed = %X\n", rnd);
+      sw = sw2 & 0xFF;
+    }
+  switch (sw >> 5)
+    {
+    case 0x0: printf("SD boot\n"); sd_main(sw); break;
+    case 0x1: printf("QSPI boot\n"); qspi_main(sw); break;
+    case 0x2: printf("DRAM test\n"); dram_main(); break;
+    case 0x4: printf("TFTP boot\n"); eth_main(); break;
+    case 0x6: printf("Cache test\n"); cache_main(); break;
+    }
+  while (1)
+    {
+      // do nothing
     }
 }
 
