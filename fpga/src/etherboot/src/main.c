@@ -70,16 +70,6 @@ void qspi_main(int sw)
         rslt = qspi_send(CMD_4READ, 2, 0, data);
         rslt2 = qspi_send(CMD_4READ, 2, 0, data);
         for (j = 0; j < 8; j++) buf[i+j] = rslt2 >> (7-j)*8;
-        if (rslt != rslt2)
-          {
-            uint8_t compare;
-            printf("QSPI read consistency failure\n");
-            for (j = 0; j < 8; j++)
-              {
-                compare = rslt >> (7-j)*8;
-                printf("%x : %x\n", compare, buf[i+j]);
-              }
-          }
         rslt ^= rslt2;
       }
   for (i = 0; i < 0x01000000; i += 0x00100000)
