@@ -24,10 +24,11 @@ FATFS FatFs;   // Work area (file system object) for logical drive
 
 //char md5buf[SD_READ_SIZE];
 
-void just_jump (void)
+void just_jump (int64_t entry)
 {
   extern uint8_t _dtb[];
-  void (*fun_ptr)(uint64_t, void *) = (void*)DRAMBase;
+  void (*fun_ptr)(uint64_t, void *) = (void*)entry;
+  printf("Boot the loaded program at address %p...\n", fun_ptr);
   asm volatile ("fence.i");
   asm volatile ("fence");
   fun_ptr(read_csr(mhartid), _dtb);
@@ -74,7 +75,7 @@ void sd_elfn(void *dst, uint32_t off, uint32_t sz)
 void sd_main(int sw)
 {
   FRESULT fr;             // FatFs return code
-  uint32_t br;
+  int64_t entry;
   // Register work area to the default drive
   if(f_mount(&FatFs, "", 1)) {
     printf("Fail to mount SD driver!\n");
@@ -93,10 +94,10 @@ void sd_main(int sw)
   printf("load elf to DDR memory\n");
   sd_len_err = 0;
   sd_seek = 0;
-  br = load_elf(sd_elfn);
-  if (br || sd_len_err)
+  entry = load_elf(sd_elfn);
+  if ((entry < 0) || sd_len_err)
     {
-    printf("elf read failed with code %d", br);
+    printf("elf read failed with code %ld", -entry);
     return;
     }
   
@@ -115,8 +116,7 @@ void sd_main(int sw)
   hashbuf = hash_buf(boot_file_buf, fsize);
   printf("hash = %s\n", hashbuf);
 #endif 
-  printf("Boot the loaded program...\n");
-  just_jump();
+  just_jump(entry);
   /* unreachable code to prevent warnings */
   LD_WORD(NULL);
   LD_DWORD(NULL);

@@ -67,11 +67,11 @@
 #define IS_ELF64(hdr) (IS_ELF(hdr) && (hdr).e_ident[4] == 2)
 #endif
 
-int load_elf(void (*elfn)(void *dst, uint32_t off, uint32_t sz)) {
+int64_t load_elf(void (*elfn)(void *dst, uint32_t off, uint32_t sz)) {
   Elf64_Ehdr eh;
   elfn(&eh, 0, sizeof(eh));
   if(!IS_ELF64(eh))
-    return 2;                   /* not a elf64 file */
+    return -2;                   /* not a elf64 file */
 
   uint32_t i;
   for(i=0; i<eh.e_phnum; i++) {
@@ -85,7 +85,7 @@ int load_elf(void (*elfn)(void *dst, uint32_t off, uint32_t sz)) {
         if ((size_t)paddr < 0x80000000 || ((size_t)paddr >= 0x88000000))
           {
             printf("paddr sanity error %p\n", paddr);
-            return 3;
+            return -3;
           }
 	printf("elfn(%x,0x%x,0x%x);\n", paddr, ph.p_offset, len);
         elfn(paddr, ph.p_offset, len);
@@ -105,5 +105,5 @@ int load_elf(void (*elfn)(void *dst, uint32_t off, uint32_t sz)) {
     }
   }
 
-  return 0;
+  return eh.e_entry;
 }

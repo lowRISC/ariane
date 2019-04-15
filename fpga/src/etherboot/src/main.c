@@ -92,16 +92,18 @@ void qspi_elfn(void *dst, uint32_t off, uint32_t sz)
   
 void qspi_main(int sw)
 {
-  uint8_t *buf = (uint8_t *)0x80000000;
-  uint32_t i, j, br;
+  int64_t entry;
   // read elf
   printf("load elf to DDR memory\n");
-  br = load_elf(qspi_elfn);
-  if (br)
+  entry = load_elf(qspi_elfn);
+  if (entry < 0)
     {
-    printf("elf read failed with code %d", br);
+    printf("elf read failed with code %ld", -entry);
     return;
     }
+#if 0  
+  uint32_t i, j, br;
+  uint8_t *buf = (uint8_t *)0x80000000;
   for (i = 0; i < 0x01000000; i += 0x00100000)
       {
         puthex(i, 8);
@@ -113,6 +115,7 @@ void qspi_main(int sw)
           }
         printf("\n");
       }
+#endif  
   just_jump();
 }
 

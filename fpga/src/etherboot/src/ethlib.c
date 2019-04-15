@@ -611,32 +611,6 @@ void eth_main(void) {
   } while (1);
 }
 
-void ethboot(void)
-{
-  uint8_t *memory_base = (uint8_t *)(get_ddr_base());
-#ifdef INTERRUPT_MODE
-  printf("Disabling interrupts\n");
-  write_csr(mie, old_mie);
-  write_csr(mstatus, old_mstatus);
-#endif
-  eth_write(MACHI_OFFSET, eth_read(MACHI_OFFSET)&~MACHI_IRQ_EN);
-  eth_write(RSR_OFFSET, RSR_RECV_LAST_MASK);
-  printf("Ethernet interrupt status = %ld\n", eth_read(RSR_OFFSET));
-
-  printf("Boot the loaded program...\n");
-
-  uintptr_t mstatus = read_csr(mstatus);
-  mstatus = INSERT_FIELD(mstatus, MSTATUS_MPP, PRV_M);
-  mstatus = INSERT_FIELD(mstatus, MSTATUS_MPIE, 1);
-  write_csr(mstatus, mstatus);
-  write_csr(mepc, memory_base);
-
-  printf("Goodbye, booter ...\n");
-  asm volatile ("fence.i");
-  asm volatile ("fence");
-  asm volatile ("mret");
-}
-
 #if defined(UDP_DEBUG)
 void PrintData (const u_char * data , int Size)
 {
