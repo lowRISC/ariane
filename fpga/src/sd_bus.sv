@@ -313,7 +313,7 @@ sd_top sdtop(
     .sd_xfr_addr(sd_xfr_addr)
     );
 
-`ifndef SIMULATION
+`ifdef XLNX_ILA_SD
 xlnx_ila_sd sd_ila (
 .clk(msoc_clk), // input wire clk   
 .probe0	(1'b0),
@@ -395,9 +395,9 @@ xlnx_ila_sd sd_ila (
 .probe76 (spisd_wrdata),
 .probe77 (swapbein),
 .probe78 (1'b0),
-.probe79 (msoc_clk),
+.probe79 (1'b0),
 .probe80 (1'b0),
-.probe81 (sd_clk_o),
+.probe81 (1'b0),
 .probe82 (1'b0),
 .probe83 (sd_cmd_finish),
 .probe84 (sd_cmd_to_mem),

@@ -45,7 +45,7 @@ module perf_counters #(
     input  branchpredict_t                          resolved_branch_i
 );
 
-    logic [riscv::CSR_IF_EMPTY[4:0] : riscv::CSR_L1_ICACHE_MISS[4:0]][63:0] perf_counter_d, perf_counter_q;
+    logic [riscv::IDX_IF_EMPTY : riscv::IDX_L1_ICACHE_MISS][63:0] perf_counter_d, perf_counter_q;
 
     always_comb begin : perf_counters
         perf_counter_d = perf_counter_q;
@@ -57,55 +57,55 @@ module perf_counters #(
             // Update Performance Counters
             // ------------------------------
             if (l1_icache_miss_i)
-                perf_counter_d[riscv::CSR_L1_ICACHE_MISS[4:0]] = perf_counter_q[riscv::CSR_L1_ICACHE_MISS[4:0]] + 1'b1;
+                perf_counter_d[riscv::IDX_L1_ICACHE_MISS] = perf_counter_q[riscv::IDX_L1_ICACHE_MISS] + 1'b1;
 
             if (l1_dcache_miss_i)
-                perf_counter_d[riscv::CSR_L1_DCACHE_MISS[4:0]] = perf_counter_q[riscv::CSR_L1_DCACHE_MISS[4:0]] + 1'b1;
+                perf_counter_d[riscv::IDX_L1_DCACHE_MISS] = perf_counter_q[riscv::IDX_L1_DCACHE_MISS] + 1'b1;
 
             if (itlb_miss_i)
-                perf_counter_d[riscv::CSR_ITLB_MISS[4:0]] = perf_counter_q[riscv::CSR_ITLB_MISS[4:0]] + 1'b1;
+                perf_counter_d[riscv::IDX_ITLB_MISS] = perf_counter_q[riscv::IDX_ITLB_MISS] + 1'b1;
 
             if (dtlb_miss_i)
-                perf_counter_d[riscv::CSR_DTLB_MISS[4:0]] = perf_counter_q[riscv::CSR_DTLB_MISS[4:0]] + 1'b1;
+                perf_counter_d[riscv::IDX_DTLB_MISS] = perf_counter_q[riscv::IDX_DTLB_MISS] + 1'b1;
 
             // instruction related perf counters
             for (int unsigned i = 0; i < NR_COMMIT_PORTS-1; i++) begin
                 if (commit_ack_i[i]) begin
                     if (commit_instr_i[i].fu == LOAD)
-                        perf_counter_d[riscv::CSR_LOAD[4:0]] = perf_counter_q[riscv::CSR_LOAD[4:0]] + 1'b1;
+                        perf_counter_d[riscv::IDX_LOAD] = perf_counter_q[riscv::IDX_LOAD] + 1'b1;
 
                     if (commit_instr_i[i].fu == STORE)
-                        perf_counter_d[riscv::CSR_STORE[4:0]] = perf_counter_q[riscv::CSR_STORE[4:0]] + 1'b1;
+                        perf_counter_d[riscv::IDX_STORE] = perf_counter_q[riscv::IDX_STORE] + 1'b1;
 
                     if (commit_instr_i[i].fu == CTRL_FLOW)
-                        perf_counter_d[riscv::CSR_BRANCH_JUMP[4:0]] = perf_counter_q[riscv::CSR_BRANCH_JUMP[4:0]] + 1'b1;
+                        perf_counter_d[riscv::IDX_BRANCH_JUMP] = perf_counter_q[riscv::IDX_BRANCH_JUMP] + 1'b1;
 
                     // The standard software calling convention uses register x1 to hold the return address on a call
                     // the unconditional jump is decoded as ADD op
                     if (commit_instr_i[i].fu == CTRL_FLOW && commit_instr_i[i].op == '0 && commit_instr_i[i].rd == 'b1)
-                        perf_counter_d[riscv::CSR_CALL[4:0]] = perf_counter_q[riscv::CSR_CALL[4:0]] + 1'b1;
+                        perf_counter_d[riscv::IDX_CALL] = perf_counter_q[riscv::IDX_CALL] + 1'b1;
 
                     // Return from call
                     if (commit_instr_i[i].op == JALR && commit_instr_i[i].rs1 == 'b1)
-                        perf_counter_d[riscv::CSR_RET[4:0]] = perf_counter_q[riscv::CSR_RET[4:0]] + 1'b1;
+                        perf_counter_d[riscv::IDX_RET] = perf_counter_q[riscv::IDX_RET] + 1'b1;
                 end
             end
 
             if (ex_i.valid)
-                perf_counter_d[riscv::CSR_EXCEPTION[4:0]] = perf_counter_q[riscv::CSR_EXCEPTION[4:0]] + 1'b1;
+                perf_counter_d[riscv::IDX_EXCEPTION] = perf_counter_q[riscv::IDX_EXCEPTION] + 1'b1;
 
             if (eret_i)
-                perf_counter_d[riscv::CSR_EXCEPTION_RET[4:0]] = perf_counter_q[riscv::CSR_EXCEPTION_RET[4:0]] + 1'b1;
+                perf_counter_d[riscv::IDX_EXCEPTION_RET] = perf_counter_q[riscv::IDX_EXCEPTION_RET] + 1'b1;
 
             if (resolved_branch_i.valid && resolved_branch_i.is_mispredict)
-                perf_counter_d[riscv::CSR_MIS_PREDICT[4:0]] = perf_counter_q[riscv::CSR_MIS_PREDICT[4:0]] + 1'b1;
+                perf_counter_d[riscv::IDX_MIS_PREDICT] = perf_counter_q[riscv::IDX_MIS_PREDICT] + 1'b1;
 
             if (sb_full_i) begin
-                perf_counter_d[riscv::CSR_SB_FULL[4:0]] = perf_counter_q[riscv::CSR_SB_FULL[4:0]] + 1'b1;
+                perf_counter_d[riscv::IDX_SB_FULL] = perf_counter_q[riscv::IDX_SB_FULL] + 1'b1;
             end
 
             if (if_empty_i) begin
-                perf_counter_d[riscv::CSR_IF_EMPTY[4:0]] = perf_counter_q[riscv::CSR_IF_EMPTY[4:0]] + 1'b1;
+                perf_counter_d[riscv::IDX_IF_EMPTY] = perf_counter_q[riscv::IDX_IF_EMPTY] + 1'b1;
             end
         end
 
