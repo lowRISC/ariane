@@ -10,9 +10,6 @@
 [submodule "src/common_cells"]
 	path = src/common_cells
 	url = https://github.com/pulp-platform/common_cells.git
-[submodule "src/axi"]
-	path = src/axi
-	url = https://github.com/pulp-platform/axi.git
 [submodule "src/register_interface"]
 	path = src/register_interface
 	url = https://github.com/pulp-platform/register_interface.git
@@ -49,3 +46,6 @@
 [submodule "fpga/src/spi_mem_programmer"]
 	path = fpga/src/spi_mem_programmer
 	url = https://github.com/jrrk/spi_mem_programmer.git
+[submodule "src/axi"]
+	path = src/axi
+	url = https://github.com/lowRISC/axi.git
