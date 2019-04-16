@@ -2,7 +2,7 @@
 # 
 # 
 #include <smp.h>
-#define DRAM_BASE 0xBFFE0000
+#define DRAM_BASE 0x87FE0000
 
   .section .text.init
   .option norvc

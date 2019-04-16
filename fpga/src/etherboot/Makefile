@@ -20,6 +20,7 @@ MAIN_BIN = $(MAIN:.elf=.bin)
 MAIN_DIS = $(MAIN:.elf=.dis)
 MAIN_IMG = $(MAIN:.elf=.img)
 MAIN_SV = $(MAIN:.elf=.sv)
+BOOTRAM = ../../src/bootram.sv
 
 #.PHONY: clean
 
@@ -53,10 +54,16 @@ $(MAIN): ariane.dtb $(OBJS_C) src/main.o $(OBJS_S) linker.lds
 clean:
 	$(RM) $(OBJS_C) $(OBJS_S) $(MAIN) $(MAIN_BIN) $(MAIN_IMG) *.dtb
 
-all: $(MAIN) $(MAIN_BIN) $(MAIN_IMG) $(MAIN_DIS) $(MAIN_SV)
+all: $(MAIN) $(MAIN_BIN) $(MAIN_IMG) $(MAIN_DIS) $(MAIN_SV) $(BOOTRAM)
 	@echo "zero stage etherboot loader has been compiled!"
 
 dram.elf: $(OBJS_C) src/dram.o $(OBJS_S) linker.lds
 	$(CC) $(CFLAGS) $(LDFLAGS) $(INCLUDES) -Tlinker.lds $(OBJS_S) $(OBJS_C) src/dram.o -o $@
+
+$(BOOTRAM): $(MAIN)
+	$(CROSSCOMPILE)objcopy -O verilog $< cnvmem.mem
+	iverilog ../../scripts/cnvmem.v -o cnvmem
+	./cnvmem
+	mv bootram.sv $@
 
 # DO NOT DELETE THIS LINE -- make depend needs it
