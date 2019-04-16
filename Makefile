@@ -655,7 +655,7 @@ fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(util) $(uart_src)
 	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(fpga_src)}   >> fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"
-	cd fpga && make BOARD="nexys_video" XILINX_PART="xc7a200tsbg484-1" XILINX_BOARD="digilentinc.com:nexys_video:part0:1.1" CLK_PERIOD_NS="20"
+	cd fpga && make BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" CLK_PERIOD_NS="20"
 
 .PHONY: fpga
 

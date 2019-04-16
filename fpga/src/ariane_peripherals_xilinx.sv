@@ -24,28 +24,28 @@ module ariane_peripherals #(
     input  logic       clk_i           , // Clock
     input  logic       clk_200MHz_i    ,
     input  logic       rst_ni          , // Asynchronous reset active low
-    AXI_BUS.in         plic            ,
-    AXI_BUS.in         uart            ,
-    AXI_BUS.in         spi             ,
-    AXI_BUS.in         gpio            ,
-    input  logic       eth_clk_i       ,
-    AXI_BUS.in         ethernet        ,
+    AXI_BUS.Slave         plic            ,
+    AXI_BUS.Slave         uart            ,
+    AXI_BUS.Slave         spi             ,
+    AXI_BUS.Slave         gpio            ,
+    AXI_BUS.Slave         ethernet        ,
     output logic [1:0] irq_o           ,
     // UART
     input  logic       rx_i            ,
     output logic       tx_o            ,
     // Ethernet
-    input  wire        eth_rxck        ,
-    input  wire        eth_rxctl       ,
-    input  wire [3:0]  eth_rxd         ,
-    output wire        eth_txck        ,
-    output wire        eth_txctl       ,
-    output wire [3:0]  eth_txd         ,
-    output wire        eth_rst_n       ,
-    input  logic       phy_tx_clk_i    , // 125 MHz Clock
-    // MDIO Interface
-    inout  wire        eth_mdio        ,
-    output logic       eth_mdc         ,
+    input  logic       clk_rmii        ,
+    input  logic       clk_rmii_quad   ,
+    input wire [1:0]   i_erxd, // RMII receive data
+    input wire         i_erx_dv, // PHY data valid
+    input wire         i_erx_er, // PHY coding error
+    input wire         i_emdint, // PHY interrupt in active low
+    output reg         o_erefclk, // RMII clock out
+    output reg [1:0]   o_etxd, // RMII transmit data
+    output reg         o_etx_en, // RMII transmit enable
+    output wire        o_emdc, // MDIO clock
+    inout wire         io_emdio, // MDIO inout
+    output wire        o_erstn, // PHY reset active low 
     // SD (shared with SPI)
     output wire        sd_sclk,
     input wire         sd_detect,
@@ -364,7 +364,7 @@ sd_bus sd1
     if (InclEthernet) begin : gen_ethernet
 
     logic                    clk_200_int, clk_rgmii, clk_rgmii_quad;
-    logic                    eth_en, eth_we, eth_int_n, eth_pme_n, eth_mdio_i, eth_mdio_o, eth_mdio_oe;
+    logic                    eth_en, eth_we, eth_int_n, eth_pme_n, phy_mdio_i, phy_mdio_o, phy_mdio_t;
     logic [AxiAddrWidth-1:0] eth_addr;
     logic [AxiDataWidth-1:0] eth_wrdata, eth_rdata;
     logic [AxiDataWidth/8-1:0] eth_be;
@@ -386,8 +386,12 @@ sd_bus sd1
         .data_i ( eth_rdata               )
     );
 
-    framing_top eth_rgmii (
+    framing_top_rmii eth_mii (
+       .rstn(rst_ni),
        .msoc_clk(clk_i),
+       .clk_rmii(clk_rmii),
+       .clk_rmii_quad(clk_rmii_quad),
+
        .core_lsu_addr(eth_addr[14:0]),
        .core_lsu_wdata(eth_wrdata),
        .core_lsu_be(eth_be),
@@ -395,26 +399,17 @@ sd_bus sd1
        .we_d(eth_en & eth_we),
        .framing_sel(eth_en),
        .framing_rdata(eth_rdata),
-       .rst_int(!rst_ni),
-       .clk_int(phy_tx_clk_i), // 125 MHz in-phase
-       .clk90_int(eth_clk_i),    // 125 MHz quadrature
-       .clk_200_int(clk_200MHz_i),
-       /*
-        * Ethernet: 1000BASE-T RGMII
-        */
-       .phy_rx_clk(eth_rxck),
-       .phy_rxd(eth_rxd),
-       .phy_rx_ctl(eth_rxctl),
-       .phy_tx_clk(eth_txck),
-       .phy_txd(eth_txd),
-       .phy_tx_ctl(eth_txctl),
-       .phy_reset_n(eth_rst_n),
-       .phy_int_n(eth_int_n),
-       .phy_pme_n(eth_pme_n),
-       .phy_mdc(eth_mdc),
-       .phy_mdio_i(eth_mdio_i),
-       .phy_mdio_o(eth_mdio_o),
-       .phy_mdio_oe(eth_mdio_oe),
+       .o_edutrefclk(o_erefclk),
+       .i_edutrxd(i_erxd),
+       .i_edutrx_dv(i_erx_dv),
+       .i_edutrx_er(i_erx_er),
+       .o_eduttxd(o_etxd),
+       .o_eduttx_en(o_etx_en),
+       .o_edutmdc(o_emdc),
+       .i_edutmdio(phy_mdio_i),
+       .o_edutmdio(phy_mdio_o),
+       .oe_edutmdio(phy_mdio_t),
+       .o_edutrstn(o_erstn),
        .eth_irq(irq_sources[2])
     );
 
@@ -424,10 +419,10 @@ sd_bus sd1
           .IOSTANDARD("DEFAULT"), // Specify the I/O standard
           .SLEW("SLOW") // Specify the output slew rate
        ) IOBUF_inst (
-          .O(eth_mdio_i),     // Buffer output
-          .IO(eth_mdio),   // Buffer inout port (connect directly to top-level port)
-          .I(eth_mdio_o),     // Buffer input
-          .T(~eth_mdio_oe)      // 3-state enable input, high=input, low=output
+          .O(phy_mdio_i),     // Buffer output
+          .IO(io_emdio),      // Buffer inout port (connect directly to top-level port)
+          .I(phy_mdio_o),     // Buffer input
+          .T(phy_mdio_t)      // 3-state enable input, high=input, low=output
        );
 
     end else begin

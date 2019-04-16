@@ -9,7 +9,7 @@ ips := xlnx_axi_clock_converter.xci  \
        xlnx_axi_dwidth_converter.xci \
        xlnx_axi_quad_spi.xci         \
        xlnx_axi_gpio.xci             \
-       xlnx_clk_gen.xci              \
+       xlnx_clk_nexys.xci            \
        xlnx_clk_sd.xci               \
        xlnx_ila.xci                  \
        xlnx_ila_4.xci                \
@@ -51,7 +51,7 @@ ELF=src/etherboot/etherboot.elf
 newmcs: work-fpga/ariane_xilinx.new.mcs
 
 work-fpga/ariane_xilinx.new.mcs: work-fpga/ariane_xilinx.new.bit
-	env XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" vivado -nojournal -mode batch -source scripts/prologue.tcl -source scripts/write_cfgmem.tcl -tclargs $@ $<
+	env XILINX_PART="xc7a100t-csg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" vivado -nojournal -mode batch -source scripts/prologue.tcl -source scripts/write_cfgmem.tcl -tclargs $@ $<
 
 new: work-fpga/ariane_xilinx.bit search-ramb.log scripts/cnvmem.v boot.bmm 
 	riscv64-unknown-elf-objcopy -O verilog $(ELF) cnvmem.mem
