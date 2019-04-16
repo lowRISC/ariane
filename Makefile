@@ -58,6 +58,7 @@ ariane_pkg := include/riscv_pkg.sv                          \
 			  include/wt_cache_pkg.sv                       \
 			  src/axi/src/axi_pkg.sv                        \
 			  src/register_interface/src/reg_intf.sv        \
+			  src/register_interface/src/reg_intf_pkg.sv    \
 			  include/axi_intf.sv                           \
 			  tb/ariane_soc_pkg.sv                          \
 			  include/ariane_axi_pkg.sv                     \
@@ -106,16 +107,19 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         $(filter-out src/fpu/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv,    \
         $(wildcard src/fpu/src/fpu_div_sqrt_mvp/hdl/*.sv))                     \
         $(wildcard src/frontend/*.sv)                                          \
-        $(filter-out src/cache_subsystem/std_no_dcache.sv src/cache_subsystem/std_nbdcache.sv src/cache_subsystem/miss_handler.sv,                     \
+        $(filter-out src/cache_subsystem/std_no_dcache.sv,                     \
         $(wildcard src/cache_subsystem/*.sv))                                  \
         $(wildcard bootrom/*.sv)                                               \
         $(wildcard src/clint/*.sv)                                             \
-        $(filter-out fpga/src/axi2apb/src/axi2apb_wrap.sv, $(wildcard fpga/src/axi2apb/src/*.sv)) \
+        $(wildcard fpga/src/axi2apb/src/*.sv)                                  \
         $(wildcard fpga/src/axi_slice/src/*.sv)                                \
-        $(wildcard src/plic/*.sv)                                              \
         $(wildcard src/axi_node/src/*.sv)                                      \
         $(wildcard src/axi_riscv_atomics/src/*.sv)                             \
         $(wildcard src/axi_mem_if/src/*.sv)                                    \
+        src/rv_plic/rtl/rv_plic_target.sv                                      \
+        src/rv_plic/rtl/rv_plic_gateway.sv                                     \
+        src/rv_plic/rtl/plic_regmap.sv                                         \
+        src/rv_plic/rtl/plic_top.sv                                            \
         src/riscv-dbg/src/dmi_cdc.sv                                           \
         src/riscv-dbg/src/dmi_jtag.sv                                          \
         src/riscv-dbg/src/dmi_jtag_tap.sv                                      \
@@ -172,7 +176,10 @@ src := $(addprefix $(root-dir), $(src))
 uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
 uart_src := $(addprefix $(root-dir), $(uart_src))
 
-fpga_src :=  $(wildcard fpga/src/*.sv) $(wildcard fpga/src/bootrom/*.sv) $(wildcard fpga/src/ariane-ethernet/*.sv)
+fpga_src :=  $(wildcard fpga/src/*.sv) \
+             $(wildcard fpga/src/bootrom/*.sv) \
+             $(wildcard fpga/src/ariane-ethernet/*.sv) \
+             $(wildcard fpga/src/spi_mem_programmer/*.sv)
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
 
 # look for testbenches
@@ -344,8 +351,6 @@ verilate_command := $(verilator)                                                
                     $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))                         \
                     +define+$(defines)                                                                 \
                     src/util/sram.sv                                                                   \
-                    fpga/xilinx/xlnx_ila_plic/ip/xlnx_ila_plic_stub.v                                  \
-                    fpga/xilinx/xlnx_ila_5/ip/xlnx_ila_5_stub.v                                        \
                     +incdir+src/axi_node                                                               \
                     $(if $(verilator_threads), --threads $(verilator_threads))                         \
                     --unroll-count 256                                                                 \
