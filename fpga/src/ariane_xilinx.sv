@@ -54,7 +54,10 @@ module ariane_xilinx (
   input  logic        tdi         ,
   output logic        tdo         ,
   input  logic        rx          ,
-  output logic        tx
+  output logic        tx          ,
+  // Quad-SPI
+  inout wire          QSPI_CSN    ,
+  inout wire [3:0]    QSPI_D
 );
 // 24 MByte in 8 byte words
 localparam NumWords = (24 * 1024 * 1024) / 8;
@@ -414,6 +417,10 @@ axi_adapter #(
 ariane_axi::req_t    axi_ariane_req;
 ariane_axi::resp_t   axi_ariane_resp;
 
+// For cross-triggering ILA
+wire trig_ila, trig_ila_ack;
+wire valid_fence_i_r;
+   
 ariane #(
     .CachedAddrBeg ( CacheStartAddr   )
 ) i_ariane (
@@ -535,8 +542,13 @@ ariane_peripherals #(
     .sd_dat,
     .sd_cmd,
     .sd_reset,
-    .leds_o         ( led                        ),
-    .dip_switches_i ( sw                         )
+    .leds_o         ( led                         ),
+    .dip_switches_i ( sw                          ),
+    .valid_fence_i_r_i ( valid_fence_i_r ),
+    .trig_out(trig_ila), // output wire trig_ila
+    .trig_out_ack(trig_ila_ack), // input wire trig_ila_ack
+    .QSPI_CSN,
+    .QSPI_D
 );
 
 
@@ -608,13 +620,19 @@ axi_riscv_atomics_wrap #(
 );
 
 `ifdef PROTOCOL_CHECKER
-logic pc_status;
-// assign led[0] = pc_status;
-// assign led[7:1] = '0;
+   wire [159:0]              pc_status;
+   wire                      pc_asserted;
+   
+xlnx_ila_pc your_instance_name (
+	                        .clk(clk),           // input wire clk
+	                        .probe0(pc_status),  // input wire [159:0]  probe1
+	                        .probe1(pc_asserted) // input wire [0:0]  probe0  
+);
+   
 
 xlnx_protocol_checker i_xlnx_protocol_checker (
-  .pc_status(),
-  .pc_asserted(pc_status),
+  .pc_status,
+  .pc_asserted,
   .aclk(clk),
   .aresetn(ndmreset_n),
   .pc_axi_awid     (dram.aw_id),

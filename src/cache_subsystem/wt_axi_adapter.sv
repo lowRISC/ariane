@@ -46,7 +46,8 @@ module wt_axi_adapter #(
 );
 
 // support up to 512bit cache lines
-localparam AxiNumWords = ariane_pkg::ICACHE_LINE_WIDTH/64;
+localparam AxiNumWords = (ariane_pkg::ICACHE_LINE_WIDTH/64) * (ariane_pkg::ICACHE_LINE_WIDTH > ariane_pkg::DCACHE_LINE_WIDTH)  +
+                         (ariane_pkg::DCACHE_LINE_WIDTH/64) * (ariane_pkg::ICACHE_LINE_WIDTH <= ariane_pkg::DCACHE_LINE_WIDTH) ;
 
 ///////////////////////////////////////////////////////
 // request path
@@ -389,7 +390,7 @@ always_comb begin : p_axi_rtrn_shift
 
   if (dcache_rtrn_rd_en) begin
     dcache_first_d    = axi_rd_last;
-    dcache_rd_shift_d = {axi_rd_data, dcache_rd_shift_q[ICACHE_LINE_WIDTH/64-1:1]};
+    dcache_rd_shift_d = {axi_rd_data, dcache_rd_shift_q[DCACHE_LINE_WIDTH/64-1:1]};
     // if this is a single word transaction, we need to make sure that word is placed at offset 0
     if (dcache_first_q) begin
       dcache_rd_shift_d[0] = axi_rd_data;

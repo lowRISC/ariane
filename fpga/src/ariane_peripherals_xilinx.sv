@@ -24,11 +24,11 @@ module ariane_peripherals #(
     input  logic       clk_i           , // Clock
     input  logic       clk_200MHz_i    ,
     input  logic       rst_ni          , // Asynchronous reset active low
-    AXI_BUS.Slave         plic            ,
-    AXI_BUS.Slave         uart            ,
-    AXI_BUS.Slave         spi             ,
-    AXI_BUS.Slave         gpio            ,
-    AXI_BUS.Slave         ethernet        ,
+    AXI_BUS.Slave      plic            ,
+    AXI_BUS.Slave      uart            ,
+    AXI_BUS.Slave      spi             ,
+    AXI_BUS.Slave      gpio            ,
+    AXI_BUS.Slave      ethernet        ,
     output logic [1:0] irq_o           ,
     // UART
     input  logic       rx_i            ,
@@ -52,8 +52,13 @@ module ariane_peripherals #(
     inout wire [3:0]   sd_dat,
     inout wire         sd_cmd,
     output reg         sd_reset,
-    output logic [7:0] leds_o          ,
-    input  logic [7:0] dip_switches_i
+    output logic [7:0] leds_o,
+    input  logic [7:0] dip_switches_i,
+    input wire         valid_fence_i_r_i,
+    output wire        trig_out,
+    input wire         trig_out_ack,
+    inout wire         QSPI_CSN,
+    inout wire [3:0]   QSPI_D
 );
 
     // ---------------
@@ -155,17 +160,34 @@ module ariane_peripherals #(
         .reg_o     ( reg_bus      )
     );
 
-    plic #(
-        .ID_BITWIDTH        ( ariane_soc::PLICIdWidth       ),
-        .PARAMETER_BITWIDTH ( ariane_soc::ParameterBitwidth ),
-        .NUM_TARGETS        ( ariane_soc::NumTargets        ),
-        .NUM_SOURCES        ( ariane_soc::NumSources        )
+    reg_intf::reg_intf_resp_d32 plic_resp;
+    reg_intf::reg_intf_req_a32_d32 plic_req;
+
+    assign plic_req.addr  = reg_bus.addr;
+    assign plic_req.write = reg_bus.write;
+    assign plic_req.wdata = reg_bus.wdata;
+    assign plic_req.wstrb = reg_bus.wstrb;
+    assign plic_req.valid = reg_bus.valid;
+
+    assign reg_bus.rdata = plic_resp.rdata;
+    assign reg_bus.error = plic_resp.error;
+    assign reg_bus.ready = plic_resp.ready;
+
+    plic_top #(
+      .N_SOURCE    ( ariane_soc::NumSources  ),
+      .N_TARGET    ( ariane_soc::NumTargets  ),
+      .MAX_PRIO    ( ariane_soc::MaxPriority )
     ) i_plic (
-        .clk_i              ( clk_i                  ),
-        .rst_ni             ( rst_ni                 ),
-        .irq_sources_i      ( irq_sources            ),
-        .eip_targets_o      ( irq_o                  ),
-        .external_bus_io    ( reg_bus                )
+      .clk_i,
+      .rst_ni,
+      .req_i         ( plic_req    ),
+      .resp_o        ( plic_resp   ),
+      .le_i          ( '0          ), // 0:level 1:edge
+      .irq_sources_i ( irq_sources ),
+      .eip_targets_o ( irq_o       ),
+      .valid_fence_i_r_i, // encountered fence i,r
+      .trig_out, // output wire trig_out
+      .trig_out_ack // input wire trig_out_ack
     );
 
     // ---------------
@@ -447,7 +469,7 @@ sd_bus sd1
     if (InclGPIO) begin : gen_gpio
 
 logic                    gpio_en, gpio_we, gpio_int_n, gpio_pme_n, gpio_mdio_i, gpio_mdio_o, gpio_mdio_oe;
-logic [AxiAddrWidth-1:0] gpio_addr;
+logic [AxiAddrWidth-1:0] gpio_addr, gpio_addr_prev;
 logic [AxiDataWidth-1:0] gpio_wrdata, gpio_rdata;
 logic [AxiDataWidth/8-1:0] gpio_be;
 
@@ -472,7 +494,11 @@ axi2mem #(
        wire [31:0]         fifo_out;
        wire [11:0]         rdcount, wrcount;       
        wire                full, empty, rderr, wrerr;
-      
+       logic               spi_wr;
+       logic [31:0]        data_from_host;
+       wire                spi_busy, spi_error;
+       wire [63:0]         spi_readout;
+     
  lowrisc_hwrng rng
   (
    .clk_i,
@@ -486,28 +512,74 @@ axi2mem #(
    .rderr,
    .wrerr
    );
-       
+       always_comb
+         begin
+            case(gpio_addr_prev[5:3])
+              3'b000:
+                begin
+                   gpio_rdata = dip_switches_i;
+                end
+              3'b010:
+                begin
+                   gpio_rdata = fifo_out;
+                end
+              3'b011:
+                begin
+                   gpio_rdata = {full, empty, rderr, wrerr, 7'b0, rdcount[8:0], 7'b0, wrcount[8:0]};
+                end
+              3'b100:
+                begin
+                   gpio_rdata = spi_readout;
+                end
+              3'b110:
+                begin
+                   gpio_rdata = {spi_busy, spi_error};
+                end
+              default:
+                begin
+                   gpio_rdata = 32'hDEADBEEF;
+                end
+            endcase // case (gpio_addr[5:3])
+         end
+
        always @(posedge clk_i)
-         if (gpio_en)
-           case(gpio_addr[4:3])
-             2'b00:
-               begin
-                  gpio_rdata <= dip_switches_i;
-                  if (gpio_we)
-                    leds_o <= gpio_wrdata;
-               end
-             2'b10:
-               begin
-                  rdfifo <= gpio_we;
-                  gpio_rdata <= fifo_out;
-               end
-             2'b11:
-               begin
-                  gpio_rdata <= {full, empty, rderr, wrerr, 7'b0, rdcount[8:0], 7'b0, wrcount[8:0]};
-               end
-             default:;
-             endcase
-             
+         begin
+            spi_wr <= 0;
+            rdfifo <= 0;
+            gpio_addr_prev <= gpio_addr;
+            if (gpio_en && gpio_we)
+              case(gpio_addr[5:3])
+                3'b000:
+                  begin
+                     leds_o <= gpio_wrdata;
+                  end
+                3'b010:
+                  begin
+                     rdfifo <= 1;
+                  end
+                3'b101:
+                  begin
+                     data_from_host <= gpio_wrdata;
+                     spi_wr <= 1;
+                  end
+                default:;
+              endcase // case (gpio_addr[5:3])
+         end
+
+// Bitbang SPI for retrieving MAC address
+
+dword_interface dwi_inst(
+                         .clk_in(clk_i),
+                         .reset(~rst_ni), 
+                         .data_from_PC(data_from_host),
+                         .wr(spi_wr),
+                         .busy(spi_busy),
+                         .error(spi_error),
+                         .readout(spi_readout),
+                         .S(QSPI_CSN),
+                         .DQio(QSPI_D)
+    );
+   
     end
 endmodule
 

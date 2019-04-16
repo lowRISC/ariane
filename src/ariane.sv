@@ -51,12 +51,15 @@ module ariane #(
 `ifdef PITON_ARIANE
   // L15 (memory side)
   output wt_cache_pkg::l15_req_t       l15_req_o,
-  input  wt_cache_pkg::l15_rtrn_t      l15_rtrn_i
+  input  wt_cache_pkg::l15_rtrn_t      l15_rtrn_i,
 `else
   // memory side, AXI Master
   output ariane_axi::req_t             axi_req_o,
-  input  ariane_axi::resp_t            axi_resp_i
+  input  ariane_axi::resp_t            axi_resp_i,
 `endif
+  output wire                          valid_fence_i_r_o,
+  input wire                           trig_in,
+  output wire                          trig_in_ack
 );
 
   // ------------------------------------------
@@ -466,6 +469,7 @@ module ariane #(
     .fence_o                ( fence_commit_controller       ),
     .sfence_vma_o           ( sfence_vma_commit_controller  ),
     .flush_commit_o         ( flush_commit                  ),
+    .valid_fence_i_r_o,
     .*
   );
 
@@ -806,6 +810,8 @@ module ariane #(
 `ifdef XLNX_ILA_TRACE
 xlnx_ila_5 trace_ila (
   .clk(clk_i), // input wire clk
+  .trig_in(trig_in),// input wire trig_in
+  .trig_in_ack(trig_in_ack),// output wire trig_in_ack
   .probe0(rst_ni),
   .probe1(flush_unissued_instr_ctrl_id),
   .probe2(flush_ctrl_ex),
@@ -864,7 +870,8 @@ xlnx_ila_5 trace_ila (
   .probe55(resolved_branch.cf_type),
   .probe56(commit_stage_i.exception_o.cause),
   .probe57(commit_stage_i.exception_o.tval),
-  .probe58(commit_stage_i.exception_o.valid)
+  .probe58(commit_stage_i.exception_o.valid),
+  .probe59(valid_fence_i_r_o)
   );
 `endif   
 

@@ -341,6 +341,7 @@ void *mysbrk(size_t len);
 int mysend(int sock, void *buf, int ulen);
 void tftps_tick(int sock);
 void ethboot(void);
+void set_dummy_mac(void);
 
 static inline void eth_write(size_t addr, uint64_t data)
 {
