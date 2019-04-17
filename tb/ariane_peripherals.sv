@@ -171,7 +171,7 @@ module ariane_peripherals #(
       .req_i         ( plic_req    ),
       .resp_o        ( plic_resp   ),
       .le_i          ( '0          ), // 0:level 1:edge
-        .irq_sources_i      ( irq_sources            ),
+      .irq_sources_i ( irq_sources ),
       .eip_targets_o ( irq_o       )
     );
 

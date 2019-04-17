@@ -85,7 +85,7 @@ module csr_regfile #(
     output logic                  perf_we_o
 );
     // internal signal to keep track of access exceptions
-    logic        read_access_exception, update_access_exception;
+    logic        read_access_exception, update_access_exception, privilege_violation;
     logic        csr_we, csr_read;
     logic [63:0] csr_wdata, csr_rdata;
     riscv::priv_lvl_t   trap_to_priv_lvl;
@@ -786,11 +786,10 @@ module csr_regfile #(
                 csr_read = 1'b0;
             end
         endcase
-        // if we are retiring an exception do not return from exception
-        if (ex_i.valid) begin
-            mret = 1'b0;
-            sret = 1'b0;
-            dret = 1'b0;
+        // if we are violating our privilges do not update the architectural state
+        if (privilege_violation) begin
+            csr_we = 1'b0;
+            csr_read = 1'b0;
         end
     end
 
@@ -804,6 +803,24 @@ module csr_regfile #(
                                     & ((mstatus_q.mie & (priv_lvl_o == riscv::PRIV_LVL_M))
                                     | (priv_lvl_o != riscv::PRIV_LVL_M));
 
+    always_comb begin : privilege_check
+
+        // -----------------
+        // Privilege Check
+        // -----------------
+        privilege_violation = 1'b0;
+        // if we are reading or writing, check for the correct privilege level this has
+        // precedence over interrupts
+        if (csr_op_i inside {CSR_WRITE, CSR_SET, CSR_CLEAR, CSR_READ}) begin
+            if ((riscv::priv_lvl_t'(priv_lvl_o & csr_addr.csr_decode.priv_lvl) != csr_addr.csr_decode.priv_lvl)) begin
+                privilege_violation = 1'b1;
+            end
+            // check access to debug mode only CSRs
+            if (csr_addr_i[11:4] == 8'h7b && !debug_mode_q) begin
+                privilege_violation = 1'b1;
+            end
+        end
+    end
     // ----------------------
     // CSR Exception Control
     // ----------------------
@@ -811,23 +828,6 @@ module csr_regfile #(
         csr_exception_o = {
             64'b0, 64'b0, 1'b0
         };
-
-        // -----------------
-        // Privilege Check
-        // -----------------
-        // if we are reading or writing, check for the correct privilege level this has
-        // precedence over interrupts
-        if (csr_we || csr_read) begin
-            if ((riscv::priv_lvl_t'(priv_lvl_o & csr_addr.csr_decode.priv_lvl) != csr_addr.csr_decode.priv_lvl)) begin
-                csr_exception_o.cause = riscv::ILLEGAL_INSTR;
-                csr_exception_o.valid = 1'b1;
-            end
-            // check access to debug mode only CSRs
-            if (csr_addr_i[11:4] == 8'h7b && !debug_mode_q) begin
-                csr_exception_o.cause = riscv::ILLEGAL_INSTR;
-                csr_exception_o.valid = 1'b1;
-            end
-        end
         // ----------------------------------
         // Illegal Access (decode exception)
         // ----------------------------------
@@ -838,6 +838,10 @@ module csr_regfile #(
             // we don't set the tval field as this will be set by the commit stage
             // this spares the extra wiring from commit to CSR and back to commit
             csr_exception_o.valid = 1'b1;
+        end
+        if (privilege_violation) begin
+          csr_exception_o.cause = riscv::ILLEGAL_INSTR;
+          csr_exception_o.valid = 1'b1;
         end
     end
     // -------------------
