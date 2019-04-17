@@ -67,6 +67,18 @@ set_property -dict { PACKAGE_PIN F1  IOSTANDARD LVCMOS33 } [get_ports { sd_dat[2
 set_property -dict { PACKAGE_PIN D2  IOSTANDARD LVCMOS33 } [get_ports { sd_dat[3] }]; #IO_L9N_T1_DQS_D13_14 Sch=sd_dat[3]
 set_property -dict { PACKAGE_PIN E2  IOSTANDARD LVCMOS33 } [get_ports { sd_reset }]; #IO_L12N_T1_MRCC_12 Sch=sd_reset
 
+# Flash/QSPI Pins
+set_property PACKAGE_PIN L13 [get_ports QSPI_CSN]
+set_property IOSTANDARD LVCMOS33 [get_ports QSPI_CSN]
+set_property PACKAGE_PIN K17 [get_ports QSPI_D[0]]
+set_property IOSTANDARD LVCMOS33 [get_ports QSPI_D[0]]
+set_property PACKAGE_PIN K18 [get_ports QSPI_D[1]]
+set_property IOSTANDARD LVCMOS33 [get_ports QSPI_D[1]]
+set_property PACKAGE_PIN L14 [get_ports QSPI_D[2]]
+set_property IOSTANDARD LVCMOS33 [get_ports QSPI_D[2]]
+set_property PACKAGE_PIN M14 [get_ports QSPI_D[3]]
+set_property IOSTANDARD LVCMOS33 [get_ports QSPI_D[3]]
+
 set_property INTERNAL_VREF  0.750 [get_iobanks 35]
 set_property CFGBVS VCCO [current_design]
 #where value1 is either VCCO or GND  

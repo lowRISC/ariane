@@ -39,8 +39,8 @@ source scripts/add_sources.tcl
 set_property top ${project}_xilinx [current_fileset]
 
 if {$::env(BOARD) eq "nexys4_ddr"} {
-    read_verilog -sv {src/genesysii.svh ../src/common_cells/include/common_cells/registers.svh}
-    set file "src/genesysii.svh"
+    read_verilog -sv {src/nexys4ddr.svh ../src/common_cells/include/common_cells/registers.svh}
+    set file "src/nexys4ddr.svh"
     set registers "../src/common_cells/include/common_cells/registers.svh"
 } else {
     exit 1
@@ -57,7 +57,17 @@ set_property include_dirs src/axi_sd_bridge/include [current_fileset]
 
 synth_design -rtl -name rtl_1
 
-set_property STEPS.SYNTH_DESIGN.ARGS.RETIMING false [get_runs synth_1]
+set_property STEPS.SYNTH_DESIGN.ARGS.RETIMING true [get_runs synth_1]
+set_property STEPS.SYNTH_DESIGN.ARGS.FLATTEN_HIERARCHY full [get_runs synth_1]
+set_property STEPS.SYNTH_DESIGN.ARGS.GATED_CLOCK_CONVERSION on [get_runs synth_1]
+set_property STEPS.SYNTH_DESIGN.ARGS.RESOURCE_SHARING auto [get_runs synth_1]
+set_property STEPS.SYNTH_DESIGN.ARGS.DIRECTIVE AreaMapLargeShiftRegToBRAM [get_runs synth_1]
+set_property STEPS.PLACE_DESIGN.ARGS.DIRECTIVE ExtraTimingOpt [get_runs impl_1]
+set_property STEPS.PHYS_OPT_DESIGN.ARGS.DIRECTIVE AlternateFlowWithRetiming [get_runs impl_1]
+set_property STEPS.ROUTE_DESIGN.ARGS.DIRECTIVE MoreGlobalIterations [get_runs impl_1]
+set_property STEPS.POST_ROUTE_PHYS_OPT_DESIGN.ARGS.DIRECTIVE AddRetime [get_runs impl_1]
+set_property STEPS.OPT_DESIGN.ARGS.DIRECTIVE ExploreWithRemap [get_runs impl_1]
+set_property STEPS.SYNTH_DESIGN.ARGS.FLATTEN_HIERARCHY none [get_runs synth_1]
 
 launch_runs synth_1
 wait_on_run synth_1

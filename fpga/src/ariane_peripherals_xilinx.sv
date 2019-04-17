@@ -568,6 +568,7 @@ axi2mem #(
               endcase // case (gpio_addr[5:3])
          end
 
+`ifdef GENESYSII   
 // Bitbang SPI for retrieving MAC address
 
 dword_interface dwi_inst(
@@ -581,6 +582,8 @@ dword_interface dwi_inst(
                          .S(QSPI_CSN),
                          .DQio(QSPI_D)
     );
+
+`endif
    
     end
 endmodule
