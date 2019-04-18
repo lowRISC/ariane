@@ -15,13 +15,16 @@
 import ariane_pkg::*;
 
 module load_store_unit #(
-    parameter int unsigned ASID_WIDTH = 1
+    parameter int unsigned ASID_WIDTH = 1,
+    parameter ariane_pkg::ariane_cfg_t Cfg = ariane_pkg::ArianeDefaultConfig
 )(
     input  logic                     clk_i,
     input  logic                     rst_ni,
     input  logic                     flush_i,
     output logic                     no_st_pending_o,
     input  logic                     amo_valid_commit_i,
+    input  logic [TRANS_ID_BITS-1:0] commit_trans_id_i,
+    input  logic                     commit_ld_valid_i,
 
     input  fu_data_t                 fu_data_i,
     output logic                     lsu_ready_o,              // FU is ready e.g. not busy
@@ -179,6 +182,8 @@ module load_store_unit #(
     // Load Unit
     // ------------------
     load_unit i_load_unit (
+        .commit_ld_valid_i,
+        .commit_trans_id_i,
         .valid_i               ( ld_valid_i           ),
         .lsu_ctrl_i            ( lsu_ctrl             ),
         .pop_ld_o              ( pop_ld               ),
@@ -435,13 +440,13 @@ module lsu_bypass (
         end
 
         if (pop_st_i && pop_ld_i)
-            mem_n = '{default: 0};
+            mem_n = '0;
 
         if (flush_i) begin
             status_cnt = '0;
             write_pointer = '0;
             read_pointer = '0;
-            mem_n = '{default: 0};
+            mem_n = '0;
         end
         // default assignments
         read_pointer_n  = read_pointer;
@@ -461,7 +466,7 @@ module lsu_bypass (
     // registers
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (~rst_ni) begin
-            mem_q           <= '{default: 0};
+            mem_q           <= '0;
             status_cnt_q    <= '0;
             write_pointer_q <= '0;
             read_pointer_q  <= '0;

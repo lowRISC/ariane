@@ -34,7 +34,8 @@ module ariane #(
   parameter int unsigned AxiIdWidth    = 4,
   parameter bit          SwapEndianess = 0,                // swap endianess in l15 adapter
   parameter logic [63:0] CachedAddrEnd = 64'h80_0000_0000, // end of cached region
-  parameter logic [63:0] CachedAddrBeg = 64'h00_8000_0000  // begin of cached region
+  parameter logic [63:0] CachedAddrBeg = 64'h00_8000_0000, // begin of cached region
+  parameter ariane_pkg::ariane_cfg_t Cfg = ariane_pkg::ArianeDefaultConfig
 ) (
   input  logic                         clk_i,
   input  logic                         rst_ni,
@@ -51,15 +52,12 @@ module ariane #(
 `ifdef PITON_ARIANE
   // L15 (memory side)
   output wt_cache_pkg::l15_req_t       l15_req_o,
-  input  wt_cache_pkg::l15_rtrn_t      l15_rtrn_i,
+  input  wt_cache_pkg::l15_rtrn_t      l15_rtrn_i
 `else
   // memory side, AXI Master
   output ariane_axi::req_t             axi_req_o,
-  input  ariane_axi::resp_t            axi_resp_i,
+  input  ariane_axi::resp_t            axi_resp_i
 `endif
-  output wire                          valid_fence_i_r_o,
-  input wire                           trig_in,
-  output wire                          trig_in_ack
 );
 
   // ------------------------------------------
@@ -150,6 +148,8 @@ module ariane #(
   logic                     no_st_pending_ex;
   logic                     no_st_pending_commit;
   logic                     amo_valid_commit;
+  logic [TRANS_ID_BITS-1:0] commit_trans_id_commit_ex;
+  logic                     commit_ld_valid_commit_ex;
   // --------------
   // ID <-> COMMIT
   // --------------
@@ -183,6 +183,7 @@ module ariane #(
   logic                     tvm_csr_id;
   logic                     tw_csr_id;
   logic                     tsr_csr_id;
+  irq_ctrl_t                irq_ctrl_csr_id;
   logic                     dcache_en_csr_nbdcache;
   logic                     csr_write_fflags_commit_cs;
   logic                     icache_en_csr;
@@ -230,9 +231,6 @@ module ariane #(
   amo_resp_t                amo_resp;
   logic                     sb_full;
 
-  logic debug_req;
-  // Disable debug during AMO commit
-  assign debug_req = debug_req_i & ~amo_valid_commit;
 
   // ----------------
   // DCache <-> *
@@ -271,6 +269,7 @@ module ariane #(
   // ID
   // ---------
   id_stage id_stage_i (
+    .debug_req_i,
     .flush_i                    ( flush_ctrl_if              ),
 
     .fetch_entry_i              ( fetch_entry_if_id          ),
@@ -289,6 +288,8 @@ module ariane #(
     .tvm_i                      ( tvm_csr_id                 ),
     .tw_i                       ( tw_csr_id                  ),
     .tsr_i                      ( tsr_csr_id                 ),
+    .irq_i                      ( irq_i                      ),
+    .irq_ctrl_i                 ( irq_ctrl_csr_id            ),
     .*
   );
 
@@ -352,7 +353,9 @@ module ariane #(
   // ---------
   // EX
   // ---------
-  ex_stage ex_stage_i (
+  ex_stage #(
+    .Cfg ( Cfg )
+  ) ex_stage_i (
     .clk_i                  ( clk_i                       ),
     .rst_ni                 ( rst_ni                      ),
     .flush_i                ( flush_ctrl_ex               ),
@@ -406,6 +409,8 @@ module ariane #(
     .fpu_result_o           ( fpu_result_ex_id            ),
     .fpu_valid_o            ( fpu_valid_ex_id             ),
     .fpu_exception_o        ( fpu_exception_ex_id         ),
+    .commit_trans_id_i      ( commit_trans_id_commit_ex   ),
+    .commit_ld_valid_i      ( commit_ld_valid_commit_ex   ),
     .amo_valid_commit_i     ( amo_valid_commit            ),
     .amo_req_o              ( amo_req                     ),
     .amo_resp_i             ( amo_resp                    ),
@@ -444,8 +449,6 @@ module ariane #(
     .flush_dcache_i         ( dcache_flush_ctrl_cache       ),
     .exception_o            ( ex_commit                     ),
     .dirty_fp_state_o       ( dirty_fp_state                ),
-    .debug_mode_i           ( debug_mode                    ),
-    .debug_req_i            ( debug_req                     ),
     .single_step_i          ( single_step_csr_commit        ),
     .commit_instr_i         ( commit_instr_id_commit        ),
     .commit_ack_o           ( commit_ack                    ),
@@ -458,6 +461,8 @@ module ariane #(
     .commit_lsu_ready_i     ( lsu_commit_ready_ex_commit    ),
     .amo_valid_commit_o     ( amo_valid_commit              ),
     .amo_resp_i             ( amo_resp                      ),
+    .commit_trans_id_o      ( commit_trans_id_commit_ex     ),
+    .commit_ld_valid_o      ( commit_ld_valid_commit_ex     ),
     .commit_csr_o           ( csr_commit_commit_ex          ),
     .pc_o                   ( pc_commit                     ),
     .csr_op_o               ( csr_op_commit_csr             ),
@@ -469,7 +474,6 @@ module ariane #(
     .fence_o                ( fence_commit_controller       ),
     .sfence_vma_o           ( sfence_vma_commit_controller  ),
     .flush_commit_o         ( flush_commit                  ),
-    .valid_fence_i_r_o,
     .*
   );
 
@@ -502,6 +506,7 @@ module ariane #(
     .fflags_o               ( fflags_csr_commit             ),
     .frm_o                  ( frm_csr_id_issue_ex           ),
     .fprec_o                ( fprec_csr_ex                  ),
+    .irq_ctrl_o             ( irq_ctrl_csr_id               ),
     .ld_st_priv_lvl_o       ( ld_st_priv_lvl_csr_ex         ),
     .en_translation_o       ( enable_translation_csr_ex     ),
     .en_ld_st_translation_o ( en_ld_st_translation_csr_ex   ),
@@ -520,7 +525,7 @@ module ariane #(
     .perf_data_o            ( data_csr_perf                 ),
     .perf_data_i            ( data_perf_csr                 ),
     .perf_we_o              ( we_csr_perf                   ),
-    .debug_req_i            ( debug_req                     ),
+    .debug_req_i,
     .ipi_i,
     .irq_i,
     .time_irq_i,
@@ -810,8 +815,6 @@ module ariane #(
 `ifdef XLNX_ILA_TRACE
 xlnx_ila_5 trace_ila (
   .clk(clk_i), // input wire clk
-  .trig_in(trig_in),// input wire trig_in
-  .trig_in_ack(trig_in_ack),// output wire trig_in_ack
   .probe0(rst_ni),
   .probe1(flush_unissued_instr_ctrl_id),
   .probe2(flush_ctrl_ex),
@@ -870,8 +873,7 @@ xlnx_ila_5 trace_ila (
   .probe55(resolved_branch.cf_type),
   .probe56(commit_stage_i.exception_o.cause),
   .probe57(commit_stage_i.exception_o.tval),
-  .probe58(commit_stage_i.exception_o.valid),
-  .probe59(valid_fence_i_r_o)
+  .probe58(commit_stage_i.exception_o.valid)
   );
 `endif   
 

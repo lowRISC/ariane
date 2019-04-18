@@ -28,7 +28,29 @@ package ariane_pkg;
     // ---------------
     // Global Config
     // ---------------
-    localparam NR_SB_ENTRIES = 8; // number of scoreboard entries
+    typedef struct packed {
+      int                NrNonIdempotentRules;  // Number of non idempotent rules
+      logic [15:0][63:0] NonIdempotentAddrBase; // base which needs to match
+      logic [15:0][63:0] NonIdempotentAddrMaks; // bit mask which bits to consider when matching the rule
+    } ariane_cfg_t;
+
+    localparam ariane_cfg_t ArianeDefaultConfig = '{
+      NrNonIdempotentRules: 1,
+      NonIdempotentAddrBase: {64'b0},
+      NonIdempotentAddrMaks: {1 << 31}
+    };
+
+    // Function being called to check parameters
+    function automatic void check_cfg (ariane_cfg_t Cfg);
+      // pragma translate_off
+      `ifndef VERILATOR
+        assert(Cfg.NrNonIdempotentRules <= 16);
+      `endif
+      // pragma translate_on
+    endfunction
+
+    // TODO: Slowly move those parameters to the new system.
+    localparam NR_SB_ENTRIES = 4; // number of scoreboard entries
     localparam TRANS_ID_BITS = $clog2(NR_SB_ENTRIES); // depending on the number of scoreboard entries we need that many bits
                                                       // to uniquely identify the entry in the scoreboard
     localparam ASID_WIDTH    = 1;
@@ -267,6 +289,18 @@ package ariane_pkg;
 
     localparam EXC_OFF_RST      = 8'h80;
 
+    localparam SupervisorIrq = 1;
+    localparam MachineIrq = 0;
+
+    // All information needed to determine whether we need to associate an interrupt
+    // with the corresponding instruction or not.
+    typedef struct packed {
+      logic [63:0] mie;
+      logic [63:0] mip;
+      logic [63:0] mideleg;
+      logic        sie;
+      logic        global_enable;
+    } irq_ctrl_t;
     // ---------------
     // Cache config
     // ---------------
@@ -338,7 +372,7 @@ package ariane_pkg;
                                // set lower than operations
                                SLTS, SLTU,
                                // CSR functions
-                               MRET, SRET, DRET, ECALL, WFI, FENCE, FENCE_I, FENCE_I_R, SFENCE_VMA, CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
+                               MRET, SRET, DRET, ECALL, WFI, FENCE, FENCE_I, SFENCE_VMA, CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
                                // LSU functions
                                LD, SD, LW, LWU, SW, LH, LHU, SH, LB, SB, LBU,
                                // Atomic Memory Operations

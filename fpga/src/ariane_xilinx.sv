@@ -418,8 +418,6 @@ ariane_axi::req_t    axi_ariane_req;
 ariane_axi::resp_t   axi_ariane_resp;
 
 // For cross-triggering ILA
-wire trig_ila, trig_ila_ack;
-wire valid_fence_i_r;
    
 ariane #(
     .CachedAddrBeg ( CacheStartAddr   )
@@ -544,9 +542,6 @@ ariane_peripherals #(
     .sd_reset,
     .leds_o         ( led                         ),
     .dip_switches_i ( sw                          ),
-    .valid_fence_i_r_i ( valid_fence_i_r ),
-    .trig_out(trig_ila), // output wire trig_ila
-    .trig_out_ack(trig_ila_ack), // input wire trig_ila_ack
     .QSPI_CSN,
     .QSPI_D
 );

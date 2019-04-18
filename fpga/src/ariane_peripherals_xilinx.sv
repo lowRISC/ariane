@@ -54,9 +54,6 @@ module ariane_peripherals #(
     output reg         sd_reset,
     output logic [7:0] leds_o,
     input  logic [7:0] dip_switches_i,
-    input wire         valid_fence_i_r_i,
-    output wire        trig_out,
-    input wire         trig_out_ack,
     inout wire         QSPI_CSN,
     inout wire [3:0]   QSPI_D
 );
@@ -184,12 +181,7 @@ module ariane_peripherals #(
       .resp_o        ( plic_resp   ),
       .le_i          ( '0          ), // 0:level 1:edge
       .irq_sources_i ( irq_sources ),
-      .eip_targets_o ( irq_o       ),
-`ifdef XLNX_ILA_PLIC   
-      .trig_out, // output wire trig_out
-      .trig_out_ack, // input wire trig_out_ack
-`endif	      
-      .valid_fence_i_r_i // encountered fence i,r
+      .eip_targets_o ( irq_o       )
     );
 
     // ---------------
@@ -388,7 +380,7 @@ sd_bus sd1
     if (InclEthernet) begin : gen_ethernet
 
     logic                    clk_200_int, clk_rgmii, clk_rgmii_quad;
-    logic                    eth_en, eth_we, eth_int_n, eth_pme_n, phy_mdio_i, phy_mdio_o, phy_mdio_t;
+    logic                    eth_en, eth_we, eth_int_n, eth_pme_n, phy_mdio_i, phy_mdio_o, phy_mdio_oe;
     logic [AxiAddrWidth-1:0] eth_addr;
     logic [AxiDataWidth-1:0] eth_wrdata, eth_rdata;
     logic [AxiDataWidth/8-1:0] eth_be;
@@ -432,7 +424,7 @@ sd_bus sd1
        .o_edutmdc(o_emdc),
        .i_edutmdio(phy_mdio_i),
        .o_edutmdio(phy_mdio_o),
-       .oe_edutmdio(phy_mdio_t),
+       .oe_edutmdio(phy_mdio_oe),
        .o_edutrstn(o_erstn),
        .eth_irq(irq_sources[2])
     );
@@ -446,7 +438,7 @@ sd_bus sd1
           .O(phy_mdio_i),     // Buffer output
           .IO(io_emdio),      // Buffer inout port (connect directly to top-level port)
           .I(phy_mdio_o),     // Buffer input
-          .T(phy_mdio_t)      // 3-state enable input, high=input, low=output
+          .T(~phy_mdio_oe)    // 3-state enable input, high=input, low=output
        );
 
     end else begin

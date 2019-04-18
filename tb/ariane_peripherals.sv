@@ -21,10 +21,10 @@ module ariane_peripherals #(
 ) (
     input  logic       clk_i           , // Clock
     input  logic       rst_ni          , // Asynchronous reset active low
-    AXI_BUS.in         plic            ,
-    AXI_BUS.in         uart            ,
-    AXI_BUS.in         spi             ,
-    AXI_BUS.in         ethernet        ,
+    AXI_BUS.Slave      plic            ,
+    AXI_BUS.Slave      uart            ,
+    AXI_BUS.Slave      spi             ,
+    AXI_BUS.Slave      ethernet        ,
     output logic [1:0] irq_o           ,
     // UART
     input  logic       rx_i            ,
@@ -46,7 +46,8 @@ module ariane_peripherals #(
     output logic       spi_clk_o       ,
     output logic       spi_mosi        ,
     input  logic       spi_miso        ,
-    output logic       spi_ss
+    output logic       spi_ss          ,
+    input wire         valid_fence_i_r_i
 );
 
     // ---------------
@@ -171,8 +172,9 @@ module ariane_peripherals #(
       .req_i         ( plic_req    ),
       .resp_o        ( plic_resp   ),
       .le_i          ( '0          ), // 0:level 1:edge
-        .irq_sources_i      ( irq_sources            ),
-      .eip_targets_o ( irq_o       )
+      .irq_sources_i ( irq_sources ),
+      .eip_targets_o ( irq_o       ),
+      .valid_fence_i_r_i // encountered fence i,r
     );
 
     // ---------------

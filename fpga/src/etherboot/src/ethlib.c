@@ -498,20 +498,20 @@ void set_dummy_mac(void)
 #ifndef SIMULATION  
   printf("Setup MAC addr\n");
 #endif
-#if 0  
-  mac_addr.addr[0] = (uint8_t)0x00;
-  mac_addr.addr[1] = (uint8_t)0x18;
-  mac_addr.addr[2] = (uint8_t)0x3E;
-  mac_addr.addr[3] = (uint8_t)0x02;
-  mac_addr.addr[4] = (uint8_t)0xE3;
-  mac_addr.addr[5] = (uint8_t)0x7F;
-#else
-  for (i = 0; i < 6; i++)
+  if (!rslt)
+    {
+    mac_addr.addr[0] = (uint8_t)0x00;
+    mac_addr.addr[1] = (uint8_t)0x18;
+    mac_addr.addr[2] = (uint8_t)0x3E;
+    mac_addr.addr[3] = (uint8_t)0x02;
+    mac_addr.addr[4] = (uint8_t)0xE3;
+    mac_addr.addr[5] = (uint8_t)0x7F;
+    }
+  else for (i = 0; i < 6; i++)
     {
       mac_addr.addr[i] = (uint8_t)(rslt >> ((5-i)*8));
       printf("QSPI OEM[%d] = %x\n", i, mac_addr.addr[i]);
     }  
-#endif  
   memcpy (&macaddr_lo, mac_addr.addr+2, sizeof(uint32_t));
   memcpy (&macaddr_hi, mac_addr.addr+0, sizeof(uint16_t));
   eth_base[MACLO_OFFSET>>3] = __bswap_32(macaddr_lo);
