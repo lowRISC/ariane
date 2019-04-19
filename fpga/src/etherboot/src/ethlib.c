@@ -500,12 +500,12 @@ void set_dummy_mac(void)
 #endif
   if (!rslt)
     {
-    mac_addr.addr[0] = (uint8_t)0x00;
-    mac_addr.addr[1] = (uint8_t)0x18;
-    mac_addr.addr[2] = (uint8_t)0x3E;
-    mac_addr.addr[3] = (uint8_t)0x02;
-    mac_addr.addr[4] = (uint8_t)0xE3;
-    mac_addr.addr[5] = (uint8_t)0x7F;
+    mac_addr.addr[0] = (uint8_t)0xEE;
+    mac_addr.addr[1] = (uint8_t)0xE1;
+    mac_addr.addr[2] = (uint8_t)0xE2;
+    mac_addr.addr[3] = (uint8_t)0xE3;
+    mac_addr.addr[4] = (uint8_t)0xE4;
+    mac_addr.addr[5] = (uint8_t)(0xE0|(gpio_sw()&0xF));
     }
   else for (i = 0; i < 6; i++)
     {

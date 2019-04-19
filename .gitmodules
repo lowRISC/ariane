@@ -34,9 +34,6 @@
 [submodule "src/axi_riscv_atomics"]
 	path = src/axi_riscv_atomics
 	url = https://github.com/pulp-platform/axi_riscv_atomics.git
-[submodule "src/riscv-dbg"]
-	path = src/riscv-dbg
-	url = https://github.com/pulp-platform/riscv-dbg.git
 [submodule "src/fpu"]
 	path = src/fpu
 	url = https://github.com/lowRISC/fpnew.git
@@ -49,3 +46,6 @@
 [submodule "fpga/src/spi_mem_programmer"]
 	path = fpga/src/spi_mem_programmer
 	url = https://github.com/jrrk/spi_mem_programmer.git
+[submodule "src/riscv-dbg"]
+	path = src/riscv-dbg
+	url = https://github.com/jrrk/riscv-dbg.git
