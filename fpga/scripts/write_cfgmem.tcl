@@ -18,11 +18,11 @@
 if {$argc < 2 || $argc > 4} {
     puts $argc
     puts {Error: Invalid number of arguments}
-    puts {Usage: write_cfgmem.tcl mcsfile bitfile [datafile]}
+    puts {Usage: write_cfgmem.tcl mcsfile bitfile datafile}
     exit 1
 }
 
-lassign $argv mcsfile bitfile
+lassign $argv mcsfile bitfile datafile
 
 # https://scholar.princeton.edu/jbalkind/blog/programming-genesys-2-qspi-spi-x4-flash
-write_cfgmem -format mcs -interface SPIx4 -size 256  -loadbit "up 0x0 $bitfile" -file $mcsfile -force
+write_cfgmem -format mcs -interface SPIx4 -size 16 -loadbit "up 0x0 $bitfile" -loaddata "up 0x400000 $datafile" -file $mcsfile -force

@@ -46,8 +46,7 @@ module ariane_peripherals #(
     output logic       spi_clk_o       ,
     output logic       spi_mosi        ,
     input  logic       spi_miso        ,
-    output logic       spi_ss          ,
-    input wire         valid_fence_i_r_i
+    output logic       spi_ss
 );
 
     // ---------------
@@ -173,8 +172,7 @@ module ariane_peripherals #(
       .resp_o        ( plic_resp   ),
       .le_i          ( '0          ), // 0:level 1:edge
       .irq_sources_i ( irq_sources ),
-      .eip_targets_o ( irq_o       ),
-      .valid_fence_i_r_i // encountered fence i,r
+      .eip_targets_o ( irq_o       )
     );
 
     // ---------------

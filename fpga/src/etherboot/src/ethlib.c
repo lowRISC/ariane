@@ -498,7 +498,7 @@ void set_dummy_mac(void)
 #ifndef SIMULATION  
   printf("Setup MAC addr\n");
 #endif
-  if (!rslt)
+  if (((rslt&0xFFFFFFFFFFFF)==0xFFFFFFFFFFFF) || !rslt)
     {
     mac_addr.addr[0] = (uint8_t)0xEE;
     mac_addr.addr[1] = (uint8_t)0xE1;

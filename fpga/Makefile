@@ -26,9 +26,10 @@ ips-target := $(join $(addsuffix /ip/, $(addprefix $(ip-dir)/, $(basename $(ips)
 
 all: $(mcs)
 
+BBL=../../ariane-sdk-rng-tools/riscv-pk/build/bbl
 # Generate mcs from bitstream
 $(mcs): $(bit)
-	$(VIVADO) $(VIVADOFLAGS) -source scripts/write_cfgmem.tcl -tclargs $@ $^
+	$(VIVADO) $(VIVADOFLAGS) -source scripts/write_cfgmem.tcl -tclargs $@ $^ $(BBL)
 
 $(bit): $(ips)
 	mkdir -p $(work-dir)
@@ -51,7 +52,7 @@ ELF=src/etherboot/etherboot.elf
 newmcs: work-fpga/ariane_xilinx.new.mcs
 
 work-fpga/ariane_xilinx.new.mcs: work-fpga/ariane_xilinx.new.bit
-	env XILINX_PART="xc7a100t-csg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" vivado -nojournal -mode batch -source scripts/prologue.tcl -source scripts/write_cfgmem.tcl -tclargs $@ $<
+	env XILINX_PART="xc7a100t-csg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" vivado -nojournal -mode batch -source scripts/prologue.tcl -source scripts/write_cfgmem.tcl -tclargs $@ $< $(BBL)
 
 new: work-fpga/ariane_xilinx.bit search-ramb.log scripts/cnvmem.v boot.bmm 
 	riscv64-unknown-elf-objcopy -O verilog $(ELF) cnvmem.mem

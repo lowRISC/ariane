@@ -7,7 +7,7 @@ create_project $ipName . -force -part $partNumber
 set_property board_part $boardName [current_project]
 
 create_ip -name ila -vendor xilinx.com -library ip -module_name $ipName
-set_property -dict [list  CONFIG.C_NUM_OF_PROBES {25} \
+set_property -dict [list  CONFIG.C_NUM_OF_PROBES {23} \
                           CONFIG.C_PROBE0_WIDTH {2} \
                           CONFIG.C_PROBE1_WIDTH {3} \
                           CONFIG.C_PROBE2_WIDTH {3} \
@@ -26,8 +26,6 @@ set_property -dict [list  CONFIG.C_NUM_OF_PROBES {25} \
                           CONFIG.C_PROBE15_WIDTH {3} \
                           CONFIG.C_PROBE21_WIDTH {3} \
                           CONFIG.C_PROBE22_WIDTH {3} \
-                          CONFIG.C_PROBE23_WIDTH {3} \
-                          CONFIG.C_PROBE24_WIDTH {3} \
                           CONFIG.C_DATA_DEPTH {1024}  \
                           CONFIG.C_INPUT_PIPE_STAGES {1} \
                     ] [get_ips $ipName]

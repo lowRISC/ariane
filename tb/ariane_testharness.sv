@@ -625,8 +625,7 @@ module ariane_testharness #(
       .spi_clk_o ( ),
       .spi_mosi  ( ),
       .spi_miso  ( ),
-      .spi_ss    ( ),
-      .valid_fence_i_r_i ( valid_fence_i_r )
+      .spi_ss    ( )
     );
 
     uart_bus #(.BAUD_RATE(115200), .PARITY_EN(0)) i_uart_bus (.rx(tx), .tx(rx), .rx_en(1'b1));
@@ -636,8 +635,6 @@ module ariane_testharness #(
     // ---------------
     ariane_axi::req_t    axi_ariane_req;
     ariane_axi::resp_t   axi_ariane_resp;
-
-    wire valid_fence_i_r;
 
     ariane #(
         .AxiIdWidth    ( ariane_soc::IdWidth                             ),
@@ -660,8 +657,7 @@ module ariane_testharness #(
         .debug_req_i          ( debug_req_core      ),
 `endif
         .axi_req_o            ( axi_ariane_req      ),
-        .axi_resp_i           ( axi_ariane_resp     ),
-        .valid_fence_i_r_o    ( valid_fence_i_r     )
+        .axi_resp_i           ( axi_ariane_resp     )
     );
 
     axi_master_connect i_axi_master_connect_ariane (
