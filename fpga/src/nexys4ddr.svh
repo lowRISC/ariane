@@ -23,3 +23,6 @@
 
 // write-through cache
 `define WT_DCACHE
+
+// Spansion QSPI configuration memory
+`define QSPI_CONFIG_MEM
