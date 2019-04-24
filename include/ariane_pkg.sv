@@ -317,7 +317,7 @@ package ariane_pkg;
 `endif
 
 `ifndef CONFIG_L1I_SIZE
-    `define CONFIG_L1I_SIZE 16*1024
+    `define CONFIG_L1I_SIZE 64*1024
 `endif
 
 `ifndef CONFIG_L1D_CACHELINE_WIDTH
@@ -329,7 +329,7 @@ package ariane_pkg;
 `endif
 
 `ifndef CONFIG_L1D_SIZE
-    `define CONFIG_L1D_SIZE 32*1024
+    `define CONFIG_L1D_SIZE 64*1024
 `endif
 
     // I$

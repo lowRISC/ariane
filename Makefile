@@ -173,11 +173,9 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
 
 src := $(addprefix $(root-dir), $(src))
 
-uart_src := $(wildcard fpga/src/apb_uart/src/*.vhd)
-uart_src := $(addprefix $(root-dir), $(uart_src))
-
 fpga_src :=  $(wildcard fpga/src/*.sv) \
              $(wildcard fpga/src/bootrom/*.sv) \
+             $(wildcard fpga/src/apb_uart/src/*.sv) \
              $(wildcard fpga/src/ariane-ethernet/*.sv) \
              $(wildcard fpga/src/spi_mem_programmer/*.sv)
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
@@ -253,7 +251,7 @@ $(library)/.build-srcs: $(util) $(library)
 	# vcom$(questa_version) $(compile_flag_vhd) -work $(library) -pedanticerrors $(filter %.vhd,$(ariane_pkg))
 	vlog$(questa_version) $(compile_flag) -work $(library) $(filter %.sv,$(util)) $(list_incdir) -suppress 2583
 	# Suppress message that always_latch may not be checked thoroughly by QuestaSim.
-	vcom$(questa_version) $(compile_flag_vhd) -work $(library) -pedanticerrors $(filter %.vhd,$(uart_src))
+	vlog$(questa_version) $(compile_flag) -work $(library) -pedanticerrors $(wildcard fpga/src/apb_uart/src/*.sv)
 	# vcom$(questa_version) $(compile_flag_vhd) -work $(library) -pedanticerrors $(filter %.vhd,$(src))
 	vlog$(questa_version) $(compile_flag) -work $(library) -pedanticerrors $(filter %.sv,$(src)) $(list_incdir) -suppress 2583
 	touch $(library)/.build-srcs
@@ -652,9 +650,8 @@ check-torture:
 
 fpga_filter := $(addprefix $(root-dir), bootrom/bootrom.sv)
 
-fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(util) $(uart_src)
+fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(util)
 	@echo "[FPGA] Generate sources"
-	@echo read_vhdl        {$(uart_src)}    > fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(ariane_pkg)} >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(util)}       >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> fpga/scripts/add_sources.tcl

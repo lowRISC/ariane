@@ -26,3 +26,8 @@
 
 // Spansion QSPI configuration memory
 `define QSPI_CONFIG_MEM
+
+// Logic analysers enabled
+
+// `define XLNX_ILA_QSPI
+// `define XLNX_ILA_TRACE
