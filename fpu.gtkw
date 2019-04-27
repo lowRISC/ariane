@@ -1,0 +1,60 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Mon Apr 22 09:19:07 2019
+[*]
+[dumpfile] "/local/scratch/jrrk2/ariane-nexys4ddr/verilog.dump"
+[dumpfile_mtime] "Mon Apr 22 09:17:41 2019"
+[dumpfile_size] 1027272365
+[savefile] "/local/scratch/jrrk2/ariane-nexys4ddr/fpu.gtkw"
+[timestart] 328686
+[size] 1789 717
+[pos] -1 -1
+*-7.457520 329071 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TOP.
+[treeopen] TOP.ariane_testharness.
+[treeopen] TOP.ariane_testharness.i_ariane.
+[treeopen] TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.
+[treeopen] TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.
+[treeopen] TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.
+[treeopen] TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.
+[treeopen] TOP.ariane_testharness.i_ariane.issue_stage_i.
+[treeopen] TOP.ariane_testharness.i_ariane.issue_stage_i.i_issue_read_operands.
+[treeopen] TOP.ariane_testharness.i_ariane.issue_stage_i.i_issue_read_operands.float_regfile_gen.i_ariane_fp_regfile.
+[treeopen] TOP.ariane_testharness.i_ariane.issue_stage_i.i_issue_read_operands.i_ariane_regfile.
+[sst_width] 311
+[signals_width] 158
+[sst_expanded] 1
+[sst_vpaned_height] 389
+@22
+TOP.ariane_testharness.i_ariane.issue_stage_i.i_issue_read_operands.float_regfile_gen.i_ariane_fp_regfile.mem(0)[63:0]
+TOP.ariane_testharness.i_ariane.issue_stage_i.i_issue_read_operands.float_regfile_gen.i_ariane_fp_regfile.mem(1)[63:0]
+TOP.ariane_testharness.i_ariane.issue_stage_i.i_issue_read_operands.float_regfile_gen.i_ariane_fp_regfile.mem(2)[63:0]
+TOP.ariane_testharness.i_ariane.issue_stage_i.i_issue_read_operands.float_regfile_gen.i_ariane_fp_regfile.mem(3)[63:0]
+@24
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.fpu_op[4:0]
+@22
+TOP.ariane_testharness.i_ariane.issue_stage_i.i_issue_read_operands.i_ariane_regfile.mem(10)[63:0]
+@23
+TOP.ariane_testharness.i_ariane.issue_stage_i.i_issue_read_operands.i_ariane_regfile.mem(13)[63:0]
+@28
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.src_fmt[2:0]
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.dst_fmt[2:0]
+@22
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.count_ready[6:0]
+@28
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.count_busy
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.ready_1
+@22
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.opa[63:0]
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.opa_reg[63:0]
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.opb[63:0]
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.opc[63:0]
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.opa64[63:0]
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.opb64[63:0]
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.opc64[63:0]
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.out_round[63:0]
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.out[63:0]
+@28
+TOP.ariane_testharness.i_ariane.ex_stage_i.fpu_gen.fpu_i.fpu_gen.i_fpnew_bulk.UUT.op_enable
+[pattern_trace] 1
+[pattern_trace] 0
