@@ -109,7 +109,7 @@ int main(int argc, char **argv)
       cnt = scan(linbuf, rslt, sizeof(rslt));
       if (cnt)
 	{
-	  testcase(seq++, argv[1], rslt[2], rslt[1], rslt[0]);
+	  testcase(seq++, argv[1], rslt[2], rslt[0], rslt[1]);
 	}
     }
   footer();
