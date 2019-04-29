@@ -82,7 +82,10 @@ module ariane_xilinx (
   input  logic        tdi         ,
   output logic        tdo         ,
   input  logic        rx          ,
-  output logic        tx
+  output logic        tx          ,
+  // Quad-SPI
+  inout wire          QSPI_CSN    ,
+  inout wire [3:0]    QSPI_D
 );
 // 24 MByte in 8 byte words
 localparam NumWords = (24 * 1024 * 1024) / 8;
@@ -474,7 +477,9 @@ ariane_peripherals #(
     .sd_cmd,
     .sd_reset,
     .leds_o         ( led                         ),
-    .dip_switches_i ( sw                          )
+    .dip_switches_i ( sw                          ),
+    .QSPI_CSN,
+    .QSPI_D
 );
 
 

@@ -106,7 +106,7 @@ for (genvar g = 1; g <= wid; g=g+1)
                         .DIP(4'b0)                 // 4-bit input: Parity input
                         );
 
-   `ifndef SIMULATION
+`ifdef XLNX_ILA_RNG
 xlnx_ila_rng rng_ila (
   .clk(clk_i), // input wire clk
   .probe0(rst_ni),

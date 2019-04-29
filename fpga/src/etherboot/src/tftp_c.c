@@ -30,6 +30,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include "ariane.h"
 #include "hash-md5.h"
 #include "encoding.h"
+#include "elfriscv.h"
 
 #define CMD_RRQ (int16_t)1
 #define CMD_WRQ (int16_t)2
@@ -79,7 +80,7 @@ Error Codes
 /* hack in a document_root */
 const char *const conf_document_root = "";
 
-/* poor man's atoi that only does natural numbers (including zero in case some pedantic insists zero is unnatural) */
+/* poor man's atoi that only does natural numbers (plus zero in case some pedantic insists zero is unnatural) */
 
 int myatoi(const char *nptr)
 {
@@ -114,9 +115,18 @@ void myputn(int wid, unsigned n)
 enum {verbose=0, md5sum = 1};
 static char *file_ptr, *strt_ptr;
 
+void tftp_elfn(void *dst, uint32_t off, uint32_t sz)
+{
+  /* since we don't know how much RAM we have, we may be
+     overwriting the front part of the ELF image with the expanded executable (!?!) */
+
+  /* this will go wrong if the big Linux payload segment is not last in the ELF file */
+  memcpy(dst, strt_ptr+off, sz);
+}
+
 void file_open(const char *path)
 {
-  strt_ptr = (char *)DRAMBase;
+  strt_ptr = 0x1000000 + (char *)DRAMBase;
   file_ptr = strt_ptr;
 }
 
@@ -130,17 +140,22 @@ void file_close(void)
 {
   extern char _dtb[];
   uint8_t *hash_value;
-  int siz = file_ptr - strt_ptr;
-  void (*fun_ptr)(int, void *) = (void*)strt_ptr;
+  int br, siz = file_ptr - strt_ptr;
+  int64_t entry_point;
   printf("File length = %d\n", siz);
   if (md5sum)
     {
       hash_value = hash_buf(strt_ptr, siz);
       printf("md5(%p,%d) = %s\n", strt_ptr, siz, hash_value);
     }
-  asm volatile ("fence.i");
-  asm volatile ("fence");
-  fun_ptr(read_csr(mhartid), _dtb);
+  printf("load elf to DDR memory\n");
+  entry_point = load_elf(tftp_elfn);
+  if (entry_point < 0)
+    {
+    printf("elf read failed with code %ld", -entry_point);
+    }
+  else
+    just_jump(entry_point);
 }
 
 // Send an ACK packet. Return bytes sent.

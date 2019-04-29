@@ -11,12 +11,12 @@
 // Description: Set global FPGA degines
 // Author: Florian Zaruba <zarubaf@iis.ee.ethz.ch>
 
-`define GENESYSII
+`define NEXYS4DDR
 
 `define ARIANE_DATA_WIDTH 64
 
-// Instantiate protocol checker
-`define PROTOCOL_CHECKER
+// Instantiate protocl checker
+// `define PROTOCOL_CHECKER
 
 // write-back cache
 // `define WB_DCACHE
@@ -24,9 +24,10 @@
 // write-through cache
 `define WT_DCACHE
 
-// PLIC ila
-`define XLNX_ILA_TRACE   
-`define XLNX_ILA_FPU
-// `define XLNX_ILA_PLIC   
+// Spansion QSPI configuration memory
+`define QSPI_CONFIG_MEM
 
-`define QPSI_CONFIG_MEM
+// Logic analysers enabled
+
+// `define XLNX_ILA_QSPI
+// `define XLNX_ILA_TRACE

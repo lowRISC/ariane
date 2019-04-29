@@ -14,7 +14,16 @@
 
 import ariane_pkg::*;
 // pragma translate_off
-`ifndef VERILATOR
+`ifdef QUESTA
+ `define NOTRACE
+`endif
+`ifdef VCS
+ `define NOTRACE
+`endif
+`ifdef VERILATOR
+ `define NOTRACE
+`endif
+`ifndef NOTRACE
 import instruction_tracer_pkg::*;
 `endif
 // pragma translate_on
@@ -660,20 +669,12 @@ module ariane #(
     .axi_resp_i            ( axi_resp_i                  )
   );
 `endif
-  // -------------------
-  // Parameter Check
-  // -------------------
-  // pragma translate_off
-  `ifndef VERILATOR
-  initial ariane_pkg::check_cfg(Cfg);
-  `endif
-  // pragma translate_on
 
   // -------------------
   // Instruction Tracer
   // -------------------
   //pragma translate_off
-`ifndef VERILATOR
+`ifndef NOTRACE
   instruction_tracer_if tracer_if (clk_i);
   // assign instruction tracer interface
   // control signals
@@ -811,7 +812,7 @@ module ariane #(
 `endif // VERILATOR
   //pragma translate_on
 
-`ifdef XILINX_ILA_TRACE
+`ifdef XLNX_ILA_TRACE
 xlnx_ila_5 trace_ila (
   .clk(clk_i), // input wire clk
   .probe0(rst_ni),
