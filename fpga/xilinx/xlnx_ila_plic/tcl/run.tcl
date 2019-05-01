@@ -37,11 +37,12 @@ set_property -dict [list  CONFIG.C_NUM_OF_PROBES {28} \
                           CONFIG.C_PROBE26_WIDTH {2} \
                           CONFIG.C_PROBE27_WIDTH {2} \
                           CONFIG.C_DATA_DEPTH {8192}  \
-                          CONFIG.C_INPUT_PIPE_STAGES {1} \
-                          CONFIG.C_EN_STRG_QUAL {1} \
+                          CONFIG.C_ADV_TRIGGER {false} \
                           CONFIG.C_TRIGOUT_EN {false} \
                           CONFIG.C_TRIGIN_EN {false} \
-                          CONFIG.ALL_PROBE_SAME_MU_CNT {3} ] [get_ips $ipName]
+                          CONFIG.C_EN_STRG_QUAL {1} \
+                          CONFIG.ALL_PROBE_SAME_MU_CNT {3} \
+                          CONFIG.C_INPUT_PIPE_STAGES {1} ] [get_ips $ipName]
 
 
 generate_target {instantiation_template} [get_files ./$ipName.srcs/sources_1/ip/$ipName/$ipName.xci]
