@@ -16,7 +16,7 @@
 import ariane_pkg::*;
 
 module ex_stage #(
-    parameter ariane_pkg::ariane_cfg_t Cfg = ariane_pkg::ArianeDefaultConfig
+    parameter ariane_pkg::ariane_cfg_t ArianeCfg = ariane_pkg::ArianeDefaultConfig
 ) (
     input  logic                                   clk_i,    // Clock
     input  logic                                   rst_ni,   // Asynchronous reset active low
@@ -63,8 +63,6 @@ module ex_stage #(
     output logic                                   lsu_commit_ready_o, // commit queue is ready to accept another commit request
     output logic                                   no_st_pending_o,
     input  logic                                   amo_valid_commit_i,
-    input  logic [TRANS_ID_BITS-1:0]               commit_trans_id_i,
-    input  logic                                   commit_ld_valid_i,
     // FPU
     output logic                                   fpu_ready_o,      // FU is ready
     input  logic                                   fpu_valid_i,      // Output is valid
@@ -254,7 +252,7 @@ module ex_stage #(
     assign lsu_data  = lsu_valid_i ? fu_data_i  : '0;
 
     load_store_unit #(
-        .Cfg ( Cfg )
+      .ArianeCfg ( ArianeCfg )
     ) lsu_i (
         .clk_i,
         .rst_ni,
@@ -288,8 +286,6 @@ module ex_stage #(
         .dtlb_miss_o,
         .dcache_req_ports_i,
         .dcache_req_ports_o,
-        .commit_trans_id_i,
-        .commit_ld_valid_i,
         .amo_valid_commit_i,
         .amo_req_o,
         .amo_resp_i

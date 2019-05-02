@@ -316,23 +316,6 @@ package riscv;
     // -----
     // CSRs
     // -----
-   enum logic [4:0] {                // Performance counter indices
-        IDX_L1_ICACHE_MISS = 5'h03,  // L1 Instr Cache Miss
-        IDX_L1_DCACHE_MISS = 5'h04,  // L1 Data Cache Miss
-        IDX_ITLB_MISS      = 5'h05,  // ITLB Miss
-        IDX_DTLB_MISS      = 5'h06,  // DTLB Miss
-        IDX_LOAD           = 5'h07,  // Loads
-        IDX_STORE          = 5'h08,  // Stores
-        IDX_EXCEPTION      = 5'h09,  // Taken exceptions
-        IDX_EXCEPTION_RET  = 5'h0A,  // Exception return
-        IDX_BRANCH_JUMP    = 5'h0B,  // Software change of PC
-        IDX_CALL           = 5'h0C,  // Procedure call
-        IDX_RET            = 5'h0D,  // Procedure Return
-        IDX_MIS_PREDICT    = 5'h0E,  // Branch mis-predicted
-        IDX_SB_FULL        = 5'h0F,  // Scoreboard full
-        IDX_IF_EMPTY       = 5'h10   // instruction fetch queue empty
-        } perf_t;
-
     typedef enum logic [11:0] {
         // Floating-Point CSRs
         CSR_FFLAGS         = 12'h001,
@@ -371,40 +354,84 @@ package riscv;
         CSR_MHARTID        = 12'hF14,
         CSR_MCYCLE         = 12'hB00,
         CSR_MINSTRET       = 12'hB02,
+        // Performance counters (Machine Mode)
+        CSR_ML1_ICACHE_MISS = 12'hB03,  // L1 Instr Cache Miss
+        CSR_ML1_DCACHE_MISS = 12'hB04,  // L1 Data Cache Miss
+        CSR_MITLB_MISS      = 12'hB05,  // ITLB Miss
+        CSR_MDTLB_MISS      = 12'hB06,  // DTLB Miss
+        CSR_MLOAD           = 12'hB07,  // Loads
+        CSR_MSTORE          = 12'hB08,  // Stores
+        CSR_MEXCEPTION      = 12'hB09,  // Taken exceptions
+        CSR_MEXCEPTION_RET  = 12'hB0A,  // Exception return
+        CSR_MBRANCH_JUMP    = 12'hB0B,  // Software change of PC
+        CSR_MCALL           = 12'hB0C,  // Procedure call
+        CSR_MRET            = 12'hB0D,  // Procedure Return
+        CSR_MMIS_PREDICT    = 12'hB0E,  // Branch mis-predicted
+        CSR_MSB_FULL        = 12'hB0F,  // Scoreboard full
+        CSR_MIF_EMPTY       = 12'hB10,  // instruction fetch queue empty
+        CSR_MHPM_COUNTER_17 = 12'hB11,  // reserved
+        CSR_MHPM_COUNTER_18 = 12'hB12,  // reserved
+        CSR_MHPM_COUNTER_19 = 12'hB13,  // reserved
+        CSR_MHPM_COUNTER_20 = 12'hB14,  // reserved
+        CSR_MHPM_COUNTER_21 = 12'hB15,  // reserved
+        CSR_MHPM_COUNTER_22 = 12'hB16,  // reserved
+        CSR_MHPM_COUNTER_23 = 12'hB17,  // reserved
+        CSR_MHPM_COUNTER_24 = 12'hB18,  // reserved
+        CSR_MHPM_COUNTER_25 = 12'hB19,  // reserved
+        CSR_MHPM_COUNTER_26 = 12'hB1A,  // reserved
+        CSR_MHPM_COUNTER_27 = 12'hB1B,  // reserved
+        CSR_MHPM_COUNTER_28 = 12'hB1C,  // reserved
+        CSR_MHPM_COUNTER_29 = 12'hB1D,  // reserved
+        CSR_MHPM_COUNTER_30 = 12'hB1E,  // reserved
+        CSR_MHPM_COUNTER_31 = 12'hB1F,  // reserved
+        // Cache Control (platform specifc)
         CSR_DCACHE         = 12'h701,
         CSR_ICACHE         = 12'h700,
-
+        // Triggers
         CSR_TSELECT        = 12'h7A0,
         CSR_TDATA1         = 12'h7A1,
         CSR_TDATA2         = 12'h7A2,
         CSR_TDATA3         = 12'h7A3,
         CSR_TINFO          = 12'h7A4,
-
         // Debug CSR
         CSR_DCSR           = 12'h7b0,
         CSR_DPC            = 12'h7b1,
         CSR_DSCRATCH0      = 12'h7b2, // optional
         CSR_DSCRATCH1      = 12'h7b3, // optional
-
-        // Counters and Timers
+        // Counters and Timers (User Mode - R/O Shadows)
         CSR_CYCLE          = 12'hC00,
         CSR_TIME           = 12'hC01,
         CSR_INSTRET        = 12'hC02,
-        // Performance counters
-        CSR_L1_ICACHE_MISS = 12'hC00+IDX_L1_ICACHE_MISS,  // L1 Instr Cache Miss
-        CSR_L1_DCACHE_MISS = 12'hC00+IDX_L1_DCACHE_MISS,  // L1 Data Cache Miss
-        CSR_ITLB_MISS      = 12'hC00+IDX_ITLB_MISS     ,  // ITLB Miss
-        CSR_DTLB_MISS      = 12'hC00+IDX_DTLB_MISS     ,  // DTLB Miss
-        CSR_LOAD           = 12'hC00+IDX_LOAD          ,  // Loads
-        CSR_STORE          = 12'hC00+IDX_STORE         ,  // Stores
-        CSR_EXCEPTION      = 12'hC00+IDX_EXCEPTION     ,  // Taken exceptions
-        CSR_EXCEPTION_RET  = 12'hC00+IDX_EXCEPTION_RET ,  // Exception return
-        CSR_BRANCH_JUMP    = 12'hC00+IDX_BRANCH_JUMP   ,  // Software change of PC
-        CSR_CALL           = 12'hC00+IDX_CALL          ,  // Procedure call
-        CSR_RET            = 12'hC00+IDX_RET           ,  // Procedure Return
-        CSR_MIS_PREDICT    = 12'hC00+IDX_MIS_PREDICT   ,  // Branch mis-predicted
-        CSR_SB_FULL        = 12'hC00+IDX_SB_FULL       ,  // Scoreboard full
-        CSR_IF_EMPTY       = 12'hC00+IDX_IF_EMPTY         // instruction fetch queue empty
+        // Performance counters (User Mode - R/O Shadows)
+        CSR_L1_ICACHE_MISS = 12'hC03,  // L1 Instr Cache Miss
+        CSR_L1_DCACHE_MISS = 12'hC04,  // L1 Data Cache Miss
+        CSR_ITLB_MISS      = 12'hC05,  // ITLB Miss
+        CSR_DTLB_MISS      = 12'hC06,  // DTLB Miss
+        CSR_LOAD           = 12'hC07,  // Loads
+        CSR_STORE          = 12'hC08,  // Stores
+        CSR_EXCEPTION      = 12'hC09,  // Taken exceptions
+        CSR_EXCEPTION_RET  = 12'hC0A,  // Exception return
+        CSR_BRANCH_JUMP    = 12'hC0B,  // Software change of PC
+        CSR_CALL           = 12'hC0C,  // Procedure call
+        CSR_RET            = 12'hC0D,  // Procedure Return
+        CSR_MIS_PREDICT    = 12'hC0E,  // Branch mis-predicted
+        CSR_SB_FULL        = 12'hC0F,  // Scoreboard full
+        CSR_IF_EMPTY       = 12'hC10,  // instruction fetch queue empty
+        CSR_HPM_COUNTER_17 = 12'hC11,  // reserved
+        CSR_HPM_COUNTER_18 = 12'hC12,  // reserved
+        CSR_HPM_COUNTER_19 = 12'hC13,  // reserved
+        CSR_HPM_COUNTER_20 = 12'hC14,  // reserved
+        CSR_HPM_COUNTER_21 = 12'hC15,  // reserved
+        CSR_HPM_COUNTER_22 = 12'hC16,  // reserved
+        CSR_HPM_COUNTER_23 = 12'hC17,  // reserved
+        CSR_HPM_COUNTER_24 = 12'hC18,  // reserved
+        CSR_HPM_COUNTER_25 = 12'hC19,  // reserved
+        CSR_HPM_COUNTER_26 = 12'hC1A,  // reserved
+        CSR_HPM_COUNTER_27 = 12'hC1B,  // reserved
+        CSR_HPM_COUNTER_28 = 12'hC1C,  // reserved
+        CSR_HPM_COUNTER_29 = 12'hC1D,  // reserved
+        CSR_HPM_COUNTER_30 = 12'hC1E,  // reserved
+        CSR_HPM_COUNTER_31 = 12'hC1F  // reserved
     } csr_reg_t;
 
     localparam logic [63:0] SSTATUS_UIE  = 64'h00000001;
@@ -572,17 +599,25 @@ package riscv;
     // pragma translate_off
     function string spikeCommitLog(logic [63:0] pc, priv_lvl_t priv_lvl, logic [31:0] instr, logic [4:0] rd, logic [63:0] result, logic rd_fpr);
         string rd_s;
+        string instr_word;
+
         automatic string rf_s = rd_fpr ? "f" : "x";
+
+        if (instr[1:0] != 2'b11) begin
+          instr_word = $sformatf("(0x%h)", instr[15:0]);
+        end else begin
+          instr_word = $sformatf("(0x%h)", instr);
+        end
 
         if (rd < 10) rd_s = $sformatf("%s %0d", rf_s, rd);
         else rd_s = $sformatf("%s%0d", rf_s, rd);
 
         if (rd_fpr || rd != 0) begin
             // 0 0x0000000080000118 (0xeecf8f93) x31 0x0000000080004000
-            return $sformatf("%d 0x%h (0x%h) %s 0x%h\n", priv_lvl, pc, instr, rd_s, result);
+            return $sformatf("%d 0x%h %s %s 0x%h\n", priv_lvl, pc, instr_word, rd_s, result);
         end else begin
             // 0 0x000000008000019c (0x0040006f)
-            return $sformatf("%d 0x%h (0x%h)\n", priv_lvl, pc, instr);
+            return $sformatf("%d 0x%h %s\n", priv_lvl, pc, instr_word);
         end
     endfunction
     // pragma translate_on

@@ -16,15 +16,13 @@ import ariane_pkg::*;
 
 module load_store_unit #(
     parameter int unsigned ASID_WIDTH = 1,
-    parameter ariane_pkg::ariane_cfg_t Cfg = ariane_pkg::ArianeDefaultConfig
+    parameter ariane_pkg::ariane_cfg_t ArianeCfg = ariane_pkg::ArianeDefaultConfig
 )(
     input  logic                     clk_i,
     input  logic                     rst_ni,
     input  logic                     flush_i,
     output logic                     no_st_pending_o,
     input  logic                     amo_valid_commit_i,
-    input  logic [TRANS_ID_BITS-1:0] commit_trans_id_i,
-    input  logic                     commit_ld_valid_i,
 
     input  fu_data_t                 fu_data_i,
     output logic                     lsu_ready_o,              // FU is ready e.g. not busy
@@ -122,7 +120,8 @@ module load_store_unit #(
     mmu #(
         .INSTR_TLB_ENTRIES      ( 16                     ),
         .DATA_TLB_ENTRIES       ( 16                     ),
-        .ASID_WIDTH             ( ASID_WIDTH             )
+        .ASID_WIDTH             ( ASID_WIDTH             ),
+        .ArianeCfg              ( ArianeCfg              )
     ) i_mmu (
             // misaligned bypass
         .misaligned_ex_i        ( misaligned_exception   ),
@@ -182,8 +181,6 @@ module load_store_unit #(
     // Load Unit
     // ------------------
     load_unit i_load_unit (
-        .commit_ld_valid_i,
-        .commit_trans_id_i,
         .valid_i               ( ld_valid_i           ),
         .lsu_ctrl_i            ( lsu_ctrl             ),
         .pop_ld_o              ( pop_ld               ),

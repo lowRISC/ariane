@@ -13,29 +13,9 @@
 // Description: Ariane Top-level module
 
 import ariane_pkg::*;
-// pragma translate_off
-`ifdef QUESTA
- `define NOTRACE
-`endif
-`ifdef VCS
- `define NOTRACE
-`endif
-`ifdef VERILATOR
- `define NOTRACE
-`endif
-`ifndef NOTRACE
-import instruction_tracer_pkg::*;
-`endif
-// pragma translate_on
-
 
 module ariane #(
-  parameter logic [63:0] DmBaseAddress = 64'h0,            // debug module base address
-  parameter int unsigned AxiIdWidth    = 4,
-  parameter bit          SwapEndianess = 0,                // swap endianess in l15 adapter
-  parameter logic [63:0] CachedAddrEnd = 64'h80_0000_0000, // end of cached region
-  parameter logic [63:0] CachedAddrBeg = 64'h00_8000_0000, // begin of cached region
-  parameter ariane_pkg::ariane_cfg_t Cfg = ariane_pkg::ArianeDefaultConfig
+  parameter ariane_pkg::ariane_cfg_t ArianeCfg     = ariane_pkg::ArianeDefaultConfig
 ) (
   input  logic                         clk_i,
   input  logic                         rst_ni,
@@ -148,8 +128,6 @@ module ariane #(
   logic                     no_st_pending_ex;
   logic                     no_st_pending_commit;
   logic                     amo_valid_commit;
-  logic [TRANS_ID_BITS-1:0] commit_trans_id_commit_ex;
-  logic                     commit_ld_valid_commit_ex;
   // --------------
   // ID <-> COMMIT
   // --------------
@@ -231,7 +209,6 @@ module ariane #(
   amo_resp_t                amo_resp;
   logic                     sb_full;
 
-
   // ----------------
   // DCache <-> *
   // ----------------
@@ -243,10 +220,10 @@ module ariane #(
   // Frontend
   // --------------
   frontend #(
-    .DmBaseAddress       ( DmBaseAddress )
+    .DmBaseAddress       ( ArianeCfg.DmBaseAddress )
   ) i_frontend (
     .flush_i             ( flush_ctrl_if                 ), // not entirely correct
-    .flush_bp_i          ( flush_ctrl_bp                 ),
+    .flush_bp_i          ( 1'b0                          ),
     .debug_mode_i        ( debug_mode                    ),
     .boot_addr_i         ( boot_addr_i                   ),
     .icache_dreq_i       ( icache_dreq_cache_if          ),
@@ -271,7 +248,6 @@ module ariane #(
   id_stage id_stage_i (
     .debug_req_i,
     .flush_i                    ( flush_ctrl_if              ),
-
     .fetch_entry_i              ( fetch_entry_if_id          ),
     .fetch_entry_valid_i        ( fetch_valid_if_id          ),
     .decoded_instr_ack_o        ( decode_ack_id_if           ),
@@ -354,7 +330,7 @@ module ariane #(
   // EX
   // ---------
   ex_stage #(
-    .Cfg ( Cfg )
+    .ArianeCfg ( ArianeCfg )
   ) ex_stage_i (
     .clk_i                  ( clk_i                       ),
     .rst_ni                 ( rst_ni                      ),
@@ -409,8 +385,6 @@ module ariane #(
     .fpu_result_o           ( fpu_result_ex_id            ),
     .fpu_valid_o            ( fpu_valid_ex_id             ),
     .fpu_exception_o        ( fpu_exception_ex_id         ),
-    .commit_trans_id_i      ( commit_trans_id_commit_ex   ),
-    .commit_ld_valid_i      ( commit_ld_valid_commit_ex   ),
     .amo_valid_commit_i     ( amo_valid_commit            ),
     .amo_req_o              ( amo_req                     ),
     .amo_resp_i             ( amo_resp                    ),
@@ -461,8 +435,6 @@ module ariane #(
     .commit_lsu_ready_i     ( lsu_commit_ready_ex_commit    ),
     .amo_valid_commit_o     ( amo_valid_commit              ),
     .amo_resp_i             ( amo_resp                      ),
-    .commit_trans_id_o      ( commit_trans_id_commit_ex     ),
-    .commit_ld_valid_o      ( commit_ld_valid_commit_ex     ),
     .commit_csr_o           ( csr_commit_commit_ex          ),
     .pc_o                   ( pc_commit                     ),
     .csr_op_o               ( csr_op_commit_csr             ),
@@ -482,7 +454,7 @@ module ariane #(
   // ---------
   csr_regfile #(
     .AsidWidth              ( ASID_WIDTH                    ),
-    .DmBaseAddress          ( DmBaseAddress                 )
+    .DmBaseAddress          ( ArianeCfg.DmBaseAddress       )
   ) csr_regfile_i (
     .flush_o                ( flush_csr_ctrl                ),
     .halt_csr_o             ( halt_csr_ctrl                 ),
@@ -596,10 +568,7 @@ module ariane #(
 `ifdef WT_DCACHE
   // this is a cache subsystem that is compatible with OpenPiton
   wt_cache_subsystem #(
-    .AxiIdWidth           ( AxiIdWidth    ),
-    .CachedAddrBeg        ( CachedAddrBeg ),
-    .CachedAddrEnd        ( CachedAddrEnd ),
-    .SwapEndianess        ( SwapEndianess )
+    .ArianeCfg            ( ArianeCfg     )
   ) i_cache_subsystem (
     // to D$
     .clk_i                 ( clk_i                       ),
@@ -637,7 +606,10 @@ module ariane #(
 `else
 
   std_cache_subsystem #(
-      .CACHE_START_ADDR    ( CachedAddrBeg )
+    // note: this only works with one cacheable region
+    // not as important since this cache subsystem is about to be
+    // deprecated
+    .CACHE_START_ADDR    ( ArianeCfg.CachedRegionAddrBase )
   ) i_cache_subsystem (
     // to D$
     .clk_i                 ( clk_i                       ),
@@ -671,10 +643,64 @@ module ariane #(
 `endif
 
   // -------------------
+  // Parameter Check
+  // -------------------
+  // pragma translate_off
+  `ifndef VERILATOR
+  initial ariane_pkg::check_cfg(ArianeCfg);
+  `endif
+  // pragma translate_on
+
+  // -------------------
   // Instruction Tracer
   // -------------------
   //pragma translate_off
-`ifndef NOTRACE
+`ifdef PITON_ARIANE
+  localparam PC_QUEUE_DEPTH = 16;
+
+  logic        piton_pc_vld;
+  logic [63:0] piton_pc;
+  logic [NR_COMMIT_PORTS-1:0][63:0] pc_data;
+  logic [NR_COMMIT_PORTS-1:0] pc_pop, pc_empty;
+
+  for (genvar i = 0; i < NR_COMMIT_PORTS; i++) begin : gen_pc_fifo
+    fifo_v3 #(
+      .DATA_WIDTH(64),
+      .DEPTH(PC_QUEUE_DEPTH))
+    i_pc_fifo (
+      .clk_i      ( clk_i                                               ),
+      .rst_ni     ( rst_ni                                              ),
+      .flush_i    ( '0                                                  ),
+      .testmode_i ( '0                                                  ),
+      .full_o     (                                                     ),
+      .empty_o    ( pc_empty[i]                                         ),
+      .usage_o    (                                                     ),
+      .data_i     ( commit_instr_id_commit[i].pc                        ),
+      .push_i     ( commit_ack[i] & ~commit_instr_id_commit[i].ex.valid ),
+      .data_o     ( pc_data[i]                                          ),
+      .pop_i      ( pc_pop[i]                                           )
+    );
+  end
+
+  rr_arb_tree #(
+    .NumIn(NR_COMMIT_PORTS),
+    .DataWidth(64))
+  i_rr_arb_tree (
+    .clk_i   ( clk_i        ),
+    .rst_ni  ( rst_ni       ),
+    .flush_i ( '0           ),
+    .rr_i    ( '0           ),
+    .req_i   ( ~pc_empty    ),
+    .gnt_o   ( pc_pop       ),
+    .data_i  ( pc_data      ),
+    .gnt_i   ( piton_pc_vld ),
+    .req_o   ( piton_pc_vld ),
+    .data_o  ( piton_pc     ),
+    .idx_o   (              )
+  );
+`endif // PITON_ARIANE
+
+`ifndef VERILATOR
   instruction_tracer_if tracer_if (clk_i);
   // assign instruction tracer interface
   // control signals
@@ -682,7 +708,7 @@ module ariane #(
   assign tracer_if.flush_unissued    = flush_unissued_instr_ctrl_id;
   assign tracer_if.flush             = flush_ctrl_ex;
   // fetch
-  assign tracer_if.instruction       = id_stage_i.compressed_decoder_i.instr_o;
+  assign tracer_if.instruction       = id_stage_i.instr_realigner_i.fetch_entry_o.instruction;
   assign tracer_if.fetch_valid       = id_stage_i.instr_realigner_i.fetch_entry_valid_o;
   assign tracer_if.fetch_ack         = id_stage_i.instr_realigner_i.fetch_ack_i;
   // Issue
@@ -711,58 +737,11 @@ module ariane #(
   // assign current privilege level
   assign tracer_if.priv_lvl          = priv_lvl;
   assign tracer_if.debug_mode        = debug_mode;
-  instr_tracer instr_tracer_i (tracer_if, hart_id_i);
 
-  program instr_tracer (
-      instruction_tracer_if tracer_if,
-      input logic [63:0]    hart_id_i
-    );
-
-    instruction_tracer it = new (tracer_if, 1'b0);
-
-    initial begin
-      #15ns;
-      it.create_file(hart_id_i);
-      it.trace();
-    end
-
-    final begin
-      it.close();
-    end
-  endprogram
-
-`ifdef PITON_ARIANE
-
-  logic        piton_pc_vld;
-  logic [63:0] piton_pc;
-
-  // expose retired PCs to OpenPiton verification environment
-  // note: this only works with single issue, need to adapt this in case of dual issue
-  always_ff @(posedge clk_i or negedge rst_ni) begin
-    logic [63:0] pc_queue [$];
-    if (~rst_ni) begin
-      pc_queue.delete();
-      piton_pc_vld <= 1'b0;
-      piton_pc     <= '0;
-    end else begin
-      // serialize retired PCs via queue construct
-      for (int i = 0; i < NR_COMMIT_PORTS; i++) begin
-        if (commit_ack[i] && !commit_instr_id_commit[i].ex.valid) begin
-          pc_queue.push_back(commit_instr_id_commit[i].pc);
-        end
-      end
-
-      if (pc_queue.size()>0) begin
-        piton_pc_vld <= 1'b1;
-        piton_pc     <= pc_queue.pop_front();
-      end else begin
-        piton_pc_vld <= 1'b0;
-        piton_pc     <= '0;
-      end
-    end
-  end
-
-`endif // PITON_ARIANE
+  instruction_tracer instr_tracer_i (
+    .tracer_if(tracer_if),
+    .hart_id_i
+  );
 
 // mock tracer for Verilator, to be used with spike-dasm
 `else
@@ -810,72 +789,7 @@ module ariane #(
     $fclose(f);
   end
 `endif // VERILATOR
-  //pragma translate_on
-
-`ifdef XLNX_ILA_TRACE
-xlnx_ila_5 trace_ila (
-  .clk(clk_i), // input wire clk
-  .probe0(rst_ni),
-  .probe1(flush_unissued_instr_ctrl_id),
-  .probe2(flush_ctrl_ex),
-  .probe3(id_stage_i.compressed_decoder_i.instr_o),
-  .probe4(id_stage_i.instr_realigner_i.fetch_entry_valid_o),
-  .probe5(id_stage_i.instr_realigner_i.fetch_ack_i),
-  .probe6(issue_stage_i.i_scoreboard.issue_ack_i),
-  .probe7(irq_i),
-  .probe8(waddr_commit_id[0]),
-  .probe9(waddr_commit_id[1]),
-  .probe10(wdata_commit_id[0]),
-  .probe11(wdata_commit_id[1]),
-  .probe12(we_gpr_commit_id[0]),
-  .probe13(we_gpr_commit_id[1]),
-  .probe14(we_fpr_commit_id[0]),
-  .probe15(we_fpr_commit_id[1]),
-  .probe16(commit_ack),
-  .probe17(ex_stage_i.lsu_i.i_store_unit.store_buffer_i.valid_i),
-  .probe18(ex_stage_i.lsu_i.i_store_unit.store_buffer_i.paddr_i),
-  .probe19(ex_stage_i.lsu_i.i_load_unit.req_port_o.tag_valid),
-  .probe20(ex_stage_i.lsu_i.i_load_unit.req_port_o.kill_req),
-  .probe21(ex_stage_i.lsu_i.i_load_unit.paddr_i),
-  .probe22(priv_lvl),
-  .probe23(debug_mode),
-  .probe24(commit_instr_id_commit[0].ex.valid),
-  .probe25(commit_instr_id_commit[0].pc),
-  .probe26(commit_instr_id_commit[0].ex.tval),
-  .probe27(commit_instr_id_commit[0].ex.cause),
-  .probe28(commit_instr_id_commit[1].ex.valid),
-  .probe29(commit_instr_id_commit[1].pc),
-  .probe30(commit_instr_id_commit[1].ex.tval),
-  .probe31(commit_instr_id_commit[1].ex.cause),
-  .probe32(issue_stage_i.i_scoreboard.issue_instr_o.pc),
-  .probe33(issue_stage_i.i_scoreboard.issue_instr_o.trans_id),
-  .probe34(issue_stage_i.i_scoreboard.issue_instr_o.fu),
-  .probe35(issue_stage_i.i_scoreboard.issue_instr_o.op),
-  .probe36(issue_stage_i.i_scoreboard.issue_instr_o.rs1),
-  .probe37(issue_stage_i.i_scoreboard.issue_instr_o.rs2),
-  .probe38(issue_stage_i.i_scoreboard.issue_instr_o.rd),
-  .probe39(issue_stage_i.i_scoreboard.issue_instr_o.result),
-  .probe40(issue_stage_i.i_scoreboard.issue_instr_o.valid),
-  .probe41(issue_stage_i.i_scoreboard.issue_instr_o.use_imm),
-  .probe42(issue_stage_i.i_scoreboard.issue_instr_o.use_zimm),
-  .probe43(issue_stage_i.i_scoreboard.issue_instr_o.use_pc),
-  .probe44(issue_stage_i.i_scoreboard.issue_instr_o.ex.cause),
-  .probe45(issue_stage_i.i_scoreboard.issue_instr_o.ex.tval),
-  .probe46(issue_stage_i.i_scoreboard.issue_instr_o.ex.valid),
-  .probe47(issue_stage_i.i_scoreboard.issue_instr_o.bp),
-  .probe48(issue_stage_i.i_scoreboard.issue_instr_o.is_compressed),
-  .probe49(resolved_branch.pc),
-  .probe50(resolved_branch.target_address),
-  .probe51(resolved_branch.is_mispredict),
-  .probe52(resolved_branch.is_taken),
-  .probe53(resolved_branch.valid),
-  .probe54(resolved_branch.clear),
-  .probe55(resolved_branch.cf_type),
-  .probe56(commit_stage_i.exception_o.cause),
-  .probe57(commit_stage_i.exception_o.tval),
-  .probe58(commit_stage_i.exception_o.valid)
-  );
-`endif   
+//pragma translate_on
 
 endmodule // ariane
 

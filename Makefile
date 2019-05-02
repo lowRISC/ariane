@@ -63,13 +63,14 @@ ariane_pkg := include/riscv_pkg.sv                          \
 			  tb/ariane_soc_pkg.sv                          \
 			  include/ariane_axi_pkg.sv                     \
 			  src/fpu/src/fpnew_pkg.sv                      \
+                          src/fpu/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
 
 ariane_pkg := $(addprefix $(root-dir), $(ariane_pkg))
 
 # utility modules
 util := $(wildcard src/util/*.svh)                          \
-        src/util/instruction_tracer_pkg.sv                  \
         src/util/instruction_tracer_if.sv                   \
+        src/util/instruction_tracer.sv                      \
         src/tech_cells_generic/src/cluster_clock_gating.sv  \
         tb/common/mock_uart.sv                              \
         src/util/sram.sv
@@ -137,8 +138,6 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         src/common_cells/src/rstgen.sv                                         \
         src/common_cells/src/stream_mux.sv                                     \
         src/common_cells/src/stream_demux.sv                                   \
-        src/common_cells/src/stream_arbiter.sv                                 \
-        src/common_cells/src/stream_arbiter_flushable.sv                       \
         src/util/axi_master_connect.sv                                         \
         src/util/axi_slave_connect.sv                                          \
         src/util/axi_master_connect_rev.sv                                     \
@@ -153,16 +152,20 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         src/common_cells/src/spill_register.sv                                 \
         src/common_cells/src/sync_wedge.sv                                     \
         src/common_cells/src/edge_detect.sv                                    \
+        src/common_cells/src/deprecated/stream_arbiter.sv                      \
+        src/common_cells/src/deprecated/stream_arbiter_flushable.sv            \
+        src/common_cells/src/deprecated/fifo_v1.sv                             \
+        src/common_cells/src/deprecated/fifo_v2.sv                             \
         src/common_cells/src/fifo_v3.sv                                        \
-        src/common_cells/src/fifo_v2.sv                                        \
-        src/common_cells/src/fifo_v1.sv                                        \
         src/common_cells/src/lzc.sv                                            \
-        src/common_cells/src/rrarbiter.sv                                      \
+        src/common_cells/src/rr_arb_tree.sv                                    \
+        src/common_cells/src/deprecated/rrarbiter.sv                           \
         src/common_cells/src/stream_delay.sv                                   \
         src/common_cells/src/lfsr_8bit.sv                                      \
         src/common_cells/src/lfsr_16bit.sv                                     \
         src/common_cells/src/counter.sv                                        \
         src/common_cells/src/shift_reg.sv                                      \
+        src/tech_cells_generic/src/pulp_clock_gating.sv                        \
         src/tech_cells_generic/src/cluster_clock_inverter.sv                   \
         src/tech_cells_generic/src/pulp_clock_mux2.sv                          \
         tb/ariane_testharness.sv                                               \
@@ -649,11 +652,12 @@ check-torture:
 	diff -s $(riscv-torture-dir)/$(test-location).spike.sig $(riscv-torture-dir)/$(test-location).rtlsim.sig
 
 fpga_filter := $(addprefix $(root-dir), bootrom/bootrom.sv)
+fpga_filter += $(addprefix $(root-dir), src/util/instruction_tracer.sv)
 
-fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(util)
+fpga: $(ariane_pkg) $(util) $(src) $(fpga_src)
 	@echo "[FPGA] Generate sources"
 	@echo read_verilog -sv {$(ariane_pkg)} >> fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(util)}       >> fpga/scripts/add_sources.tcl
+	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(util))}     >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(fpga_src)}   >> fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"

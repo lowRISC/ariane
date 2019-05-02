@@ -45,8 +45,6 @@ module commit_stage #(
     // commit signals to ex
     output logic                                    commit_lsu_o,       // commit the pending store
     input  logic                                    commit_lsu_ready_i, // commit buffer of LSU is ready
-    output logic [TRANS_ID_BITS-1:0]                commit_trans_id_o,  // commit load (only non-speculative loads)
-    output logic                                    commit_ld_valid_o,  // commit load (only non-speculative loads)
     output logic                                    amo_valid_commit_o, // valid AMO in commit stage
     input  logic                                    no_st_pending_i,    // there is no store pending
     output logic                                    commit_csr_o,       // commit the pending CSR instruction
@@ -84,7 +82,6 @@ module commit_stage #(
     // -------------------
     // write register file or commit instruction in LSU or CSR Buffer
     always_comb begin : commit
-
         // default assignments
         commit_ack_o[0]    = 1'b0;
         commit_ack_o[1]    = 1'b0;
@@ -107,10 +104,6 @@ module commit_stage #(
         csr_write_fflags_o = 1'b0;
         flush_commit_o  = 1'b0;
 
-        // helper signals for non-speculative loads. The load unit will wait until the
-        // the ROB points to the load which is waiting.
-        commit_trans_id_o = commit_instr_i[0].trans_id;
-        commit_ld_valid_o = commit_instr_i[0].fu == LOAD;
         // we will not commit the instruction if we took an exception
         // and we do not commit the instruction if we requested a halt
         if (commit_instr_i[0].valid && !commit_instr_i[0].ex.valid && !halt_i) begin
@@ -133,8 +126,6 @@ module commit_stage #(
                     commit_ack_o[0] = 1'b0;
                 end
             end
-
-
             // ---------
             // FPU Flags
             // ---------
@@ -161,6 +152,52 @@ module commit_stage #(
                   commit_ack_o[0] = 1'b0;
                   we_gpr_o[0] = 1'b0;
                 end
+            end
+            // ---------
+            // CSR Logic
+            // ---------
+            // check whether the instruction we retire was a CSR instruction
+            // interrupts are never taken on CSR instructions
+            if (commit_instr_i[0].fu == CSR) begin
+                // write the CSR file
+                commit_csr_o = 1'b1;
+                wdata_o[0]   = csr_rdata_i;
+                csr_op_o     = commit_instr_i[0].op;
+                csr_wdata_o  = commit_instr_i[0].result;
+            end
+            // ------------------
+            // SFENCE.VMA Logic
+            // ------------------
+            // sfence.vma is idempotent so we can safely re-execute it after returning
+            // from interrupt service routine
+            // check if this instruction was a SFENCE_VMA
+            if (commit_instr_i[0].op == SFENCE_VMA) begin
+                // no store pending so we can flush the TLBs and pipeline
+                sfence_vma_o = no_st_pending_i;
+                // wait for the store buffer to drain until flushing the pipeline
+                commit_ack_o[0] = no_st_pending_i;
+            end
+            // ------------------
+            // FENCE.I Logic
+            // ------------------
+            // fence.i is idempotent so we can safely re-execute it after returning
+            // from interrupt service routine
+            // Fence synchronizes data and instruction streams. That means that we need to flush the private icache
+            // and the private dcache. This is the most expensive instruction.
+            if (commit_instr_i[0].op == FENCE_I || (flush_dcache_i && commit_instr_i[0].fu != STORE)) begin
+                commit_ack_o[0] = no_st_pending_i;
+                // tell the controller to flush the I$
+                fence_i_o = no_st_pending_i;
+            end
+            // ------------------
+            // FENCE Logic
+            // ------------------
+            // fence is idempotent so we can safely re-execute it after returning
+            // from interrupt service routine
+            if (commit_instr_i[0].op == FENCE) begin
+                commit_ack_o[0] = no_st_pending_i;
+                // tell the controller to flush the D$
+                fence_o = no_st_pending_i;
             end
             // ------------------
             // SFENCE.VMA Logic
@@ -278,5 +315,4 @@ module commit_stage #(
             exception_o.valid = 1'b0;
         end
     end
-
 endmodule

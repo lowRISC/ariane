@@ -84,10 +84,8 @@ module scoreboard #(
 
     // output commit instruction directly
     always_comb begin : commit_ports
-        for (logic [BITS_ENTRIES-1:0] i = 0; i < NR_COMMIT_PORTS; i++) begin
+        for (logic [BITS_ENTRIES-1:0] i = 0; i < NR_COMMIT_PORTS; i++)
             commit_instr_o[i] = mem_q[commit_pointer_q + i].sbe;
-            commit_instr_o[i].trans_id = commit_pointer_q + i;
-        end
     end
 
     // an instruction is ready for issue if we have place in the issue FIFO and it the decoder says it is valid

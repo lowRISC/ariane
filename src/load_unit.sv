@@ -15,9 +15,7 @@
 
 import ariane_pkg::*;
 
-module load_unit #(
-  parameter ariane_pkg::ariane_cfg_t Cfg = ariane_pkg::ArianeDefaultConfig
-) (
+module load_unit (
     input  logic                     clk_i,    // Clock
     input  logic                     rst_ni,   // Asynchronous reset active low
     input  logic                     flush_i,
@@ -39,21 +37,12 @@ module load_unit #(
     // address checker
     output logic [11:0]              page_offset_o,
     input  logic                     page_offset_matches_i,
-    // commit port
-    input  logic [TRANS_ID_BITS-1:0] commit_trans_id_i,
-    input  logic                     commit_ld_valid_i,
     // D$ interface
     input dcache_req_o_t             req_port_i,
     output dcache_req_i_t            req_port_o
 );
-    logic is_non_idempotent;
-    logic [Cfg.NrNonIdempotentRules-1:0] addr_match;
-    logic replay_addr;
-    logic [63:0] paddr_d, paddr_q;
-
-    enum logic [3:0] { IDLE, WAIT_GNT, SEND_TAG, WAIT_PAGE_OFFSET,
-                       ABORT_TRANSACTION, WAIT_TRANSLATION, WAIT_FLUSH, WAIT_UNTIL_NON_SPECULATIVE,
-                       REPLAY_LOAD, REPLAY_LOAD_SEND_TAG
+    enum logic [2:0] { IDLE, WAIT_GNT, SEND_TAG, WAIT_PAGE_OFFSET,
+                       ABORT_TRANSACTION, WAIT_TRANSLATION, WAIT_FLUSH
                      } state_d, state_q;
     // in order to decouple the response interface from the request interface we need a
     // a queue which can hold all outstanding memory requests
@@ -74,15 +63,11 @@ module load_unit #(
     assign in_data = {lsu_ctrl_i.trans_id, lsu_ctrl_i.vaddr[2:0], lsu_ctrl_i.operator};
     // output address
     // we can now output the lower 12 bit as the index to the cache
-    assign req_port_o.address_index = replay_addr ? paddr_q[ariane_pkg::DCACHE_INDEX_WIDTH-1:0]
-                                                  : lsu_ctrl_i.vaddr[ariane_pkg::DCACHE_INDEX_WIDTH-1:0];
+    assign req_port_o.address_index = lsu_ctrl_i.vaddr[ariane_pkg::DCACHE_INDEX_WIDTH-1:0];
     // translation from last cycle, again: control is handled in the FSM
-    assign req_port_o.address_tag   = replay_addr ? paddr_q[ariane_pkg::DCACHE_TAG_WIDTH     +
-                                                            ariane_pkg::DCACHE_INDEX_WIDTH-1 :
-                                                            ariane_pkg::DCACHE_INDEX_WIDTH]
-                                                  : paddr_i[ariane_pkg::DCACHE_TAG_WIDTH     +
-                                                            ariane_pkg::DCACHE_INDEX_WIDTH-1 :
-                                                            ariane_pkg::DCACHE_INDEX_WIDTH];
+    assign req_port_o.address_tag   = paddr_i[ariane_pkg::DCACHE_TAG_WIDTH     +
+                                              ariane_pkg::DCACHE_INDEX_WIDTH-1 :
+                                              ariane_pkg::DCACHE_INDEX_WIDTH];
     // directly output an exception
     assign ex_o = ex_i;
 
@@ -93,7 +78,6 @@ module load_unit #(
         // default assignments
         state_d              = state_q;
         load_data_d          = load_data_q;
-        paddr_d              = paddr_q;
         translation_req_o    = 1'b0;
         req_port_o.data_req  = 1'b0;
         // tag control
@@ -102,7 +86,6 @@ module load_unit #(
         req_port_o.data_be   = lsu_ctrl_i.be;
         req_port_o.data_size = extract_transfer_size(lsu_ctrl_i.operator);
         pop_ld_o             = 1'b0;
-        replay_addr          = 1'b0;
 
         case (state_q)
             IDLE: begin
@@ -179,7 +162,7 @@ module load_unit #(
                 req_port_o.tag_valid = 1'b1;
                 state_d = IDLE;
                 // we can make a new request here if we got one
-                if (valid_i && !is_non_idempotent) begin
+                if (valid_i) begin
                     // start the translation process even though we do not know if the addresses match
                     // this should ease timing
                     translation_req_o = 1'b1;
@@ -204,15 +187,6 @@ module load_unit #(
                         state_d = WAIT_PAGE_OFFSET;
                     end
                 end
-                // ------------------------------
-                // Check non-idempotence region
-                // ------------------------------
-                if (is_non_idempotent) begin
-                  // save physical address
-                  paddr_d = paddr_i;
-                  req_port_o.kill_req = 1'b1;
-                  state_d = WAIT_UNTIL_NON_SPECULATIVE;
-                end
                 // ----------
                 // Exception
                 // ----------
@@ -222,28 +196,6 @@ module load_unit #(
                 end
             end
 
-            WAIT_UNTIL_NON_SPECULATIVE: begin
-                // the load is not speculative anymore -> redo the request
-                if (commit_ld_valid_i && commit_trans_id_i == load_data_q.trans_id) begin
-                    state_d = REPLAY_LOAD;
-                end
-            end
-
-            // we already went through address translation and checked that the physical address matched
-            // start by replaying the index
-            REPLAY_LOAD: begin
-              replay_addr = 1'b1;
-              req_port_o.data_req = 1'b1;
-              if (req_port_i.data_gnt) state_d = REPLAY_LOAD_SEND_TAG;
-            end
-
-            // replay the tag
-            // the replay can never be aborted by a flush as it is always non-speculative
-            REPLAY_LOAD_SEND_TAG: begin
-              replay_addr = 1'b1;
-              req_port_o.tag_valid = 1'b1;
-              state_d = IDLE;
-            end
             WAIT_FLUSH: begin
                 // the D$ arbiter will take care of presenting this to the memory only in case we
                 // have an outstanding request
@@ -307,26 +259,15 @@ module load_unit #(
 
     end
 
-    // ---------------------------------------------
-    // Check Address for non-idempotence
-    // ---------------------------------------------
-    for (genvar i = 0; i < Cfg.NrNonIdempotentRules; i++) begin
-      assign addr_match[i] = (Cfg.NonIdempotentAddrBase[i] & Cfg.NonIdempotentAddrMaks[i])
-                                  == (paddr_i & Cfg.NonIdempotentAddrMaks[i]);
-    end
-    // assign is_non_idempotent = addr_match;
-    assign is_non_idempotent = 1'b0;
 
     // latch physical address for the tag cycle (one cycle after applying the index)
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (~rst_ni) begin
             state_q     <= IDLE;
             load_data_q <= '0;
-            paddr_q     <= '0;
         end else begin
             state_q     <= state_d;
             load_data_q <= load_data_d;
-            paddr_q     <= paddr_d;
         end
     end
 
@@ -415,8 +356,6 @@ module load_unit #(
         valid_o |->  (load_data_q.operator inside {LH, LHU}) |-> load_data_q.address_offset < 7) else $fatal (1,"invalid address offset used with {LH, LHU}");
     addr_offset2: assert property (@(posedge clk_i) disable iff (~rst_ni)
         valid_o |->  (load_data_q.operator inside {LB, LBU}) |-> load_data_q.address_offset < 8) else $fatal (1,"invalid address offset used with {LB, LBU}");
-    flush_at_replay: assert property (@(posedge clk_i) disable iff (!rst_ni)
-        state_q inside {REPLAY_LOAD, REPLAY_LOAD_SEND_TAG} |->  !flush_i) else $fatal (1, "Flush during load replay");
 `endif
 //pragma translate_on
 

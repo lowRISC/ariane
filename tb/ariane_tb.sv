@@ -13,41 +13,27 @@
 // Description: Top level testbench module. Instantiates the top level DUT, configures
 //              the virtual interfaces and starts the test passed by +UVM_TEST+
 
-`timescale 1ps/100fs
 
 import ariane_pkg::*;
-`ifndef VCS
 import uvm_pkg::*;
 
 `include "uvm_macros.svh"
-`endif
 
 `define MAIN_MEM(P) dut.i_sram.genblk1[0].i_ram.Mem_DP[(``P``)]
 
-`ifndef VCS
 import "DPI-C" function read_elf(input string filename);
 import "DPI-C" function byte get_section(output longint address, output longint len);
 import "DPI-C" context function byte read_section(input longint address, inout byte buffer[]);
-`endif
 
 module ariane_tb;
 
-`ifndef VCS
     static uvm_cmdline_processor uvcl = uvm_cmdline_processor::get_inst();
-`endif
 
     localparam int unsigned CLOCK_PERIOD = 20ns;
     // toggle with RTC period
     localparam int unsigned RTC_CLOCK_PERIOD = 30.517us;
 
     localparam NUM_WORDS = 2**25;
-
-    wire  sys_clk_p;
-    wire  sys_clk_n;
-    reg   sys_rst_n;
-    reg   sys_clk_i;
-    reg   clk_ref_i;
-
     logic clk_i;
     logic rst_ni;
     logic rtc_i;
@@ -57,61 +43,41 @@ module ariane_tb;
 
     logic [31:0] exit_o;
 
-    localparam int unsigned AXI_ID_WIDTH      = 4;
-    localparam int unsigned AXI_USER_WIDTH    = 1;
-    localparam int unsigned AXI_ADDRESS_WIDTH = 64;
-    localparam int unsigned AXI_DATA_WIDTH    = 64;
+    string binary = "";
 
-    localparam NB_SLAVE = 2;
-    localparam AXI_ID_WIDTH_SLAVES = AXI_ID_WIDTH + $clog2(NB_SLAVE);
-
-   AXI_BUS #(
-                 .ID_WIDTH   (AXI_ID_WIDTH_SLAVES),
-                 .ADDR_WIDTH (AXI_ADDRESS_WIDTH),
-                 .DATA_WIDTH (AXI_DATA_WIDTH)
-                 ) axi_ddr_buf ();
-    
     ariane_testharness #(
-        .AXI_ID_WIDTH   (AXI_ID_WIDTH),
-        .AXI_ADDRESS_WIDTH (AXI_ADDRESS_WIDTH),
-        .AXI_DATA_WIDTH (AXI_DATA_WIDTH),
-        .AXI_USER_WIDTH (AXI_USER_WIDTH),
         .NUM_WORDS         ( NUM_WORDS ),
         .InclSimDTM        ( 1'b1      ),
         .StallRandomOutput ( 1'b1      ),
         .StallRandomInput  ( 1'b1      )
     ) dut (
-           .sys_clk_p,
-           .sys_clk_n,
-           .sys_rst_n,
-           .clk_i,
-           .rst_ni,
-           .rtc_i,
-           .exit_o,
-           .axi_ddr_buf
+        .clk_i,
+        .rst_ni,
+        .rtc_i,
+        .exit_o
     );
 
-   ariane_main_memory
-     #(
-       .AXI_ID_WIDTH_SLAVES ( AXI_ID_WIDTH_SLAVES ),
-       .AXI_ADDRESS_WIDTH ( AXI_ADDRESS_WIDTH     ),
-       .AXI_DATA_WIDTH    ( AXI_DATA_WIDTH        ),
-       .AXI_USER_WIDTH    ( AXI_USER_WIDTH        ),
-       .NUM_WORDS         ( NUM_WORDS             )
-       ) i_main_mem (
-                     .sys_clk_p,
-                     .sys_clk_n,
-                     .sys_rst_n,
-                     .clk_i,
-                     .rst_ni,
-                     .master(axi_ddr_buf));
-   
+`ifdef SPIKE_TANDEM
+    spike #(
+        .Size ( NUM_WORDS * 8 )
+    ) i_spike (
+        .clk_i,
+        .rst_ni,
+        .clint_tick_i   ( rtc_i                               ),
+        .commit_instr_i ( dut.i_ariane.commit_instr_id_commit ),
+        .commit_ack_i   ( dut.i_ariane.commit_ack             ),
+        .exception_i    ( dut.i_ariane.ex_commit              ),
+        .waddr_i        ( dut.i_ariane.waddr_commit_id        ),
+        .wdata_i        ( dut.i_ariane.wdata_commit_id        ),
+        .priv_lvl_i     ( dut.i_ariane.priv_lvl               )
+    );
+    initial begin
+        $display("Running binary in tandem mode");
+    end
+`endif
+
     // Clock process
     initial begin
-`ifdef VCDPLUS       
-       $vcdpluson(0, dut.i_ariane_peripherals.gen_uart.i_apb_uart);
-       $vcdpluson(0, i_main_mem.i_axi_delayer);       
-`endif       
         clk_i = 1'b0;
         rst_ni = 1'b0;
         repeat(8)
@@ -125,7 +91,6 @@ module ariane_tb;
             //    $fatal(1, "Simulation reached maximum cycle count of %d", max_cycles);
 
             cycles++;
-            if (cycles % 1000 == 0) $vcdplusflush();
         end
     end
 
@@ -141,59 +106,49 @@ module ariane_tb;
         forever begin
 
             wait (exit_o[0]);
-`ifndef VCS
+
             if ((exit_o >> 1)) begin
                 `uvm_error( "Core Test",  $sformatf("*** FAILED *** (tohost = %0d)", (exit_o >> 1)))
             end else begin
                 `uvm_info( "Core Test",  $sformatf("*** SUCCESS *** (tohost = %0d)", (exit_o >> 1)), UVM_LOW)
             end
-`endif
+
             $finish();
         end
     end
 
-//**************************************************************************//
-   //***************************************************************************
-   // The following parameters are multiplier and divisor factors for PLLE2.
-   // Based on the selected design frequency these parameters vary.
-   //***************************************************************************
-   parameter CLKIN_PERIOD          = 5000;
-                                     // Input Clock Period
+    // for faster simulation we can directly preload the ELF
+    // Note that we are loosing the capabilities to use risc-fesvr though
+    initial begin
+        automatic logic [7:0][7:0] mem_row;
+        longint address, len;
+        byte buffer[];
+        void'(uvcl.get_arg_value("+PRELOAD=", binary));
 
-   //***************************************************************************
-   // Referece clock frequency parameters
-   //***************************************************************************
-   parameter REFCLK_FREQ           = 200.0;
-                                     // IODELAYCTRL reference clock frequency
-  localparam real REFCLK_PERIOD = (1000000.0/(2*REFCLK_FREQ));
-  localparam RESET_PERIOD = 200000; //in pSec  
+        if (binary != "") begin
+            `uvm_info( "Core Test", $sformatf("Preloading ELF: %s", binary), UVM_LOW)
 
-  //**************************************************************************//
-  // DDR3 Reset Generation
-  //**************************************************************************//
-  initial begin
-    sys_rst_n = 1'b0;
-    #RESET_PERIOD
-      sys_rst_n = 1'b1;
-   end
+            void'(read_elf(binary));
+            // wait with preloading, otherwise randomization will overwrite the existing value
+            wait(rst_ni);
 
-   assign sys_rst = sys_rst_n;
-
-  //**************************************************************************//
-  // DDR3 Clock Generation
-  //**************************************************************************//
-
-  initial
-    sys_clk_i = 1'b0;
-  always
-    sys_clk_i = #(CLKIN_PERIOD/2.0) ~sys_clk_i;
-
-  assign sys_clk_p = sys_clk_i;
-  assign sys_clk_n = ~sys_clk_i;
-
-  initial
-    clk_ref_i = 1'b0;
-  always
-    clk_ref_i = #REFCLK_PERIOD ~clk_ref_i;
-       
+            // while there are more sections to process
+            while (get_section(address, len)) begin
+                automatic int num_words = (len+7)/8;
+                `uvm_info( "Core Test", $sformatf("Loading Address: %x, Length: %x", address, len),
+UVM_LOW)
+                buffer = new [num_words*8];
+                void'(read_section(address, buffer));
+                // preload memories
+                // 64-bit
+                for (int i = 0; i < num_words; i++) begin
+                    mem_row = '0;
+                    for (int j = 0; j < 8; j++) begin
+                        mem_row[j] = buffer[i*8 + j];
+                    end
+                    `MAIN_MEM((address[28:0] >> 3) + i) = mem_row;
+                end
+            end
+        end
+    end
 endmodule

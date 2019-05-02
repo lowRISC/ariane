@@ -18,8 +18,7 @@ import wt_cache_pkg::*;
 
 module wt_axi_adapter #(
   parameter int unsigned ReqFifoDepth  = 2,
-  parameter int unsigned MetaFifoDepth = wt_cache_pkg::DCACHE_MAX_TX,
-  parameter int unsigned AxiIdWidth    = 4
+  parameter int unsigned MetaFifoDepth = wt_cache_pkg::DCACHE_MAX_TX
 ) (
   input logic                  clk_i,
   input logic                  rst_ni,
@@ -69,7 +68,7 @@ module wt_axi_adapter #(
   logic [63:0]                    axi_rd_addr, axi_wr_addr;
   logic [$clog2(AxiNumWords)-1:0] axi_rd_blen, axi_wr_blen;
   logic [1:0] axi_rd_size, axi_wr_size;
-  logic [AxiIdWidth-1:0] axi_rd_id_in, axi_wr_id_in, axi_rd_id_out, axi_wr_id_out, wr_id_out;
+  logic [$size(axi_resp_i.r.id)-1:0] axi_rd_id_in, axi_wr_id_in, axi_rd_id_out, axi_wr_id_out, wr_id_out;
   logic [AxiNumWords-1:0][63:0] axi_wr_data;
   logic [63:0] axi_rd_data;
   logic [AxiNumWords-1:0][7:0]  axi_wr_be;
@@ -99,18 +98,23 @@ module wt_axi_adapter #(
 
   assign arb_gnt           = axi_rd_gnt | axi_wr_gnt;
 
-  rrarbiter #(
-    .NUM_REQ(2),
-    .LOCK_IN(1)
-  ) i_rrarbiter (
-    .clk_i  ( clk_i   ),
-    .rst_ni ( rst_ni  ),
-    .flush_i( '0      ),
-    .en_i   ( arb_gnt ),
-    .req_i  ( arb_req ),
-    .ack_o  ( arb_ack ),
-    .vld_o  (         ),
-    .idx_o  ( arb_idx )
+  rr_arb_tree #(
+    .NumIn     (2),
+    .DataWidth (1),
+    .AxiVldRdy (1'b1),
+    .LockIn    (1'b1)
+  ) i_rr_arb_tree (
+    .clk_i  (clk_i   ),
+    .rst_ni (rst_ni  ),
+    .flush_i('0      ),
+    .rr_i   ('0      ),
+    .req_i  (arb_req ),
+    .gnt_o  (arb_ack ),
+    .data_i ('0      ),
+    .gnt_i  (arb_gnt ),
+    .req_o  (        ),
+    .data_o (        ),
+    .idx_o  (arb_idx )
   );
 
   // request side
@@ -227,7 +231,7 @@ module wt_axi_adapter #(
     end
   end
 
-  fifo_v2 #(
+  fifo_v3 #(
     .dtype       (  icache_req_t            ),
     .DEPTH       (  ReqFifoDepth            )
   ) i_icache_data_fifo (
@@ -237,15 +241,14 @@ module wt_axi_adapter #(
     .testmode_i  (  1'b0                    ),
     .full_o      (  icache_data_full        ),
     .empty_o     (  icache_data_empty       ),
-    .alm_full_o  (                          ),
-    .alm_empty_o (                          ),
+    .usage_o     (                          ),
     .data_i      (  icache_data_i           ),
     .push_i      (  icache_data_ack_o       ),
     .data_o      (  icache_data             ),
     .pop_i       (  arb_ack[0]              )
   );
 
-  fifo_v2 #(
+  fifo_v3 #(
     .dtype       (  dcache_req_t            ),
     .DEPTH       (  ReqFifoDepth            )
   ) i_dcache_data_fifo (
@@ -255,8 +258,7 @@ module wt_axi_adapter #(
     .testmode_i  (  1'b0                    ),
     .full_o      (  dcache_data_full        ),
     .empty_o     (  dcache_data_empty       ),
-    .alm_full_o  (                          ),
-    .alm_empty_o (                          ),
+    .usage_o     (                          ),
     .data_i      (  dcache_data_i           ),
     .push_i      (  dcache_data_ack_o       ),
     .data_o      (  dcache_data             ),
@@ -272,7 +274,7 @@ module wt_axi_adapter #(
 
   fifo_v3 #(
     .DATA_WIDTH ( wt_cache_pkg::CACHE_ID_WIDTH ),
-    .DEPTH      ( MetaFifoDepth                     )
+    .DEPTH      ( MetaFifoDepth                )
   ) i_rd_icache_id (
     .clk_i      ( clk_i                   ),
     .rst_ni     ( rst_ni                  ),
@@ -289,7 +291,7 @@ module wt_axi_adapter #(
 
   fifo_v3 #(
     .DATA_WIDTH ( wt_cache_pkg::CACHE_ID_WIDTH ),
-    .DEPTH      ( MetaFifoDepth                     )
+    .DEPTH      ( MetaFifoDepth                )
   ) i_rd_dcache_id (
     .clk_i      ( clk_i                   ),
     .rst_ni     ( rst_ni                  ),
@@ -306,7 +308,7 @@ module wt_axi_adapter #(
 
   fifo_v3 #(
     .DATA_WIDTH ( wt_cache_pkg::CACHE_ID_WIDTH ),
-    .DEPTH      ( MetaFifoDepth                     )
+    .DEPTH      ( MetaFifoDepth                 )
   ) i_wr_dcache_id (
     .clk_i      ( clk_i                   ),
     .rst_ni     ( rst_ni                  ),
@@ -334,9 +336,9 @@ module wt_axi_adapter #(
   assign b_push              = axi_wr_valid & axi_wr_rdy;
 
   fifo_v3 #(
-    .DATA_WIDTH   ( AxiIdWidth + 1 ),
-    .DEPTH        ( MetaFifoDepth  ),
-    .FALL_THROUGH ( 1'b1           )
+    .DATA_WIDTH   ( $size(axi_resp_i.r.id) + 1 ),
+    .DEPTH        ( MetaFifoDepth              ),
+    .FALL_THROUGH ( 1'b1                       )
   ) i_b_fifo (
     .clk_i      ( clk_i      ),
     .rst_ni     ( rst_ni     ),
@@ -538,8 +540,8 @@ module wt_axi_adapter #(
 ///////////////////////////////////////////////////////
 
   axi_shim #(
-    .AxiNumWords     ( AxiNumWords     ),
-    .AxiIdWidth      ( AxiIdWidth      )
+    .AxiNumWords     ( AxiNumWords            ),
+    .AxiIdWidth      ( $size(axi_resp_i.r.id) )
   ) i_axi_shim (
     .clk_i           ( clk_i             ),
     .rst_ni          ( rst_ni            ),
