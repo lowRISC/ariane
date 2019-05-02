@@ -11,7 +11,7 @@
 // Xilinx Peripehrals
 `default_nettype none
 
-module ariane_peripherals #(
+module ariane_peripherals_xilinx #(
     parameter int AxiAddrWidth = -1,
     parameter int AxiDataWidth = -1,
     parameter int AxiIdWidth   = -1,
