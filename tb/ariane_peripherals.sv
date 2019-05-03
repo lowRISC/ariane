@@ -21,11 +21,8 @@ module ariane_peripherals #(
 ) (
     input  logic       clk_i           , // Clock
     input  logic       rst_ni          , // Asynchronous reset active low
-    AXI_BUS.in         plic            ,
-    AXI_BUS.in         uart            ,
-    AXI_BUS.in         spi             ,
-    AXI_BUS.in         ethernet        ,
-    output logic [1:0] irq_o           ,
+    AXI_BUS.Slave      iobus           ,
+    output logic [ariane_soc::NumSources-1:0] irq_sources,
     // UART
     input  logic       rx_i            ,
     output logic       tx_o            ,
@@ -48,132 +45,35 @@ module ariane_peripherals #(
     input  logic       spi_miso        ,
     output logic       spi_ss
 );
+AXI_BUS #(
+    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+    .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_ID_WIDTH   ( AxiIdWidth       ),
+    .AXI_USER_WIDTH ( AxiUserWidth     )
+) master[3:0]();
 
-    // ---------------
-    // 1. PLIC
-    // ---------------
-    logic [ariane_soc::NumSources-1:0] irq_sources;
+logic [3:0][AxiAddrWidth-1:0] BASE;
+logic [3:0][AxiAddrWidth-1:0] MASK;
 
-    REG_BUS #(
-        .ADDR_WIDTH ( 32 ),
-        .DATA_WIDTH ( 32 )
-    ) reg_bus (clk_i);
+assign BASE = {
+        ariane_soc::UARTBase,
+        ariane_soc::SPIBase,
+        ariane_soc::EthernetBase,
+        ariane_soc::GPIOBase
+      };
+      
+assign MASK = {
+              ariane_soc::UARTBase     + ariane_soc::UARTLength - 1,
+              ariane_soc::SPIBase      + ariane_soc::SPILength - 1,
+              ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
+              ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1
+            };
 
-    logic         plic_penable;
-    logic         plic_pwrite;
-    logic [31:0]  plic_paddr;
-    logic         plic_psel;
-    logic [31:0]  plic_pwdata;
-    logic [31:0]  plic_prdata;
-    logic         plic_pready;
-    logic         plic_pslverr;
-
-    axi2apb_64_32 #(
-        .AXI4_ADDRESS_WIDTH ( AxiAddrWidth  ),
-        .AXI4_RDATA_WIDTH   ( AxiDataWidth  ),
-        .AXI4_WDATA_WIDTH   ( AxiDataWidth  ),
-        .AXI4_ID_WIDTH      ( AxiIdWidth    ),
-        .AXI4_USER_WIDTH    ( AxiUserWidth  ),
-        .BUFF_DEPTH_SLAVE   ( 2             ),
-        .APB_ADDR_WIDTH     ( 32            )
-    ) i_axi2apb_64_32_plic (
-        .ACLK      ( clk_i          ),
-        .ARESETn   ( rst_ni         ),
-        .test_en_i ( 1'b0           ),
-        .AWID_i    ( plic.aw_id     ),
-        .AWADDR_i  ( plic.aw_addr   ),
-        .AWLEN_i   ( plic.aw_len    ),
-        .AWSIZE_i  ( plic.aw_size   ),
-        .AWBURST_i ( plic.aw_burst  ),
-        .AWLOCK_i  ( plic.aw_lock   ),
-        .AWCACHE_i ( plic.aw_cache  ),
-        .AWPROT_i  ( plic.aw_prot   ),
-        .AWREGION_i( plic.aw_region ),
-        .AWUSER_i  ( plic.aw_user   ),
-        .AWQOS_i   ( plic.aw_qos    ),
-        .AWVALID_i ( plic.aw_valid  ),
-        .AWREADY_o ( plic.aw_ready  ),
-        .WDATA_i   ( plic.w_data    ),
-        .WSTRB_i   ( plic.w_strb    ),
-        .WLAST_i   ( plic.w_last    ),
-        .WUSER_i   ( plic.w_user    ),
-        .WVALID_i  ( plic.w_valid   ),
-        .WREADY_o  ( plic.w_ready   ),
-        .BID_o     ( plic.b_id      ),
-        .BRESP_o   ( plic.b_resp    ),
-        .BVALID_o  ( plic.b_valid   ),
-        .BUSER_o   ( plic.b_user    ),
-        .BREADY_i  ( plic.b_ready   ),
-        .ARID_i    ( plic.ar_id     ),
-        .ARADDR_i  ( plic.ar_addr   ),
-        .ARLEN_i   ( plic.ar_len    ),
-        .ARSIZE_i  ( plic.ar_size   ),
-        .ARBURST_i ( plic.ar_burst  ),
-        .ARLOCK_i  ( plic.ar_lock   ),
-        .ARCACHE_i ( plic.ar_cache  ),
-        .ARPROT_i  ( plic.ar_prot   ),
-        .ARREGION_i( plic.ar_region ),
-        .ARUSER_i  ( plic.ar_user   ),
-        .ARQOS_i   ( plic.ar_qos    ),
-        .ARVALID_i ( plic.ar_valid  ),
-        .ARREADY_o ( plic.ar_ready  ),
-        .RID_o     ( plic.r_id      ),
-        .RDATA_o   ( plic.r_data    ),
-        .RRESP_o   ( plic.r_resp    ),
-        .RLAST_o   ( plic.r_last    ),
-        .RUSER_o   ( plic.r_user    ),
-        .RVALID_o  ( plic.r_valid   ),
-        .RREADY_i  ( plic.r_ready   ),
-        .PENABLE   ( plic_penable   ),
-        .PWRITE    ( plic_pwrite    ),
-        .PADDR     ( plic_paddr     ),
-        .PSEL      ( plic_psel      ),
-        .PWDATA    ( plic_pwdata    ),
-        .PRDATA    ( plic_prdata    ),
-        .PREADY    ( plic_pready    ),
-        .PSLVERR   ( plic_pslverr   )
-    );
-
-    apb_to_reg i_apb_to_reg (
-        .clk_i     ( clk_i        ),
-        .rst_ni    ( rst_ni       ),
-        .penable_i ( plic_penable ),
-        .pwrite_i  ( plic_pwrite  ),
-        .paddr_i   ( plic_paddr   ),
-        .psel_i    ( plic_psel    ),
-        .pwdata_i  ( plic_pwdata  ),
-        .prdata_o  ( plic_prdata  ),
-        .pready_o  ( plic_pready  ),
-        .pslverr_o ( plic_pslverr ),
-        .reg_o     ( reg_bus      )
-    );
-
-    reg_intf::reg_intf_resp_d32 plic_resp;
-    reg_intf::reg_intf_req_a32_d32 plic_req;
-
-    assign plic_req.addr  = reg_bus.addr;
-    assign plic_req.write = reg_bus.write;
-    assign plic_req.wdata = reg_bus.wdata;
-    assign plic_req.wstrb = reg_bus.wstrb;
-    assign plic_req.valid = reg_bus.valid;
-
-    assign reg_bus.rdata = plic_resp.rdata;
-    assign reg_bus.error = plic_resp.error;
-    assign reg_bus.ready = plic_resp.ready;
-
-    plic_top #(
-      .N_SOURCE    ( ariane_soc::NumSources  ),
-      .N_TARGET    ( ariane_soc::NumTargets  ),
-      .MAX_PRIO    ( ariane_soc::MaxPriority )
-    ) i_plic (
-      .clk_i,
-      .rst_ni,
-      .req_i         ( plic_req    ),
-      .resp_o        ( plic_resp   ),
-      .le_i          ( '0          ), // 0:level 1:edge
-      .irq_sources_i ( irq_sources ),
-      .eip_targets_o ( irq_o       )
-    );
+axi_demux_raw #(
+    .SLAVE_NUM  ( 4                ),
+    .ADDR_WIDTH ( AxiAddrWidth     ),
+    .ID_WIDTH   ( AxiIdWidth       )
+) demux (.clk(clk_i), .rstn(rst_ni), .master(iobus), .slave(master), .BASE, .MASK);
 
     // ---------------
     // 2. UART
@@ -199,50 +99,50 @@ module ariane_peripherals #(
         .ACLK      ( clk_i          ),
         .ARESETn   ( rst_ni         ),
         .test_en_i ( 1'b0           ),
-        .AWID_i    ( uart.aw_id     ),
-        .AWADDR_i  ( uart.aw_addr   ),
-        .AWLEN_i   ( uart.aw_len    ),
-        .AWSIZE_i  ( uart.aw_size   ),
-        .AWBURST_i ( uart.aw_burst  ),
-        .AWLOCK_i  ( uart.aw_lock   ),
-        .AWCACHE_i ( uart.aw_cache  ),
-        .AWPROT_i  ( uart.aw_prot   ),
-        .AWREGION_i( uart.aw_region ),
-        .AWUSER_i  ( uart.aw_user   ),
-        .AWQOS_i   ( uart.aw_qos    ),
-        .AWVALID_i ( uart.aw_valid  ),
-        .AWREADY_o ( uart.aw_ready  ),
-        .WDATA_i   ( uart.w_data    ),
-        .WSTRB_i   ( uart.w_strb    ),
-        .WLAST_i   ( uart.w_last    ),
-        .WUSER_i   ( uart.w_user    ),
-        .WVALID_i  ( uart.w_valid   ),
-        .WREADY_o  ( uart.w_ready   ),
-        .BID_o     ( uart.b_id      ),
-        .BRESP_o   ( uart.b_resp    ),
-        .BVALID_o  ( uart.b_valid   ),
-        .BUSER_o   ( uart.b_user    ),
-        .BREADY_i  ( uart.b_ready   ),
-        .ARID_i    ( uart.ar_id     ),
-        .ARADDR_i  ( uart.ar_addr   ),
-        .ARLEN_i   ( uart.ar_len    ),
-        .ARSIZE_i  ( uart.ar_size   ),
-        .ARBURST_i ( uart.ar_burst  ),
-        .ARLOCK_i  ( uart.ar_lock   ),
-        .ARCACHE_i ( uart.ar_cache  ),
-        .ARPROT_i  ( uart.ar_prot   ),
-        .ARREGION_i( uart.ar_region ),
-        .ARUSER_i  ( uart.ar_user   ),
-        .ARQOS_i   ( uart.ar_qos    ),
-        .ARVALID_i ( uart.ar_valid  ),
-        .ARREADY_o ( uart.ar_ready  ),
-        .RID_o     ( uart.r_id      ),
-        .RDATA_o   ( uart.r_data    ),
-        .RRESP_o   ( uart.r_resp    ),
-        .RLAST_o   ( uart.r_last    ),
-        .RUSER_o   ( uart.r_user    ),
-        .RVALID_o  ( uart.r_valid   ),
-        .RREADY_i  ( uart.r_ready   ),
+        .AWID_i    ( master[ariane_soc::UART].aw_id     ),
+        .AWADDR_i  ( master[ariane_soc::UART].aw_addr   ),
+        .AWLEN_i   ( master[ariane_soc::UART].aw_len    ),
+        .AWSIZE_i  ( master[ariane_soc::UART].aw_size   ),
+        .AWBURST_i ( master[ariane_soc::UART].aw_burst  ),
+        .AWLOCK_i  ( master[ariane_soc::UART].aw_lock   ),
+        .AWCACHE_i ( master[ariane_soc::UART].aw_cache  ),
+        .AWPROT_i  ( master[ariane_soc::UART].aw_prot   ),
+        .AWREGION_i( master[ariane_soc::UART].aw_region ),
+        .AWUSER_i  ( master[ariane_soc::UART].aw_user   ),
+        .AWQOS_i   ( master[ariane_soc::UART].aw_qos    ),
+        .AWVALID_i ( master[ariane_soc::UART].aw_valid  ),
+        .AWREADY_o ( master[ariane_soc::UART].aw_ready  ),
+        .WDATA_i   ( master[ariane_soc::UART].w_data    ),
+        .WSTRB_i   ( master[ariane_soc::UART].w_strb    ),
+        .WLAST_i   ( master[ariane_soc::UART].w_last    ),
+        .WUSER_i   ( master[ariane_soc::UART].w_user    ),
+        .WVALID_i  ( master[ariane_soc::UART].w_valid   ),
+        .WREADY_o  ( master[ariane_soc::UART].w_ready   ),
+        .BID_o     ( master[ariane_soc::UART].b_id      ),
+        .BRESP_o   ( master[ariane_soc::UART].b_resp    ),
+        .BVALID_o  ( master[ariane_soc::UART].b_valid   ),
+        .BUSER_o   ( master[ariane_soc::UART].b_user    ),
+        .BREADY_i  ( master[ariane_soc::UART].b_ready   ),
+        .ARID_i    ( master[ariane_soc::UART].ar_id     ),
+        .ARADDR_i  ( master[ariane_soc::UART].ar_addr   ),
+        .ARLEN_i   ( master[ariane_soc::UART].ar_len    ),
+        .ARSIZE_i  ( master[ariane_soc::UART].ar_size   ),
+        .ARBURST_i ( master[ariane_soc::UART].ar_burst  ),
+        .ARLOCK_i  ( master[ariane_soc::UART].ar_lock   ),
+        .ARCACHE_i ( master[ariane_soc::UART].ar_cache  ),
+        .ARPROT_i  ( master[ariane_soc::UART].ar_prot   ),
+        .ARREGION_i( master[ariane_soc::UART].ar_region ),
+        .ARUSER_i  ( master[ariane_soc::UART].ar_user   ),
+        .ARQOS_i   ( master[ariane_soc::UART].ar_qos    ),
+        .ARVALID_i ( master[ariane_soc::UART].ar_valid  ),
+        .ARREADY_o ( master[ariane_soc::UART].ar_ready  ),
+        .RID_o     ( master[ariane_soc::UART].r_id      ),
+        .RDATA_o   ( master[ariane_soc::UART].r_data    ),
+        .RRESP_o   ( master[ariane_soc::UART].r_resp    ),
+        .RLAST_o   ( master[ariane_soc::UART].r_last    ),
+        .RUSER_o   ( master[ariane_soc::UART].r_user    ),
+        .RVALID_o  ( master[ariane_soc::UART].r_valid   ),
+        .RREADY_i  ( master[ariane_soc::UART].r_ready   ),
         .PENABLE   ( uart_penable   ),
         .PWRITE    ( uart_pwrite    ),
         .PADDR     ( uart_paddr     ),
@@ -341,45 +241,45 @@ module ariane_peripherals #(
             .s_axi_aclk     ( clk_i              ),
             .s_axi_aresetn  ( rst_ni             ),
 
-            .s_axi_awid     ( spi.aw_id          ),
-            .s_axi_awaddr   ( spi.aw_addr[31:0]  ),
-            .s_axi_awlen    ( spi.aw_len         ),
-            .s_axi_awsize   ( spi.aw_size        ),
-            .s_axi_awburst  ( spi.aw_burst       ),
-            .s_axi_awlock   ( spi.aw_lock        ),
-            .s_axi_awcache  ( spi.aw_cache       ),
-            .s_axi_awprot   ( spi.aw_prot        ),
-            .s_axi_awregion ( spi.aw_region      ),
-            .s_axi_awqos    ( spi.aw_qos         ),
-            .s_axi_awvalid  ( spi.aw_valid       ),
-            .s_axi_awready  ( spi.aw_ready       ),
-            .s_axi_wdata    ( spi.w_data         ),
-            .s_axi_wstrb    ( spi.w_strb         ),
-            .s_axi_wlast    ( spi.w_last         ),
-            .s_axi_wvalid   ( spi.w_valid        ),
-            .s_axi_wready   ( spi.w_ready        ),
-            .s_axi_bid      ( spi.b_id           ),
-            .s_axi_bresp    ( spi.b_resp         ),
-            .s_axi_bvalid   ( spi.b_valid        ),
-            .s_axi_bready   ( spi.b_ready        ),
-            .s_axi_arid     ( spi.ar_id          ),
-            .s_axi_araddr   ( spi.ar_addr[31:0]  ),
-            .s_axi_arlen    ( spi.ar_len         ),
-            .s_axi_arsize   ( spi.ar_size        ),
-            .s_axi_arburst  ( spi.ar_burst       ),
-            .s_axi_arlock   ( spi.ar_lock        ),
-            .s_axi_arcache  ( spi.ar_cache       ),
-            .s_axi_arprot   ( spi.ar_prot        ),
-            .s_axi_arregion ( spi.ar_region      ),
-            .s_axi_arqos    ( spi.ar_qos         ),
-            .s_axi_arvalid  ( spi.ar_valid       ),
-            .s_axi_arready  ( spi.ar_ready       ),
-            .s_axi_rid      ( spi.r_id           ),
-            .s_axi_rdata    ( spi.r_data         ),
-            .s_axi_rresp    ( spi.r_resp         ),
-            .s_axi_rlast    ( spi.r_last         ),
-            .s_axi_rvalid   ( spi.r_valid        ),
-            .s_axi_rready   ( spi.r_ready        ),
+            .s_axi_awid     ( master[ariane_soc::SPI].aw_id          ),
+            .s_axi_awaddr   ( master[ariane_soc::SPI].aw_addr[31:0]  ),
+            .s_axi_awlen    ( master[ariane_soc::SPI].aw_len         ),
+            .s_axi_awsize   ( master[ariane_soc::SPI].aw_size        ),
+            .s_axi_awburst  ( master[ariane_soc::SPI].aw_burst       ),
+            .s_axi_awlock   ( master[ariane_soc::SPI].aw_lock        ),
+            .s_axi_awcache  ( master[ariane_soc::SPI].aw_cache       ),
+            .s_axi_awprot   ( master[ariane_soc::SPI].aw_prot        ),
+            .s_axi_awregion ( master[ariane_soc::SPI].aw_region      ),
+            .s_axi_awqos    ( master[ariane_soc::SPI].aw_qos         ),
+            .s_axi_awvalid  ( master[ariane_soc::SPI].aw_valid       ),
+            .s_axi_awready  ( master[ariane_soc::SPI].aw_ready       ),
+            .s_axi_wdata    ( master[ariane_soc::SPI].w_data         ),
+            .s_axi_wstrb    ( master[ariane_soc::SPI].w_strb         ),
+            .s_axi_wlast    ( master[ariane_soc::SPI].w_last         ),
+            .s_axi_wvalid   ( master[ariane_soc::SPI].w_valid        ),
+            .s_axi_wready   ( master[ariane_soc::SPI].w_ready        ),
+            .s_axi_bid      ( master[ariane_soc::SPI].b_id           ),
+            .s_axi_bresp    ( master[ariane_soc::SPI].b_resp         ),
+            .s_axi_bvalid   ( master[ariane_soc::SPI].b_valid        ),
+            .s_axi_bready   ( master[ariane_soc::SPI].b_ready        ),
+            .s_axi_arid     ( master[ariane_soc::SPI].ar_id          ),
+            .s_axi_araddr   ( master[ariane_soc::SPI].ar_addr[31:0]  ),
+            .s_axi_arlen    ( master[ariane_soc::SPI].ar_len         ),
+            .s_axi_arsize   ( master[ariane_soc::SPI].ar_size        ),
+            .s_axi_arburst  ( master[ariane_soc::SPI].ar_burst       ),
+            .s_axi_arlock   ( master[ariane_soc::SPI].ar_lock        ),
+            .s_axi_arcache  ( master[ariane_soc::SPI].ar_cache       ),
+            .s_axi_arprot   ( master[ariane_soc::SPI].ar_prot        ),
+            .s_axi_arregion ( master[ariane_soc::SPI].ar_region      ),
+            .s_axi_arqos    ( master[ariane_soc::SPI].ar_qos         ),
+            .s_axi_arvalid  ( master[ariane_soc::SPI].ar_valid       ),
+            .s_axi_arready  ( master[ariane_soc::SPI].ar_ready       ),
+            .s_axi_rid      ( master[ariane_soc::SPI].r_id           ),
+            .s_axi_rdata    ( master[ariane_soc::SPI].r_data         ),
+            .s_axi_rresp    ( master[ariane_soc::SPI].r_resp         ),
+            .s_axi_rlast    ( master[ariane_soc::SPI].r_last         ),
+            .s_axi_rvalid   ( master[ariane_soc::SPI].r_valid        ),
+            .s_axi_rready   ( master[ariane_soc::SPI].r_ready        ),
 
             .m_axi_awaddr   ( s_axi_spi_awaddr   ),
             .m_axi_awlen    ( s_axi_spi_awlen    ),
@@ -476,19 +376,19 @@ module ariane_peripherals #(
         assign spi_ss = 1'b0;
 
         assign irq_sources [1] = 1'b0;
-        assign spi.aw_ready = 1'b1;
-        assign spi.ar_ready = 1'b1;
-        assign spi.w_ready = 1'b1;
+        assign master[ariane_soc::SPI].aw_ready = 1'b1;
+        assign master[ariane_soc::SPI].ar_ready = 1'b1;
+        assign master[ariane_soc::SPI].w_ready = 1'b1;
 
-        assign spi.b_valid = spi.aw_valid;
-        assign spi.b_id = spi.aw_id;
-        assign spi.b_resp = axi_pkg::RESP_SLVERR;
-        assign spi.b_user = '0;
+        assign master[ariane_soc::SPI].b_valid = master[ariane_soc::SPI].aw_valid;
+        assign master[ariane_soc::SPI].b_id = master[ariane_soc::SPI].aw_id;
+        assign master[ariane_soc::SPI].b_resp = axi_pkg::RESP_SLVERR;
+        assign master[ariane_soc::SPI].b_user = '0;
 
-        assign spi.r_valid = spi.ar_valid;
-        assign spi.r_resp = axi_pkg::RESP_SLVERR;
-        assign spi.r_data = 'hdeadbeef;
-        assign spi.r_last = 1'b1;
+        assign master[ariane_soc::SPI].r_valid = master[ariane_soc::SPI].ar_valid;
+        assign master[ariane_soc::SPI].r_resp = axi_pkg::RESP_SLVERR;
+        assign master[ariane_soc::SPI].r_data = 'hdeadbeef;
+        assign master[ariane_soc::SPI].r_last = 1'b1;
     end
 
 
@@ -501,18 +401,18 @@ module ariane_peripherals #(
     else
       begin
         assign irq_sources [2] = 1'b0;
-        assign ethernet.aw_ready = 1'b1;
-        assign ethernet.ar_ready = 1'b1;
-        assign ethernet.w_ready = 1'b1;
+        assign master[ariane_soc::Ethernet].aw_ready = 1'b1;
+        assign master[ariane_soc::Ethernet].ar_ready = 1'b1;
+        assign master[ariane_soc::Ethernet].w_ready = 1'b1;
 
-        assign ethernet.b_valid = ethernet.aw_valid;
-        assign ethernet.b_id = ethernet.aw_id;
-        assign ethernet.b_resp = axi_pkg::RESP_SLVERR;
-        assign ethernet.b_user = '0;
+        assign master[ariane_soc::Ethernet].b_valid = master[ariane_soc::Ethernet].aw_valid;
+        assign master[ariane_soc::Ethernet].b_id = master[ariane_soc::Ethernet].aw_id;
+        assign master[ariane_soc::Ethernet].b_resp = axi_pkg::RESP_SLVERR;
+        assign master[ariane_soc::Ethernet].b_user = '0;
 
-        assign ethernet.r_valid = ethernet.ar_valid;
-        assign ethernet.r_resp = axi_pkg::RESP_SLVERR;
-        assign ethernet.r_data = 'hdeadbeef;
-        assign ethernet.r_last = 1'b1;
+        assign master[ariane_soc::Ethernet].r_valid = master[ariane_soc::Ethernet].ar_valid;
+        assign master[ariane_soc::Ethernet].r_resp = axi_pkg::RESP_SLVERR;
+        assign master[ariane_soc::Ethernet].r_data = 'hdeadbeef;
+        assign master[ariane_soc::Ethernet].r_last = 1'b1;
     end
 endmodule

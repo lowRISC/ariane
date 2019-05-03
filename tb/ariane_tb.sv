@@ -15,9 +15,13 @@
 
 
 import ariane_pkg::*;
+`ifdef VCS
+ `define uvm_error(a,b,c)
+ `define uvm_info(a,b,c)
+`else
 import uvm_pkg::*;
-
 `include "uvm_macros.svh"
+`endif
 
 `define MAIN_MEM(P) dut.i_sram.genblk1[0].i_ram.Mem_DP[(``P``)]
 
@@ -26,9 +30,9 @@ import "DPI-C" function byte get_section(output longint address, output longint 
 import "DPI-C" context function byte read_section(input longint address, inout byte buffer[]);
 
 module ariane_tb;
-
+`ifndef VCS
     static uvm_cmdline_processor uvcl = uvm_cmdline_processor::get_inst();
-
+`endif
     localparam int unsigned CLOCK_PERIOD = 20ns;
     // toggle with RTC period
     localparam int unsigned RTC_CLOCK_PERIOD = 30.517us;
@@ -123,8 +127,11 @@ module ariane_tb;
         automatic logic [7:0][7:0] mem_row;
         longint address, len;
         byte buffer[];
+`ifdef VCS
+        $value$plusargs("+PRELOAD=", binary);
+`else       
         void'(uvcl.get_arg_value("+PRELOAD=", binary));
-
+`endif
         if (binary != "") begin
             `uvm_info( "Core Test", $sformatf("Preloading ELF: %s", binary), UVM_LOW)
 
@@ -151,4 +158,41 @@ UVM_LOW)
             end
         end
     end
+
+`ifdef VCS
+// tediously connect unused module interfaces at the top level   
+   AXI_BUS  #(
+    .AXI_ADDR_WIDTH ( 64     ),
+    .AXI_DATA_WIDTH ( 64     ),
+    .AXI_ID_WIDTH   ( 5      ),
+    .AXI_USER_WIDTH ( 1      )
+) axi_dummy[14:0] (), axi_master[3:0] (), axi_slave[3:0] (), axi_master4[3:0] ();
+   AXI_LITE axi_dummy_lite[1:0] ();
+   REG_BUS reg_dummy[1:0] ();
+   
+   axi_riscv_lrsc_wrap dummy1 (.mst(axi_dummy[0]), .slv(axi_dummy[8]));
+   axi_riscv_atomics_wrap #(.ADDR_END(0)) dummy2 (.mst(axi_dummy[1]), .slv(axi_dummy[2]));
+   axi_master_connect_rev dummy3 (.master(axi_dummy[3]));
+   axi_slave_connect_rev dummy4 (.slave(axi_dummy[4]));
+   axi_node_wrap_with_slices dummy5 (.master(axi_master), .slave(axi_slave));
+   axi_to_axi_lite dummy6 (.in(axi_dummy[6]), .out(axi_dummy_lite[0]));
+   axi_slave_connect dummy7 (.slave(axi_dummy[10]));
+   axi_slice_wrap dummy8 (.axi_master(axi_dummy[11]), .axi_slave(axi_dummy[12]));
+   apb_to_reg dummy9 (.reg_o(reg_dummy[0]));
+   axi_master_connect dummy10 (.master(axi_dummy[13]));
+   axi_demux #(
+    .SLAVE_NUM  ( 4      ),
+    .ADDR_WIDTH ( 64     ),
+    .DATA_WIDTH ( 64     ),
+    .USER_WIDTH ( 1      ),
+    .ID_WIDTH   ( 5      )
+   ) dummy11 (.clk(clk_i),
+              .rstn(rst_ni),
+              .master(axi_dummy[14]),
+              .slave(axi_master4),
+              .BASE(0),
+              .MASK(0));
+  
+`endif   
+   
 endmodule

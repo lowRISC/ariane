@@ -9,6 +9,11 @@
   .globl _prog_start
 _prog_start:
   smp_pause(s1, s2)
+# use a delay to allow the debugger in
+  li t4, 100000000
+_wait_dbg:
+  add t4, t4, -1
+  bne t4, zero, _wait_dbg
   li sp, DRAM_BASE
   la t0, init_uart
   jalr ra, t0

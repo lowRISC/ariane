@@ -71,7 +71,6 @@ localparam AxiUserWidth = 1;
 // MIG clock
 logic mig_sys_clk, mig_ui_clk, mig_ui_rst, mig_ui_rstn, sys_rst,
       clk, clk_rmii, clk_rmii_quad, clk_pixel, clk_locked_wiz;
-logic ndmreset_n;
 logic rst_n;
 
 assign mig_ui_rstn = !mig_ui_rst;
@@ -141,7 +140,7 @@ xlnx_mig_7_ddr3 i_ddr (
     .ui_clk          ( mig_ui_clk     ),
     .ui_clk_sync_rst ( mig_ui_rst     ),
     .mmcm_locked     (                ), // keep open
-    .aresetn         ( ndmreset_n     ),
+    .aresetn         ( rst_n          ),
     .app_sr_req      ( '0             ),
     .app_ref_req     ( '0             ),
     .app_zq_req      ( '0             ),
@@ -224,7 +223,7 @@ ariane_peripherals_xilinx #(
 ) i_ariane_peripherals (
     .clk_i         ( clk                          ),
     .clk_200MHz_i  ( mig_sys_clk                  ),
-    .rst_ni        ( ndmreset_n                   ),
+    .rst_ni        ( rst_n                   ),
     .iobus,
     .irq_sources,
     .rx_i          ( rx                           ),
@@ -259,7 +258,7 @@ ariane_peripherals_xilinx #(
 
 fan_ctrl i_fan_ctrl (
     .clk_i         ( clk        ),
-    .rst_ni        ( ndmreset_n ),
+    .rst_ni        ( rst_n      ),
     .pwm_setting_i ( 'd8        ),
     .fan_pwm_o     ( fan_pwm    )
 );

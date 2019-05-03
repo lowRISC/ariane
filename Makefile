@@ -113,11 +113,32 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         $(wildcard src/cache_subsystem/*.sv))                                  \
         $(wildcard bootrom/*.sv)                                               \
         $(wildcard src/clint/*.sv)                                             \
-        $(wildcard fpga/src/axi2apb/src/*.sv)                                  \
+        $(filter-out fpga/src/axi2apb/src/axi2apb_wrap.sv $(wildcard fpga/src/axi2apb/src/*.sv)) \
         $(wildcard fpga/src/axi_slice/src/*.sv)                                \
         $(wildcard src/axi_node/src/*.sv)                                      \
         $(wildcard src/axi_riscv_atomics/src/*.sv)                             \
         $(wildcard src/axi_mem_if/src/*.sv)                                    \
+        fpga/src/bootram.sv                                                    \
+        fpga/src/ariane_shell.sv                                               \
+        $(filter-out fpga/src/OpenIP/axi/common.sv                             \
+			fpga/src/OpenIP/axi/dummy_slave.sv                     \
+			fpga/src/OpenIP/axi/dummy_master.sv                    \
+			fpga/src/OpenIP/axi/id_downsizer.sv                    \
+			fpga/src/OpenIP/axi/to_lite.sv                         \
+			fpga/src/OpenIP/axi/from_lite.sv                       \
+			fpga/src/OpenIP/axi/crossbar.sv                        \
+			fpga/src/OpenIP/axi/bram_ctrl.sv                       \
+			fpga/src/OpenIP/axi/buf.sv                             \
+			fpga/src/OpenIP/axi/mux.sv                             \
+			fpga/src/OpenIP/axi/join.sv,                           \
+                        $(wildcard fpga/src/OpenIP/axi/d*.sv))                 \
+        $(filter-out fpga/src/OpenIP/util/from_if.sv                           \
+			fpga/src/OpenIP/util/to_if.sv                          \
+			fpga/src/OpenIP/util/axi_xbar_rework.sv                \
+			fpga/src/OpenIP/util/async_fifo.sv                     \
+			fpga/src/OpenIP/util/axi_xbar_wrapper.sv               \
+			fpga/src/OpenIP/util/axi_xbar_rework_wrapper.sv,       \
+                        $(wildcard fpga/src/OpenIP/util/*.sv))                 \
         src/rv_plic/rtl/rv_plic_target.sv                                      \
         src/rv_plic/rtl/rv_plic_gateway.sv                                     \
         src/rv_plic/rtl/plic_regmap.sv                                         \
@@ -134,7 +155,6 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         src/axi/src/axi_multicut.sv                                            \
         src/common_cells/src/deprecated/generic_fifo.sv                        \
         src/common_cells/src/deprecated/pulp_sync.sv                           \
-        src/common_cells/src/deprecated/find_first_one.sv                      \
         src/common_cells/src/rstgen_bypass.sv                                  \
         src/common_cells/src/rstgen.sv                                         \
         src/common_cells/src/stream_mux.sv                                     \
@@ -204,7 +224,7 @@ riscv-fp-tests            := $(shell xargs printf '\n%s' < $(riscv-fp-tests-list
 riscv-benchmarks          := $(shell xargs printf '\n%s' < $(riscv-benchmarks-list) | cut -b 1-)
 
 # Search here for include files (e.g.: non-standalone components)
-incdir := src/common_cells/include/common_cells
+incdir := src/common_cells/include/common_cells src/axi_node 
 # Compile and sim flags
 compile_flag     += +cover=bcfst+/dut -incr -64 -nologo -quiet -suppress 13262 -permissive +define+$(defines)
 uvm-flags        += +UVM_NO_RELNOTES +UVM_VERBOSITY=LOW
@@ -500,15 +520,18 @@ $(ddr_path)/$(ddr_user_design)/ui/mig_7series_v4_1_ui_wr_data.v \
 $(ddr_path)/$(ddr_user_design)/xlnx_mig_7_ddr3_mig_sim.v \
 $(ddr_path)/$(ddr_user_design)/xlnx_mig_7_ddr3.v \
 
-vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
+vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps -error=noZMMCM \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
 	            $(filter-out src/fpu_wrap.sv fpga/src/axi_slice/src/axi_slice_wrap.sv, $(filter-out %.vhd, $(src)))             \
 	            +define+$(defines)                                                     \
 	            +define+SIMPLE_XBAR                                                    \
 	            +define+SIMULATION                                                     \
-	            +incdir+src/axi_node                                                   \
+	            $(list_incdir)                                                         \
 		    src/util/sram.sv                                                       \
+                    fpga/src/apb_uart/src/*.sv                                             \
+                    fpga/src/OpenIP/axi/regslice.sv  \
 	            tb/ariane_tb.sv                                                        \
+                    src/tech_cells_generic/src/cluster_clock_gating.sv
 
 vlogan_command_ddr := vlogan -work xil_defaultlib -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \

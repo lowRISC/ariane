@@ -6,10 +6,10 @@ typedef enum {
         ROMBase      = 0x00010000,
         CLINTBase    = 0x02000000,
         PLICBase     = 0x0C000000,
-        UARTBase     = 0x10000000,
-        SPIBase      = 0x20000000,
-        EthernetBase = 0x30000000,
-        GPIOBase     = 0x40000000,
+        UARTBase     = 0x41000000,
+        SPIBase      = 0x42000000,
+        EthernetBase = 0x43000000,
+        GPIOBase     = 0x44000000,
         DRAMBase     = 0x80000000
     } soc_bus_start_t;
 

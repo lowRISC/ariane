@@ -14,6 +14,7 @@
 module ariane_shell (
   input logic  clk,
   input logic  rst_n,
+  input logic test_en,
   input logic [ariane_soc::NumSources-1:0] irq_sources,
   AXI_BUS.Master dram, iobus,
   // common part
@@ -22,8 +23,7 @@ module ariane_shell (
   input logic  trst_n ,
   input logic  tdi ,
   output logic tdo ,
-  input logic  rx ,
-  output logic tx          
+  output logic tdo_oe
 );
 // 24 MByte in 8 byte words
 localparam NumWords = (24 * 1024 * 1024) / 8;
@@ -34,13 +34,7 @@ localparam AxiIdWidthMaster = 4;
 localparam AxiIdWidthSlaves = AxiIdWidthMaster + $clog2(NBSlave); // 5
 localparam AxiUserWidth = 1;
 
-// MIG clock
-   logic       mig_sys_clk, mig_ui_clk, mig_ui_rst, mig_ui_rstn, sys_rst;
-   
 logic ndmreset_n;
-
-assign mig_ui_rstn = !mig_ui_rst;
-assign clk = mig_ui_clk;
 
 AXI_BUS #(
     .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
@@ -57,7 +51,6 @@ AXI_BUS #(
 ) master[ariane_soc::NB_PERIPHERALS-1:0]();
 
 // disable test-enable
-logic test_en;
 logic ndmreset;
 logic debug_req_irq;
 logic time_irq;
@@ -69,8 +62,6 @@ logic phy_tx_clk;
 logic sd_clk_sys;
 
 logic rtc;
-
-assign sys_rst = ~rst_n;
 
 // ROM
 logic                    rom_req, rom_we;
@@ -90,7 +81,6 @@ logic dmactive;
 // IRQ
 logic [1:0] irq;
 logic    timer_irq;
-assign test_en    = 1'b0;
 
 logic [NBSlave-1:0] pc_asserted;
 
@@ -147,10 +137,10 @@ axi_cut #(
       .ID_WIDTH   ( AxiIdWidthSlaves ),
       .USER_WIDTH ( AxiUserWidth )
     ) i_cut (
-      .clk_i  ( clk_i  ),
-      .rst_ni ( rst_ni ),
+      .clk_i  ( clk                       ),
+      .rst_ni ( rst_n                     ),
       .in     ( master[ariane_soc::ExtIO] ),
-      .out    ( iobus[0]                  )
+      .out    ( iobus                     )
     );
 
 // ---------------
@@ -172,7 +162,7 @@ dmi_jtag i_dmi_jtag (
     .trst_ni              ( trst_n ),
     .td_i                 ( tdi    ),
     .td_o                 ( tdo    ),
-    .tdo_oe_o             (        )
+    .tdo_oe_o             ( tdo_oe )
 );
 
 ariane_axi::req_t    dm_axi_m_req;
@@ -433,7 +423,7 @@ axi_riscv_atomics_wrap #(
     REG_BUS #(
         .ADDR_WIDTH ( 32 ),
         .DATA_WIDTH ( 32 )
-    ) reg_bus (clk_i);
+    ) reg_bus (clk);
 
     logic         plic_penable;
     logic         plic_pwrite;
@@ -453,9 +443,9 @@ axi_riscv_atomics_wrap #(
         .BUFF_DEPTH_SLAVE   ( 2             ),
         .APB_ADDR_WIDTH     ( 32            )
     ) i_axi2apb_64_32_plic (
-        .ACLK      ( clk_i          ),
-        .ARESETn   ( rst_ni         ),
-        .test_en_i ( 1'b0           ),
+        .ACLK      ( clk            ),
+        .ARESETn   ( rst_n          ),
+        .test_en_i ( test_en        ),
         .AWID_i    ( master[ariane_soc::PLIC].aw_id     ),
         .AWADDR_i  ( master[ariane_soc::PLIC].aw_addr   ),
         .AWLEN_i   ( master[ariane_soc::PLIC].aw_len    ),
@@ -511,8 +501,8 @@ axi_riscv_atomics_wrap #(
     );
 
     apb_to_reg i_apb_to_reg (
-        .clk_i     ( clk_i        ),
-        .rst_ni    ( rst_ni       ),
+        .clk_i     ( clk          ),
+        .rst_ni    ( rst_n        ),
         .penable_i ( plic_penable ),
         .pwrite_i  ( plic_pwrite  ),
         .paddr_i   ( plic_paddr   ),
@@ -542,8 +532,8 @@ axi_riscv_atomics_wrap #(
       .N_TARGET    ( ariane_soc::NumTargets  ),
       .MAX_PRIO    ( ariane_soc::MaxPriority )
     ) i_plic (
-      .clk_i,
-      .rst_ni,
+      .clk_i         ( clk         ),
+      .rst_ni        ( rst_n       ),
       .req_i         ( plic_req    ),
       .resp_o        ( plic_resp   ),
       .le_i          ( '0          ), // 0:level 1:edge
@@ -613,12 +603,5 @@ xlnx_protocol_checker i_xlnx_protocol_checker (
   .pc_axi_rready   (dram.r_ready)
 );
 `endif
-
-fan_ctrl i_fan_ctrl (
-    .clk_i         ( clk        ),
-    .rst_ni        ( ndmreset_n ),
-    .pwm_setting_i ( 'd8        ),
-    .fan_pwm_o     ( fan_pwm    )
-);
 
 endmodule

@@ -25,9 +25,6 @@
 [submodule "fpga/src/ariane-ethernet"]
 	path = fpga/src/ariane-ethernet
 	url = https://github.com/lowRISC/ariane-ethernet.git
-[submodule "src/axi_riscv_atomics"]
-	path = src/axi_riscv_atomics
-	url = https://github.com/pulp-platform/axi_riscv_atomics.git
 [submodule "src/fpu"]
 	path = src/fpu
 	url = https://github.com/lowRISC/fpnew.git
@@ -52,3 +49,6 @@
 [submodule "fpga/src/OpenIP"]
 	path = fpga/src/OpenIP
 	url = https://github.com/lowRISC/OpenIP.git
+[submodule "src/axi_riscv_atomics"]
+	path = src/axi_riscv_atomics
+	url = https://github.com/lowRISC/axi_riscv_atomics

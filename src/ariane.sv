@@ -700,7 +700,15 @@ module ariane #(
   );
 `endif // PITON_ARIANE
 
-`ifndef VERILATOR
+`ifdef VERILATOR
+`define NOTRACE
+`endif
+
+`ifdef VCS
+`define NOTRACE
+`endif
+
+`ifndef NOTRACE
   instruction_tracer_if tracer_if (clk_i);
   // assign instruction tracer interface
   // control signals
