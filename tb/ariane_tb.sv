@@ -126,9 +126,9 @@ module ariane_tb;
     initial begin
         automatic logic [7:0][7:0] mem_row;
         longint address, len;
-        byte buffer[];
+        byte buffer[];       
 `ifdef VCS
-        $value$plusargs("+PRELOAD=", binary);
+       $vcdpluson();
 `else       
         void'(uvcl.get_arg_value("+PRELOAD=", binary));
 `endif
@@ -167,11 +167,20 @@ UVM_LOW)
     .AXI_ID_WIDTH   ( 5      ),
     .AXI_USER_WIDTH ( 1      )
 ) axi_dummy[14:0] (), axi_master[3:0] (), axi_slave[3:0] (), axi_master4[3:0] ();
-   AXI_LITE axi_dummy_lite[1:0] ();
+   AXI_LITE #(
+    .AXI_ADDR_WIDTH ( 64     ),
+    .AXI_DATA_WIDTH ( 64     ),
+    .AXI_ID_WIDTH   ( 5      ),
+    .AXI_USER_WIDTH ( 1      )
+) axi_dummy_lite[1:0] ();
    REG_BUS reg_dummy[1:0] ();
    
-   axi_riscv_lrsc_wrap dummy1 (.mst(axi_dummy[0]), .slv(axi_dummy[8]));
-   axi_riscv_atomics_wrap #(.ADDR_END(0)) dummy2 (.mst(axi_dummy[1]), .slv(axi_dummy[2]));
+   axi_riscv_lrsc_wrap #(.ADDR_BEGIN(0),
+                         .ADDR_END(1),
+                         .AXI_ADDR_WIDTH(64),
+                         .AXI_DATA_WIDTH(64),
+                         .AXI_ID_WIDTH(5)) dummy1 (.mst(axi_dummy[0]), .slv(axi_dummy[8]));
+   axi_riscv_atomics_wrap dummy2 (.mst(axi_dummy[1]), .slv(axi_dummy[2]));
    axi_master_connect_rev dummy3 (.master(axi_dummy[3]));
    axi_slave_connect_rev dummy4 (.slave(axi_dummy[4]));
    axi_node_wrap_with_slices dummy5 (.master(axi_master), .slave(axi_slave));
@@ -192,7 +201,8 @@ UVM_LOW)
               .slave(axi_master4),
               .BASE(0),
               .MASK(0));
-  
+   stream_mux #(.N_INP(2)) dummy12 ();
+   
 `endif   
    
 endmodule

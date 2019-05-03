@@ -30,7 +30,6 @@ module ariane_testharness #(
 
   // disable test-enable
   logic        test_en;
-  logic        ndmreset;
   logic        ndmreset_n;
   logic        debug_req_core;
 
@@ -82,14 +81,6 @@ module ariane_testharness #(
     .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave ),
     .AXI_USER_WIDTH ( AXI_USER_WIDTH           )
   ) master[ariane_soc::NB_PERIPHERALS-1:0]();
-
-  rstgen i_rstgen_main (
-    .clk_i        ( clk_i                ),
-    .rst_ni       ( rst_ni & (~ndmreset) ),
-    .test_mode_i  ( test_en              ),
-    .rst_no       ( ndmreset_n           ),
-    .init_no      (                      ) // keep open
-  );
 
   // ---------------
   // Debug
@@ -401,12 +392,13 @@ module ariane_testharness #(
   // ---------------
 
   ariane_shell i_shell (
-    .clk                  ( clk_i               ),
-    .rst_n                ( ndmreset_n          ),
+    .clk             ( clk_i                ),
+    .rst_n           ( rst_ni               ),
     .irq_sources,
     .dram,
     .iobus,
     .test_en,
+    .ndmreset_n,
     .tck             ( jtag_TCK             ),
     .tms             ( jtag_TMS             ),
     .tdi             ( jtag_TDI             ),

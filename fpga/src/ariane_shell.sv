@@ -17,6 +17,7 @@ module ariane_shell (
   input logic test_en,
   input logic [ariane_soc::NumSources-1:0] irq_sources,
   AXI_BUS.Master dram, iobus,
+  output logic ndmreset_n,
   // common part
   input logic  tck ,
   input logic  tms ,
@@ -33,8 +34,6 @@ localparam AxiDataWidth = 64;
 localparam AxiIdWidthMaster = 4;
 localparam AxiIdWidthSlaves = AxiIdWidthMaster + $clog2(NBSlave); // 5
 localparam AxiUserWidth = 1;
-
-logic ndmreset_n;
 
 AXI_BUS #(
     .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
