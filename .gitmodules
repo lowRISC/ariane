@@ -49,3 +49,6 @@
 [submodule "src/common_cells"]
 	path = src/common_cells
 	url = https://github.com/lowRISC/common_cells.git
+[submodule "fpga/src/OpenIP"]
+	path = fpga/src/OpenIP
+	url = https://github.com/lowRISC/OpenIP.git

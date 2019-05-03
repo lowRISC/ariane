@@ -39,7 +39,7 @@ source scripts/add_sources.tcl
 set_property top ${project}_xilinx [current_fileset]
 
 if {$::env(BOARD) eq "nexys4_ddr"} {
-    read_verilog -sv {src/nexys4ddr.svh ../src/common_cells/include/common_cells/registers.svh}
+    read_verilog -sv {src/nexys4ddr.svh ../src/common_cells/include/common_cells/registers.svh }
     set file "src/nexys4ddr.svh"
     set registers "../src/common_cells/include/common_cells/registers.svh"
 } else {

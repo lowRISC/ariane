@@ -51,7 +51,7 @@ endif
 
 # Sources
 # Package files -> compile first
-ariane_pkg := include/riscv_pkg.sv                          \
+ariane_pkg :=             include/riscv_pkg.sv                          \
 			  src/riscv-dbg/src/dm_pkg.sv                   \
 			  include/ariane_pkg.sv                         \
 			  include/std_cache_pkg.sv                      \
@@ -63,7 +63,8 @@ ariane_pkg := include/riscv_pkg.sv                          \
 			  tb/ariane_soc_pkg.sv                          \
 			  include/ariane_axi_pkg.sv                     \
 			  src/fpu/src/fpnew_pkg.sv                      \
-                          src/fpu/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
+                          src/fpu/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv \
+                          fpga/src/OpenIP/axi/common.sv
 
 ariane_pkg := $(addprefix $(root-dir), $(ariane_pkg))
 
@@ -179,6 +180,8 @@ src := $(addprefix $(root-dir), $(src))
 fpga_src :=  $(wildcard fpga/src/*.sv) \
              $(wildcard fpga/src/bootrom/*.sv) \
              $(wildcard fpga/src/apb_uart/src/*.sv) \
+             $(filter-out fpga/src/OpenIP/axi/common.sv, $(wildcard fpga/src/OpenIP/axi/*.sv)) \
+             $(wildcard fpga/src/OpenIP/util/*.sv) \
              $(wildcard fpga/src/ariane-ethernet/*.sv) \
              $(wildcard fpga/src/spi_mem_programmer/*.sv)
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
@@ -656,7 +659,7 @@ fpga_filter += $(addprefix $(root-dir), src/util/instruction_tracer.sv)
 
 fpga: $(ariane_pkg) $(util) $(src) $(fpga_src)
 	@echo "[FPGA] Generate sources"
-	@echo read_verilog -sv {$(ariane_pkg)} >> fpga/scripts/add_sources.tcl
+	@echo read_verilog -sv {$(ariane_pkg)} > fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(util))}     >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(fpga_src)}   >> fpga/scripts/add_sources.tcl

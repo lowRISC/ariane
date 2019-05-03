@@ -25,15 +25,19 @@ package ariane_soc;
 
   typedef enum int unsigned {
     DRAM     = 0,
-    GPIO     = 1,
-    Ethernet = 2,
-    SPI      = 3,
-    UART     = 4,
-    PLIC     = 5,
-    CLINT    = 6,
-    ROM      = 7,
-    Debug    = 8
+    ExtIO    = 1,
+    PLIC     = 2,
+    CLINT    = 3,
+    ROM      = 4,
+    Debug    = 5
   } axi_slaves_t;
+
+  typedef enum int unsigned {
+    GPIO     = 0,
+    Ethernet = 1,
+    SPI      = 2,
+    UART     = 3
+  } axi_extio_t;
 
   localparam NB_PERIPHERALS = Debug + 1;
 
@@ -46,6 +50,7 @@ package ariane_soc;
   localparam logic[63:0] SPILength      = 64'h800000;
   localparam logic[63:0] EthernetLength = 64'h10000;
   localparam logic[63:0] GPIOLength     = 64'h1000;
+  localparam logic[63:0] ExtIOLength    = 64'h10000000;
   localparam logic[63:0] DRAMLength     = 64'h40000000; // 1GByte of DDR (split between two chips on Genesys2)
   localparam logic[63:0] SRAMLength     = 64'h1800000;  // 24 MByte of SRAM
   // Instantiate AXI protocol checkers
@@ -56,12 +61,16 @@ package ariane_soc;
     ROMBase      = 64'h0001_0000,
     CLINTBase    = 64'h0200_0000,
     PLICBase     = 64'h0C00_0000,
-    UARTBase     = 64'h1000_0000,
-    SPIBase      = 64'h2000_0000,
-    EthernetBase = 64'h3000_0000,
-    GPIOBase     = 64'h4000_0000,
+    ExtIOBase    = 64'h4000_0000,
     DRAMBase     = 64'h8000_0000
   } soc_bus_start_t;
+
+  typedef enum logic [63:0] {
+    UARTBase     = 64'h4100_0000,
+    SPIBase      = 64'h4200_0000,
+    EthernetBase = 64'h4300_0000,
+    GPIOBase     = 64'h4400_0000
+  } soc_iobus_start_t;
 
   localparam NrRegion = 1;
   localparam logic [NrRegion-1:0][NB_PERIPHERALS-1:0] ValidRule = {{NrRegion * NB_PERIPHERALS}{1'b1}};

@@ -114,7 +114,7 @@ AXI_BUS #(
     .AXI_DATA_WIDTH ( AxiDataWidth     ),
     .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
     .AXI_USER_WIDTH ( AxiUserWidth     )
-) dram();
+) dram(), iobus();
    
 xlnx_mig_7_ddr3 i_ddr (
     .sys_clk_i          ( mig_sys_clk ),
@@ -207,10 +207,12 @@ logic cpu_reset;
 assign cpu_reset  = ~cpu_resetn;
 assign sys_rst = ~rst_n;
 
+logic [ariane_soc::NumSources-1:0] irq_sources;
+
 // ---------------
 // Peripherals
 // ---------------
-ariane_peripherals #(
+ariane_peripherals_xilinx #(
     .AxiAddrWidth ( AxiAddrWidth     ),
     .AxiDataWidth ( AxiDataWidth     ),
     .AxiIdWidth   ( AxiIdWidthSlaves ),
@@ -223,12 +225,8 @@ ariane_peripherals #(
     .clk_i         ( clk                          ),
     .clk_200MHz_i  ( mig_sys_clk                  ),
     .rst_ni        ( ndmreset_n                   ),
-    .plic          ( master[ariane_soc::PLIC]     ),
-    .uart          ( master[ariane_soc::UART]     ),
-    .spi           ( master[ariane_soc::SPI]      ),
-    .gpio          ( master[ariane_soc::GPIO]     ),
-    .ethernet      ( master[ariane_soc::Ethernet] ),
-    .irq_o         ( irq                          ),
+    .iobus,
+    .irq_sources,
     .rx_i          ( rx                           ),
     .tx_o          ( tx                           ),
     .clk_rmii      ( clk_rmii                     ),
@@ -265,5 +263,7 @@ fan_ctrl i_fan_ctrl (
     .pwm_setting_i ( 'd8        ),
     .fan_pwm_o     ( fan_pwm    )
 );
+
+ariane_shell shell1(.*);
 
 endmodule

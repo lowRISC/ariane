@@ -23,7 +23,8 @@ interface uart_bus #(
 );
 
 /* pragma translate_off */
-`ifndef VERILATOR
+`ifdef VERILATOR
+`else
   localparam time BIT_PERIOD = (1000000000 / BAUD_RATE) * 1ns;
 
   logic [7:0]       character;

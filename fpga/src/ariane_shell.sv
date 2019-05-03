@@ -14,6 +14,8 @@
 module ariane_shell (
   input logic  clk,
   input logic  rst_n,
+  input logic [ariane_soc::NumSources-1:0] irq_sources,
+  AXI_BUS.Master dram, iobus,
   // common part
   input logic  tck ,
   input logic  tms ,
@@ -125,10 +127,7 @@ axi_node_wrap_with_slices #(
         ariane_soc::ROMBase,
         ariane_soc::CLINTBase,
         ariane_soc::PLICBase,
-        ariane_soc::UARTBase,
-        ariane_soc::SPIBase,
-        ariane_soc::EthernetBase,
-        ariane_soc::GPIOBase,
+        ariane_soc::ExtIOBase,
         ariane_soc::DRAMBase
     }),
     .end_addr_i   ({
@@ -136,14 +135,23 @@ axi_node_wrap_with_slices #(
         ariane_soc::ROMBase      + ariane_soc::ROMLength - 1,
         ariane_soc::CLINTBase    + ariane_soc::CLINTLength - 1,
         ariane_soc::PLICBase     + ariane_soc::PLICLength - 1,
-        ariane_soc::UARTBase     + ariane_soc::UARTLength - 1,
-        ariane_soc::SPIBase      + ariane_soc::SPILength - 1,
-        ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
-        ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
+        ariane_soc::ExtIOBase    + ariane_soc::ExtIOLength - 1,
         ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1
     }),
     .valid_rule_i (ariane_soc::ValidRule)
 );
+
+axi_cut #(
+      .ADDR_WIDTH ( AxiAddrWidth ),
+      .DATA_WIDTH ( AxiDataWidth ),
+      .ID_WIDTH   ( AxiIdWidthSlaves ),
+      .USER_WIDTH ( AxiUserWidth )
+    ) i_cut (
+      .clk_i  ( clk_i  ),
+      .rst_ni ( rst_ni ),
+      .in     ( master[ariane_soc::ExtIO] ),
+      .out    ( iobus[0]                  )
+    );
 
 // ---------------
 // Debug Module
@@ -404,13 +412,6 @@ logic                        s_axi_rlast;
 logic                        s_axi_rvalid;
 logic                        s_axi_rready;
 
-AXI_BUS #(
-    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
-    .AXI_DATA_WIDTH ( AxiDataWidth     ),
-    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
-    .AXI_USER_WIDTH ( AxiUserWidth     )
-) dram();
-
 axi_riscv_atomics_wrap #(
     .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
     .AXI_DATA_WIDTH ( AxiDataWidth     ),
@@ -424,6 +425,131 @@ axi_riscv_atomics_wrap #(
     .slv    ( master[ariane_soc::DRAM] ),
     .mst    ( dram                     )
 );
+
+    // ---------------
+    // 1. PLIC
+    // ---------------
+
+    REG_BUS #(
+        .ADDR_WIDTH ( 32 ),
+        .DATA_WIDTH ( 32 )
+    ) reg_bus (clk_i);
+
+    logic         plic_penable;
+    logic         plic_pwrite;
+    logic [31:0]  plic_paddr;
+    logic         plic_psel;
+    logic [31:0]  plic_pwdata;
+    logic [31:0]  plic_prdata;
+    logic         plic_pready;
+    logic         plic_pslverr;
+
+    axi2apb_64_32 #(
+        .AXI4_ADDRESS_WIDTH ( AxiAddrWidth  ),
+        .AXI4_RDATA_WIDTH   ( AxiDataWidth  ),
+        .AXI4_WDATA_WIDTH   ( AxiDataWidth  ),
+        .AXI4_ID_WIDTH      ( AxiIdWidthSlaves ),
+        .AXI4_USER_WIDTH    ( AxiUserWidth  ),
+        .BUFF_DEPTH_SLAVE   ( 2             ),
+        .APB_ADDR_WIDTH     ( 32            )
+    ) i_axi2apb_64_32_plic (
+        .ACLK      ( clk_i          ),
+        .ARESETn   ( rst_ni         ),
+        .test_en_i ( 1'b0           ),
+        .AWID_i    ( master[ariane_soc::PLIC].aw_id     ),
+        .AWADDR_i  ( master[ariane_soc::PLIC].aw_addr   ),
+        .AWLEN_i   ( master[ariane_soc::PLIC].aw_len    ),
+        .AWSIZE_i  ( master[ariane_soc::PLIC].aw_size   ),
+        .AWBURST_i ( master[ariane_soc::PLIC].aw_burst  ),
+        .AWLOCK_i  ( master[ariane_soc::PLIC].aw_lock   ),
+        .AWCACHE_i ( master[ariane_soc::PLIC].aw_cache  ),
+        .AWPROT_i  ( master[ariane_soc::PLIC].aw_prot   ),
+        .AWREGION_i( master[ariane_soc::PLIC].aw_region ),
+        .AWUSER_i  ( master[ariane_soc::PLIC].aw_user   ),
+        .AWQOS_i   ( master[ariane_soc::PLIC].aw_qos    ),
+        .AWVALID_i ( master[ariane_soc::PLIC].aw_valid  ),
+        .AWREADY_o ( master[ariane_soc::PLIC].aw_ready  ),
+        .WDATA_i   ( master[ariane_soc::PLIC].w_data    ),
+        .WSTRB_i   ( master[ariane_soc::PLIC].w_strb    ),
+        .WLAST_i   ( master[ariane_soc::PLIC].w_last    ),
+        .WUSER_i   ( master[ariane_soc::PLIC].w_user    ),
+        .WVALID_i  ( master[ariane_soc::PLIC].w_valid   ),
+        .WREADY_o  ( master[ariane_soc::PLIC].w_ready   ),
+        .BID_o     ( master[ariane_soc::PLIC].b_id      ),
+        .BRESP_o   ( master[ariane_soc::PLIC].b_resp    ),
+        .BVALID_o  ( master[ariane_soc::PLIC].b_valid   ),
+        .BUSER_o   ( master[ariane_soc::PLIC].b_user    ),
+        .BREADY_i  ( master[ariane_soc::PLIC].b_ready   ),
+        .ARID_i    ( master[ariane_soc::PLIC].ar_id     ),
+        .ARADDR_i  ( master[ariane_soc::PLIC].ar_addr   ),
+        .ARLEN_i   ( master[ariane_soc::PLIC].ar_len    ),
+        .ARSIZE_i  ( master[ariane_soc::PLIC].ar_size   ),
+        .ARBURST_i ( master[ariane_soc::PLIC].ar_burst  ),
+        .ARLOCK_i  ( master[ariane_soc::PLIC].ar_lock   ),
+        .ARCACHE_i ( master[ariane_soc::PLIC].ar_cache  ),
+        .ARPROT_i  ( master[ariane_soc::PLIC].ar_prot   ),
+        .ARREGION_i( master[ariane_soc::PLIC].ar_region ),
+        .ARUSER_i  ( master[ariane_soc::PLIC].ar_user   ),
+        .ARQOS_i   ( master[ariane_soc::PLIC].ar_qos    ),
+        .ARVALID_i ( master[ariane_soc::PLIC].ar_valid  ),
+        .ARREADY_o ( master[ariane_soc::PLIC].ar_ready  ),
+        .RID_o     ( master[ariane_soc::PLIC].r_id      ),
+        .RDATA_o   ( master[ariane_soc::PLIC].r_data    ),
+        .RRESP_o   ( master[ariane_soc::PLIC].r_resp    ),
+        .RLAST_o   ( master[ariane_soc::PLIC].r_last    ),
+        .RUSER_o   ( master[ariane_soc::PLIC].r_user    ),
+        .RVALID_o  ( master[ariane_soc::PLIC].r_valid   ),
+        .RREADY_i  ( master[ariane_soc::PLIC].r_ready   ),
+        .PENABLE   ( plic_penable   ),
+        .PWRITE    ( plic_pwrite    ),
+        .PADDR     ( plic_paddr     ),
+        .PSEL      ( plic_psel      ),
+        .PWDATA    ( plic_pwdata    ),
+        .PRDATA    ( plic_prdata    ),
+        .PREADY    ( plic_pready    ),
+        .PSLVERR   ( plic_pslverr   )
+    );
+
+    apb_to_reg i_apb_to_reg (
+        .clk_i     ( clk_i        ),
+        .rst_ni    ( rst_ni       ),
+        .penable_i ( plic_penable ),
+        .pwrite_i  ( plic_pwrite  ),
+        .paddr_i   ( plic_paddr   ),
+        .psel_i    ( plic_psel    ),
+        .pwdata_i  ( plic_pwdata  ),
+        .prdata_o  ( plic_prdata  ),
+        .pready_o  ( plic_pready  ),
+        .pslverr_o ( plic_pslverr ),
+        .reg_o     ( reg_bus      )
+    );
+
+    reg_intf::reg_intf_resp_d32 plic_resp;
+    reg_intf::reg_intf_req_a32_d32 plic_req;
+
+    assign plic_req.addr  = reg_bus.addr;
+    assign plic_req.write = reg_bus.write;
+    assign plic_req.wdata = reg_bus.wdata;
+    assign plic_req.wstrb = reg_bus.wstrb;
+    assign plic_req.valid = reg_bus.valid;
+
+    assign reg_bus.rdata = plic_resp.rdata;
+    assign reg_bus.error = plic_resp.error;
+    assign reg_bus.ready = plic_resp.ready;
+
+    plic_top #(
+      .N_SOURCE    ( ariane_soc::NumSources  ),
+      .N_TARGET    ( ariane_soc::NumTargets  ),
+      .MAX_PRIO    ( ariane_soc::MaxPriority )
+    ) i_plic (
+      .clk_i,
+      .rst_ni,
+      .req_i         ( plic_req    ),
+      .resp_o        ( plic_resp   ),
+      .le_i          ( '0          ), // 0:level 1:edge
+      .irq_sources_i ( irq_sources ),
+      .eip_targets_o ( irq         )
+    );
 
 `ifdef PROTOCOL_CHECKER
    wire [159:0]              pc_status;
