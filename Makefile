@@ -387,6 +387,7 @@ verilate_command := $(verilator)                                                
                     -Wno-UNUSED                                                                        \
                     -Wno-UNOPTFLAT                                                                     \
                     -Wno-style                                                                         \
+                    --debug --gdbbt                                                                    \
                     $(if $(PROFILE),--stats --stats-vars --profile-cfuncs,)                            \
                     $(if $(DEBUG),--trace --trace-structs,)                                            \
                     -LDFLAGS "-L$(RISCV)/lib -Wl,-rpath,$(RISCV)/lib -lfesvr$(if $(PROFILE), -g -pg,)" \
@@ -401,6 +402,14 @@ verilate:
 	@echo "[Verilator] Building Model$(if $(PROFILE), for Profiling,)"
 	$(verilate_command)
 	cd $(ver-library) && $(MAKE) -j${NUM_JOBS} -f Variane_testharness.mk
+
+verilate-tokens.v:
+	verilator -E $(filter-out %.vhd, $(ariane_pkg)) +define+$(defines) $(list_incdir)                                           \
+                    $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))                         \
+                    src/util/sram.sv                                                                   \
+                    | grep -v \`line | cat -s > $@
+	verilator -cc --top-module ariane_testharness --debug --gdbbt verilate-tokens.v |& tee verilator.log
+	zip bug1.zip verilate-tokens.v verilator.log
 
 sim-verilator: verilate
 	$(ver-library)/Variane_testharness $(elf-bin)

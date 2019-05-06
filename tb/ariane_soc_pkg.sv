@@ -49,10 +49,10 @@ package ariane_soc;
   localparam logic[63:0] ExtIOLength    = 64'h10000000;
   localparam logic[63:0] DRAMLength     = 64'h40000000; // 1GByte of DDR (split between two chips on Genesys2)
 // These peripheral lengths must be powers of 2, because of the way the I/O demux works
-  localparam logic[63:0] UARTLength     = 64'h1000;
-  localparam logic[63:0] SPILength      = 64'h800000;
+  localparam logic[63:0] UARTLength     = 64'h10000;
+  localparam logic[63:0] SPILength      = 64'h10000;
   localparam logic[63:0] EthernetLength = 64'h10000;
-  localparam logic[63:0] GPIOLength     = 64'h1000;
+  localparam logic[63:0] GPIOLength     = 64'h10000;
   // Instantiate AXI protocol checkers
   localparam bit GenProtocolChecker = 1'b0;
 

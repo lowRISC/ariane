@@ -26,7 +26,9 @@ ips-target := $(join $(addsuffix /ip/, $(addprefix $(ip-dir)/, $(basename $(ips)
 
 all: $(mcs)
 
-BBL=../../ariane-sdk-rng-tools/riscv-pk/build/bbl
+ELF=src/etherboot/etherboot.elf
+#BBL=../../ariane-sdk-rng-tools/riscv-pk/build/bbl
+BBL=$(ELF)
 # Generate mcs from bitstream
 $(mcs): $(bit)
 	$(VIVADO) $(VIVADOFLAGS) -source scripts/write_cfgmem.tcl -tclargs $@ $^ $(BBL)
@@ -46,8 +48,6 @@ mcs: $(mcs)
 
 program:
 	$(VIVADO) $(VIVADOFLAGS) -source scripts/program.tcl
-
-ELF=src/etherboot/etherboot.elf
 
 newmcs: work-fpga/ariane_xilinx.new.mcs
 

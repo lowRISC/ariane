@@ -6,12 +6,12 @@
   compatible = "eth,ariane-bare-dev";
   model = "eth,ariane-bare";
   chosen {
-    stdout-path = "/soc/uart@10000000:115200";
+    stdout-path = "/soc/uart@41000000:115200";
   };
   cpus {
     #address-cells = <1>;
     #size-cells = <0>;
-    timebase-frequency = <25000000>; // 15 MHz
+    timebase-frequency = <25000000>; // 25 MHz
     CPU0: cpu@0 {
       clock-frequency = <50000000>; // 50 MHz
       device_type = "cpu";
@@ -60,9 +60,9 @@
       reg = <0x0 0x0 0x0 0x1000>;
       reg-names = "control";
     };
-    uart@10000000 {
+    uart@41000000 {
       compatible = "ns16750";
-      reg = <0x0 0x10000000 0x0 0x1000>;
+      reg = <0x0 0x41000000 0x0 0x1000>;
       clock-frequency = <50000000>;
       current-speed = <115200>;
       interrupt-parent = <&PLIC0>;
@@ -70,23 +70,23 @@
       reg-shift = <2>; // regs are spaced on 32 bit boundary
       reg-io-width = <4>; // only 32-bit access are supported
     };
-    mmc: lowrisc-mmc@20000000 {
-      reg = <0x0 0x20000000 0x0 0x10000>;
+    mmc: lowrisc-mmc@42000000 {
+      reg = <0x0 0x42000000 0x0 0x10000>;
       interrupt-parent = <&PLIC0>;
       interrupts = <2>;
       compatible = "lowrisc-mmc";
       };
-    eth: lowrisc-eth@30000000 {
+    eth: lowrisc-eth@43000000 {
       compatible = "lowrisc-eth";
       device_type = "network";
       interrupt-parent = <&PLIC0>;
       interrupts = <3>;
       local-mac-address = [00 18 3e 02 e3 7f]; // This needs to change if more than one GenesysII on a VLAN
-      reg = <0x0 0x30000000 0x0 0x8000>;
+      reg = <0x0 0x43000000 0x0 0x8000>;
     };
-    hwrnd: lowrisc-hwrnd@40000000 {
+    hwrnd: lowrisc-hwrnd@44000000 {
       compatible = "lowrisc-hwrnd";
-      reg = <0x0 0x40000000 0x0 0x1000 >;
+      reg = <0x0 0x44000000 0x0 0x1000 >;
     };
   };
 };
