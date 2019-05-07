@@ -59,12 +59,13 @@ AXI_BUS #(
     .AXI_DATA_WIDTH ( AxiDataWidth     ),
     .AXI_ID_WIDTH   ( AxiIdWidth       ),
     .AXI_USER_WIDTH ( AxiUserWidth     )
-) master[3:0]();
+) master[4:0]();
 
-logic [3:0][AxiAddrWidth-1:0] BASE;
-logic [3:0][AxiAddrWidth-1:0] MASK;
+logic [4:0][AxiAddrWidth-1:0] BASE;
+logic [4:0][AxiAddrWidth-1:0] MASK;
 
 assign BASE = {
+        ariane_soc::BOOTBase,
         ariane_soc::UARTBase,
         ariane_soc::SPIBase,
         ariane_soc::EthernetBase,
@@ -72,6 +73,7 @@ assign BASE = {
       };
       
 assign MASK = {
+              ariane_soc::BOOTLength - 1,
               ariane_soc::UARTLength - 1,
               ariane_soc::SPILength - 1,
               ariane_soc::EthernetLength -1,
@@ -79,11 +81,47 @@ assign MASK = {
             };
 
 axi_demux_raw #(
-    .SLAVE_NUM  ( 4                ),
+    .SLAVE_NUM  ( 5                ),
     .ADDR_WIDTH ( AxiAddrWidth     ),
     .ID_WIDTH   ( AxiIdWidth       )
 ) demux (.clk(clk_i), .rstn(rst_ni), .master(iobus), .slave(master), .BASE, .MASK);
 
+// ---------------
+// BOOTRAM
+// ---------------
+
+logic                    ram_req, ram_we;
+logic [AxiAddrWidth-1:0] ram_addr;
+logic [AxiDataWidth-1:0] ram_rdata, ram_wdata;
+logic [AxiDataWidth/8-1:0] ram_be;
+
+axi2mem #(
+    .AXI_ID_WIDTH   ( AxiIdWidth       ),
+    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+    .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_USER_WIDTH ( AxiUserWidth     )
+) i_axi2rom (
+    .clk_i  ( clk_i                    ),
+    .rst_ni ( rst_ni                   ),
+    .slave  ( master[ariane_soc::BOOT] ),
+    .req_o  ( ram_req                  ),
+    .we_o   ( ram_we                   ),
+    .addr_o ( ram_addr                 ),
+    .be_o   ( ram_be                   ),
+    .data_o ( ram_wdata                ),
+    .data_i ( ram_rdata                )
+);
+
+bootram i_bootram (
+    .clk_i   ( clk_i     ),
+    .req_i   ( ram_req   ),
+    .we_i    ( ram_we    ),
+    .addr_i  ( ram_addr  ),
+    .be_i    ( ram_be    ),
+    .wdata_i ( ram_wdata ),
+    .rdata_o ( ram_rdata )
+);
+   
     // ---------------
     // 2. UART
     // ---------------
@@ -187,6 +225,7 @@ axi_demux_raw #(
             .SOUT    ( tx_o            )
         );
     end else begin
+        assign irq_sources[0] = 1'b0;
         /* pragma translate_off */
         `ifndef VERILATOR
         mock_uart i_mock_uart (

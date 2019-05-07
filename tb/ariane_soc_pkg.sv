@@ -36,7 +36,8 @@ package ariane_soc;
     GPIO     = 0,
     Ethernet = 1,
     SPI      = 2,
-    UART     = 3
+    UART     = 3,
+    BOOT     = 4
   } axi_extio_t;
 
   localparam NB_PERIPHERALS = Debug + 1;
@@ -49,6 +50,7 @@ package ariane_soc;
   localparam logic[63:0] ExtIOLength    = 64'h10000000;
   localparam logic[63:0] DRAMLength     = 64'h40000000; // 1GByte of DDR (split between two chips on Genesys2)
 // These peripheral lengths must be powers of 2, because of the way the I/O demux works
+  localparam logic[63:0] BOOTLength     = 64'h10000;
   localparam logic[63:0] UARTLength     = 64'h10000;
   localparam logic[63:0] SPILength      = 64'h10000;
   localparam logic[63:0] EthernetLength = 64'h10000;
@@ -66,6 +68,7 @@ package ariane_soc;
   } soc_bus_start_t;
 
   typedef enum logic [63:0] {
+    BOOTBase     = 64'h4000_0000,
     UARTBase     = 64'h4100_0000,
     SPIBase      = 64'h4200_0000,
     EthernetBase = 64'h4300_0000,

@@ -52,15 +52,13 @@ module ariane_xilinx (
   input  logic        tms         ,
   input  logic        trst_n      ,
   input  logic        tdi         ,
-  output logic        tdo         ,
+  output wire         tdo         ,
   input  logic        rx          ,
   output logic        tx          ,
   // Quad-SPI
   inout wire          QSPI_CSN    ,
   inout wire [3:0]    QSPI_D
 );
-// 24 MByte in 8 byte words
-localparam NumWords = (24 * 1024 * 1024) / 8;
 localparam NBSlave = 2; // debug, ariane
 localparam AxiAddrWidth = 64;
 localparam AxiDataWidth = 64;
@@ -71,7 +69,19 @@ localparam AxiUserWidth = 1;
 // MIG clock
 logic mig_sys_clk, mig_ui_clk, mig_ui_rst, mig_ui_rstn, sys_rst,
       clk, clk_rmii, clk_rmii_quad, clk_pixel, clk_locked_wiz;
-logic rst_n;
+logic rst_n, tdo_oe, tdo_data, ndmreset_n, locked;
+
+IOBUF #(
+          .DRIVE(12), // Specify the output drive strength
+          .IBUF_LOW_PWR("TRUE"),  // Low Power - "TRUE", High Performance = "FALSE"
+          .IOSTANDARD("DEFAULT"), // Specify the I/O standard
+          .SLEW("SLOW") // Specify the output slew rate
+       ) IOBUF_inst (
+          .O(),     // Buffer output
+          .IO(tdo),      // Buffer inout port (connect directly to top-level port)
+          .I(tdo_data),     // Buffer input
+          .T(~tdo_oe)    // 3-state enable input, high=input, low=output
+       );
 
 assign mig_ui_rstn = !mig_ui_rst;
 assign clk = mig_ui_clk;
@@ -82,9 +92,27 @@ xlnx_clk_nexys i_xlnx_clk_gen (
   .clk_out3 ( clk_rmii_quad  ), // 50 MHz quadrature (90 deg phase shift)
   .clk_out4 ( clk_pixel      ), // 120 MHz clock
   .resetn   ( cpu_resetn     ),
-  .locked   ( rst_n          ),
+  .locked   ( locked         ),
   .clk_in1  ( clk_p          )
 );
+
+logic rst_done;   
+logic [5:0] rst_count;
+   
+always @(posedge mig_ui_clk or posedge mig_ui_rst)
+  if (mig_ui_rst)
+    begin
+       rst_count <= '0;
+       rst_done = '0;
+       rst_n = '0;
+    end
+  else
+    begin
+       rst_done = &rst_count;
+       rst_count <= rst_count + !rst_done;
+       if (rst_done && locked)
+         rst_n = '1;
+    end
 
 // ---------------
 // DDR
@@ -96,10 +124,12 @@ AXI_BUS #(
     .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
     .AXI_USER_WIDTH ( AxiUserWidth     )
 ) dram(), iobus();
+
+`ifndef XLNX_MIG_SIMULATION
    
 xlnx_mig_7_ddr3 i_ddr (
     .sys_clk_i          ( mig_sys_clk ),
-    .sys_rst            ( rst_n  ),
+    .sys_rst            ( locked      ),
     .ui_addn_clk_0      (             ),
     .ui_addn_clk_1      (             ),  // output                                       ui_addn_clk_1
     .ui_addn_clk_2      (             ),  // output                                       ui_addn_clk_2
@@ -168,20 +198,58 @@ xlnx_mig_7_ddr3 i_ddr (
     .s_axi_rready    ( dram.r_ready   ),
     .init_calib_complete (            ) // keep open
 );
+`else // !`ifdef XLNX_MIG
+localparam NUM_WORDS = 16 * 1024 * 1024;
+   
+logic                    ddr_req, ddr_we;
+logic [AxiAddrWidth-1:0] ddr_addr;
+logic [AxiDataWidth-1:0] ddr_rdata, ddr_wdata;
+logic [AxiDataWidth/8-1:0] ddr_be;
+
+axi2mem #(
+    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
+    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+    .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_USER_WIDTH ( AxiUserWidth     )
+) i_axi2rom (
+    .clk_i  ( clk_i                    ),
+    .rst_ni ( rst_ni                   ),
+    .slave  ( dram                     ),
+    .req_o  ( ddr_req                  ),
+    .we_o   ( ddr_we                   ),
+    .addr_o ( ddr_addr                 ),
+    .be_o   ( ddr_be                   ),
+    .data_o ( ddr_wdata                ),
+    .data_i ( ddr_rdata                )
+);
+
+sram #(
+    .DATA_WIDTH ( AxiDataWidth ),
+    .NUM_WORDS  ( NUM_WORDS    )
+  ) i_sram (
+    .clk_i      ( clk_i                                                                       ),
+    .rst_ni     ( rst_ni                                                                      ),
+    .req_i      ( req                                                                         ),
+    .we_i       ( we                                                                          ),
+    .addr_i     ( addr[$clog2(NUM_WORDS)-1+$clog2(AxiDataWidth/8):$clog2(AxiDataWidth/8)] ),
+    .wdata_i    ( wdata                                                                       ),
+    .be_i       ( be                                                                          ),
+    .rdata_o    ( rdata                                                                       )
+  );
+
+assign mig_ui_rst = !locked;   
+  
+`endif //  `ifdef XLNX_MIG
 
 // disable test-enable
 logic test_en;
-logic ndmreset;
 logic debug_req_irq;
 logic time_irq;
 logic ipi;
 
-logic eth_clk;
 logic spi_clk_i;
 logic phy_tx_clk;
 logic sd_clk_sys;
-
-logic rtc;
 
 logic cpu_reset;
 

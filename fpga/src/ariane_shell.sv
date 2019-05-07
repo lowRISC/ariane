@@ -23,7 +23,7 @@ module ariane_shell (
   input logic  tms ,
   input logic  trst_n ,
   input logic  tdi ,
-  output logic tdo ,
+  output logic tdo_data ,
   output logic tdo_oe
 );
 // 24 MByte in 8 byte words
@@ -62,11 +62,6 @@ logic sd_clk_sys;
 
 logic rtc;
 
-// ROM
-logic                    rom_req, rom_we;
-logic [AxiAddrWidth-1:0] rom_addr;
-logic [AxiDataWidth-1:0] rom_rdata, rom_wdata;
-logic [AxiDataWidth/8-1:0] rom_be;
 // Debug
 logic          debug_req_valid;
 logic          debug_req_ready;
@@ -328,31 +323,33 @@ axi_slave_connect i_axi_slave_connect_clint (.axi_req_o(axi_clint_req), .axi_res
 // ---------------
 // ROM
 // ---------------
+// ROM
+logic                    rom_req;
+logic [AxiAddrWidth-1:0] rom_addr;
+logic [AxiDataWidth-1:0] rom_rdata;
+
 axi2mem #(
-    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
     .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
     .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
     .AXI_USER_WIDTH ( AxiUserWidth     )
 ) i_axi2rom (
-    .clk_i  ( clk                     ),
+    .clk_i  ( clk_i                   ),
     .rst_ni ( ndmreset_n              ),
     .slave  ( master[ariane_soc::ROM] ),
     .req_o  ( rom_req                 ),
-    .we_o   ( rom_we                  ),
+    .we_o   (                         ),
     .addr_o ( rom_addr                ),
-    .be_o   ( rom_be                  ),
-    .data_o ( rom_wdata               ),
+    .be_o   (                         ),
+    .data_o (                         ),
     .data_i ( rom_rdata               )
 );
 
-bootram i_bootram (
-    .clk_i   ( clk       ),
-    .req_i   ( rom_req   ),
-    .we_i    ( rom_we    ),
-    .addr_i  ( rom_addr  ),
-    .be_i    ( rom_be    ),
-    .wdata_i ( rom_wdata ),
-    .rdata_o ( rom_rdata )
+bootrom i_bootrom (                         
+    .clk_i      ( clk_i     ),
+    .req_i      ( rom_req   ),
+    .addr_i     ( rom_addr  ),
+    .rdata_o    ( rom_rdata )
 );
 
 // ---------------------

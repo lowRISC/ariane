@@ -121,25 +121,6 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         fpga/src/bootram.sv                                                    \
         fpga/src/ariane_shell.sv                                               \
         fpga/src/rocket_shell.sv                                               \
-        $(filter-out fpga/src/OpenIP/axi/common.sv                             \
-			fpga/src/OpenIP/axi/dummy_slave.sv                     \
-			fpga/src/OpenIP/axi/dummy_master.sv                    \
-			fpga/src/OpenIP/axi/id_downsizer.sv                    \
-			fpga/src/OpenIP/axi/to_lite.sv                         \
-			fpga/src/OpenIP/axi/from_lite.sv                       \
-			fpga/src/OpenIP/axi/crossbar.sv                        \
-			fpga/src/OpenIP/axi/bram_ctrl.sv                       \
-			fpga/src/OpenIP/axi/buf.sv                             \
-			fpga/src/OpenIP/axi/mux.sv                             \
-			fpga/src/OpenIP/axi/join.sv,                           \
-                        $(wildcard fpga/src/OpenIP/axi/d*.sv))                 \
-        $(filter-out fpga/src/OpenIP/util/from_if.sv                           \
-			fpga/src/OpenIP/util/to_if.sv                          \
-			fpga/src/OpenIP/util/axi_xbar_rework.sv                \
-			fpga/src/OpenIP/util/async_fifo.sv                     \
-			fpga/src/OpenIP/util/axi_xbar_wrapper.sv               \
-			fpga/src/OpenIP/util/axi_xbar_rework_wrapper.sv,       \
-                        $(wildcard fpga/src/OpenIP/util/*.sv))                 \
         src/rv_plic/rtl/rv_plic_target.sv                                      \
         src/rv_plic/rtl/rv_plic_gateway.sv                                     \
         src/rv_plic/rtl/plic_regmap.sv                                         \
@@ -190,11 +171,6 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         src/tech_cells_generic/src/pulp_clock_gating.sv                        \
         src/tech_cells_generic/src/cluster_clock_inverter.sv                   \
         src/tech_cells_generic/src/pulp_clock_mux2.sv                          \
-        tb/ariane_testharness.sv                                               \
-        tb/ariane_peripherals.sv                                               \
-        tb/common/uart.sv                                                      \
-        tb/common/SimDTM.sv                                                    \
-        tb/common/SimJTAG.sv                                                   \
         rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.v \
 	rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.behav_srams.v \
 	rocket-chip/vsrc/AsyncResetReg.v \
@@ -204,14 +180,51 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
 
 src := $(addprefix $(root-dir), $(src))
 
-fpga_src :=  $(wildcard fpga/src/*.sv) \
-             $(wildcard fpga/src/bootrom/*.sv) \
-             $(wildcard fpga/src/apb_uart/src/*.sv) \
-             $(filter-out fpga/src/OpenIP/axi/common.sv, $(wildcard fpga/src/OpenIP/axi/*.sv)) \
-             $(wildcard fpga/src/OpenIP/util/*.sv) \
-             $(wildcard fpga/src/ariane-ethernet/*.sv) \
-             $(wildcard fpga/src/spi_mem_programmer/*.sv)
+tb_src := tb/ariane_testharness.sv                                               \
+	  tb/ariane_peripherals.sv                                               \
+	  tb/common/uart.sv                                                      \
+	  tb/common/SimDTM.sv                                                    \
+	  tb/common/SimJTAG.sv                                                   \
+
+open_src := $(filter-out fpga/src/OpenIP/axi/common.sv                         \
+			fpga/src/OpenIP/axi/dummy_slave.sv                     \
+			fpga/src/OpenIP/axi/dummy_master.sv                    \
+			fpga/src/OpenIP/axi/id_downsizer.sv                    \
+			fpga/src/OpenIP/axi/to_lite.sv                         \
+			fpga/src/OpenIP/axi/from_lite.sv                       \
+			fpga/src/OpenIP/axi/crossbar.sv                        \
+			fpga/src/OpenIP/axi/bram_ctrl.sv                       \
+			fpga/src/OpenIP/axi/buf.sv                             \
+			fpga/src/OpenIP/axi/mux.sv                             \
+			fpga/src/OpenIP/axi/join.sv,                           \
+                        $(wildcard fpga/src/OpenIP/axi/[dr]*.sv))                 \
+        $(filter-out fpga/src/OpenIP/util/from_if.sv                           \
+			fpga/src/OpenIP/util/to_if.sv                          \
+			fpga/src/OpenIP/util/axi_xbar_rework.sv                \
+			fpga/src/OpenIP/util/async_fifo.sv                     \
+			fpga/src/OpenIP/util/axi_xbar_wrapper.sv               \
+			fpga/src/OpenIP/util/axi_xbar_rework_wrapper.sv,       \
+                        $(wildcard fpga/src/OpenIP/util/*.sv))                 \
+
+open_src := $(addprefix $(root-dir), $(open_src))
+
+fpga_src := $(filter-out fpga/src/ariane_shell.sv \
+                         fpga/src/rocket_shell.sv \
+                         fpga/src/bootram.sv, $(wildcard fpga/src/*.sv)) \
+            $(wildcard fpga/src/apb_uart/src/*.sv) \
+            $(wildcard fpga/src/ariane-ethernet/*.sv) \
+            $(wildcard fpga/src/spi_mem_programmer/*.sv)
+
 fpga_src := $(addprefix $(root-dir), $(fpga_src))
+
+sim_src := fpga/xilinx/xlnx_clk_sd/ip/xlnx_clk_sd_sim_netlist.v \
+	   fpga/xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter_sim_netlist.v \
+	   fpga/xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio_sim_netlist.v \
+	   fpga/xilinx/xlnx_clk_nexys/ip/xlnx_clk_nexys_sim_netlist.v \
+	   fpga/xilinx/xlnx_mig_7_ddr3/ip/xlnx_mig_7_ddr3_sim_netlist.v \
+	   fpga/xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi_sim_netlist.v \
+	   fpga/xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter_sim_netlist.v \
+           fpga/xilinx/xilinx_stubs.sv
 
 # look for testbenches
 tbs := tb/ariane_tb.sv tb/ariane_testharness.sv
@@ -231,7 +244,7 @@ riscv-fp-tests            := $(shell xargs printf '\n%s' < $(riscv-fp-tests-list
 riscv-benchmarks          := $(shell xargs printf '\n%s' < $(riscv-benchmarks-list) | cut -b 1-)
 
 # Search here for include files (e.g.: non-standalone components)
-incdir := src/common_cells/include/common_cells src/axi_node 
+incdir := src/common_cells/include/common_cells src/axi_node fpga/src fpga/src/spi_mem_programmer
 # Compile and sim flags
 compile_flag     += +cover=bcfst+/dut -incr -64 -nologo -quiet -suppress 13262 -permissive +define+$(defines)
 uvm-flags        += +UVM_NO_RELNOTES +UVM_VERBOSITY=LOW
@@ -379,7 +392,7 @@ check-benchmarks:
 
 verilate_command := $(verilator)                                                                       \
                     $(filter-out %.vhd, $(ariane_pkg))                                                 \
-                    $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))                         \
+                    $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src) $(tb_src)))               \
                     +define+$(defines)                                                                 \
                     src/util/sram.sv                                                                   \
                     +incdir+src/axi_node                                                               \
@@ -412,7 +425,7 @@ verilate:
 
 verilate-tokens.v:
 	verilator -E $(filter-out %.vhd, $(ariane_pkg)) +define+$(defines) $(list_incdir)                                           \
-                    $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src)))                         \
+                    $(filter-out src/fpu_wrap.sv, $(filter-out %.vhd, $(src) $(tb_src))                \
                     src/util/sram.sv                                                                   \
                     | grep -v \`line | cat -s > $@
 	verilator -cc --top-module ariane_testharness --debug --gdbbt verilate-tokens.v |& tee verilator.log
@@ -538,7 +551,7 @@ $(ddr_path)/$(ddr_user_design)/xlnx_mig_7_ddr3.v \
 
 vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps -error=noZMMCM \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
-	            $(filter-out src/fpu_wrap.sv fpga/src/axi_slice/src/axi_slice_wrap.sv, $(filter-out %.vhd, $(src)))             \
+	            $(filter-out src/fpu_wrap.sv fpga/src/axi_slice/src/axi_slice_wrap.sv, $(filter-out %.vhd, $(src) $(tb_src)))             \
 	            +define+$(defines)                                                     \
 	            +define+RANDOMIZE_MEM_INIT                                             \
 	            +define+RANDOMIZE_REG_INIT                                             \
@@ -551,6 +564,26 @@ vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate 
                     fpga/src/OpenIP/axi/regslice.sv                                        \
 	            tb/ariane_tb.sv                                                        \
                     src/tech_cells_generic/src/cluster_clock_gating.sv                     \
+
+vcs_command_fpga := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps -error=noZMMCM \
+	            $(filter-out %.vhd, $(ariane_pkg))                                     \
+	            $(filter-out src/fpu_wrap.sv fpga/src/axi_slice/src/axi_slice_wrap.sv, $(filter-out %.vhd, $(src)))             \
+	            +define+$(defines)                                                     \
+	            +define+RANDOMIZE_MEM_INIT                                             \
+	            +define+RANDOMIZE_REG_INIT                                             \
+	            +define+RANDOMIZE_GARBAGE_ASSIGN                                       \
+	            +define+RANDOMIZE_INVALID_ASSIGN                                       \
+	            +define+SIMULATION                                                     \
+	            $(list_incdir)                                                         \
+		    src/util/sram.sv                                                       \
+	            fpga/xilinx/xilinx_tb.sv                                               \
+                    src/tech_cells_generic/src/cluster_clock_gating.sv                     \
+                    $(fpga_src) $(open_src) $(sim_src)                                     \
+                    tb/common/SimJTAG.sv                                                   \
+                    -y $(XILINX_VIVADO)/data/verilog/src/unisims                           \
+                    -y $(XILINX_VIVADO)/data/verilog/src/retarget                          \
+                    $(XILINX_VIVADO)/data/verilog/src/glbl.v                               \
+                    +libext+.v
 
 vlogan_command_ddr := vlogan -work xil_defaultlib -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
@@ -597,6 +630,10 @@ vcs_command_orig := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_gene
 sim-vcs:
 	@echo "[Vcs] Building Model"
 	$(vcs_command)
+
+sim-vcs-fpga:
+	@echo "[Vcs] Building Model"
+	$(vcs_command_fpga)
 
 sim-vcs-debug:
 	@echo "[Vcs] Building Model"
@@ -705,6 +742,7 @@ fpga: $(ariane_pkg) $(util) $(src) $(fpga_src)
 	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(util))}     >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> fpga/scripts/add_sources.tcl
 	@echo read_verilog -sv {$(fpga_src)}   >> fpga/scripts/add_sources.tcl
+	@echo read_verilog -sv {$(open_src)}   >> fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"
 	cd fpga && make BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" CLK_PERIOD_NS="20"
 

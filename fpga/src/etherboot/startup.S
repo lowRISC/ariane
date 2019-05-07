@@ -10,7 +10,7 @@
 _prog_start:
   smp_pause(s1, s2)
 # use a delay to allow the debugger in
-  li t4, 10000
+  li t4, 10
 _wait_dbg:
   add t4, t4, -1
   bne t4, zero, _wait_dbg

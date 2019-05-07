@@ -50,12 +50,13 @@ AXI_BUS #(
     .AXI_DATA_WIDTH ( AxiDataWidth     ),
     .AXI_ID_WIDTH   ( AxiIdWidth       ),
     .AXI_USER_WIDTH ( AxiUserWidth     )
-) master[3:0]();
+) master[4:0]();
 
-logic [3:0][AxiAddrWidth-1:0] BASE;
-logic [3:0][AxiAddrWidth-1:0] MASK;
+logic [4:0][AxiAddrWidth-1:0] BASE;
+logic [4:0][AxiAddrWidth-1:0] MASK;
 
 assign BASE = {
+        ariane_soc::BOOTBase,
         ariane_soc::UARTBase,
         ariane_soc::SPIBase,
         ariane_soc::EthernetBase,
@@ -63,18 +64,55 @@ assign BASE = {
       };
       
 assign MASK = {
-              ariane_soc::UARTBase     + ariane_soc::UARTLength - 1,
-              ariane_soc::SPIBase      + ariane_soc::SPILength - 1,
-              ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
-              ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1
+              ariane_soc::BOOTLength - 1,
+              ariane_soc::UARTLength - 1,
+              ariane_soc::SPILength - 1,
+              ariane_soc::EthernetLength -1,
+              ariane_soc::GPIOLength - 1
             };
 
 axi_demux_raw #(
-    .SLAVE_NUM  ( 4                ),
+    .SLAVE_NUM  ( 5                ),
     .ADDR_WIDTH ( AxiAddrWidth     ),
     .ID_WIDTH   ( AxiIdWidth       )
 ) demux (.clk(clk_i), .rstn(rst_ni), .master(iobus), .slave(master), .BASE, .MASK);
 
+// ---------------
+// BOOTRAM
+// ---------------
+
+logic                    ram_req, ram_we;
+logic [AxiAddrWidth-1:0] ram_addr;
+logic [AxiDataWidth-1:0] ram_rdata, ram_wdata;
+logic [AxiDataWidth/8-1:0] ram_be;
+
+axi2mem #(
+    .AXI_ID_WIDTH   ( AxiIdWidth       ),
+    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+    .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_USER_WIDTH ( AxiUserWidth     )
+) i_axi2rom (
+    .clk_i  ( clk_i                    ),
+    .rst_ni ( rst_ni                   ),
+    .slave  ( master[ariane_soc::BOOT] ),
+    .req_o  ( ram_req                  ),
+    .we_o   ( ram_we                   ),
+    .addr_o ( ram_addr                 ),
+    .be_o   ( ram_be                   ),
+    .data_o ( ram_wdata                ),
+    .data_i ( ram_rdata                )
+);
+
+bootram i_bootram (
+    .clk_i   ( clk_i     ),
+    .req_i   ( ram_req   ),
+    .we_i    ( ram_we    ),
+    .addr_i  ( ram_addr  ),
+    .be_i    ( ram_be    ),
+    .wdata_i ( ram_wdata ),
+    .rdata_o ( ram_rdata )
+);
+   
     // ---------------
     // 2. UART
     // ---------------
@@ -201,179 +239,52 @@ axi_demux_raw #(
     // 3. SPI
     // ---------------
     if (InclSPI) begin : gen_spi
-        logic [31:0] s_axi_spi_awaddr;
-        logic [7:0]  s_axi_spi_awlen;
-        logic [2:0]  s_axi_spi_awsize;
-        logic [1:0]  s_axi_spi_awburst;
-        logic [0:0]  s_axi_spi_awlock;
-        logic [3:0]  s_axi_spi_awcache;
-        logic [2:0]  s_axi_spi_awprot;
-        logic [3:0]  s_axi_spi_awregion;
-        logic [3:0]  s_axi_spi_awqos;
-        logic        s_axi_spi_awvalid;
-        logic        s_axi_spi_awready;
-        logic [31:0] s_axi_spi_wdata;
-        logic [3:0]  s_axi_spi_wstrb;
-        logic        s_axi_spi_wlast;
-        logic        s_axi_spi_wvalid;
-        logic        s_axi_spi_wready;
-        logic [1:0]  s_axi_spi_bresp;
-        logic        s_axi_spi_bvalid;
-        logic        s_axi_spi_bready;
-        logic [31:0] s_axi_spi_araddr;
-        logic [7:0]  s_axi_spi_arlen;
-        logic [2:0]  s_axi_spi_arsize;
-        logic [1:0]  s_axi_spi_arburst;
-        logic [0:0]  s_axi_spi_arlock;
-        logic [3:0]  s_axi_spi_arcache;
-        logic [2:0]  s_axi_spi_arprot;
-        logic [3:0]  s_axi_spi_arregion;
-        logic [3:0]  s_axi_spi_arqos;
-        logic        s_axi_spi_arvalid;
-        logic        s_axi_spi_arready;
-        logic [31:0] s_axi_spi_rdata;
-        logic [1:0]  s_axi_spi_rresp;
-        logic        s_axi_spi_rlast;
-        logic        s_axi_spi_rvalid;
-        logic        s_axi_spi_rready;
 
-        xlnx_axi_clock_converter i_xlnx_axi_clock_converter_spi (
-            .s_axi_aclk     ( clk_i              ),
-            .s_axi_aresetn  ( rst_ni             ),
+logic                    spi_en, spi_we, spi_int_n, spi_pme_n, spi_mdio_i, spi_mdio_o, spi_mdio_oe;
+logic [AxiAddrWidth-1:0] spi_addr;
+logic [AxiDataWidth-1:0] spi_wrdata, spi_rdata;
+logic [AxiDataWidth/8-1:0] spi_be;
 
-            .s_axi_awid     ( master[ariane_soc::SPI].aw_id          ),
-            .s_axi_awaddr   ( master[ariane_soc::SPI].aw_addr[31:0]  ),
-            .s_axi_awlen    ( master[ariane_soc::SPI].aw_len         ),
-            .s_axi_awsize   ( master[ariane_soc::SPI].aw_size        ),
-            .s_axi_awburst  ( master[ariane_soc::SPI].aw_burst       ),
-            .s_axi_awlock   ( master[ariane_soc::SPI].aw_lock        ),
-            .s_axi_awcache  ( master[ariane_soc::SPI].aw_cache       ),
-            .s_axi_awprot   ( master[ariane_soc::SPI].aw_prot        ),
-            .s_axi_awregion ( master[ariane_soc::SPI].aw_region      ),
-            .s_axi_awqos    ( master[ariane_soc::SPI].aw_qos         ),
-            .s_axi_awvalid  ( master[ariane_soc::SPI].aw_valid       ),
-            .s_axi_awready  ( master[ariane_soc::SPI].aw_ready       ),
-            .s_axi_wdata    ( master[ariane_soc::SPI].w_data         ),
-            .s_axi_wstrb    ( master[ariane_soc::SPI].w_strb         ),
-            .s_axi_wlast    ( master[ariane_soc::SPI].w_last         ),
-            .s_axi_wvalid   ( master[ariane_soc::SPI].w_valid        ),
-            .s_axi_wready   ( master[ariane_soc::SPI].w_ready        ),
-            .s_axi_bid      ( master[ariane_soc::SPI].b_id           ),
-            .s_axi_bresp    ( master[ariane_soc::SPI].b_resp         ),
-            .s_axi_bvalid   ( master[ariane_soc::SPI].b_valid        ),
-            .s_axi_bready   ( master[ariane_soc::SPI].b_ready        ),
-            .s_axi_arid     ( master[ariane_soc::SPI].ar_id          ),
-            .s_axi_araddr   ( master[ariane_soc::SPI].ar_addr[31:0]  ),
-            .s_axi_arlen    ( master[ariane_soc::SPI].ar_len         ),
-            .s_axi_arsize   ( master[ariane_soc::SPI].ar_size        ),
-            .s_axi_arburst  ( master[ariane_soc::SPI].ar_burst       ),
-            .s_axi_arlock   ( master[ariane_soc::SPI].ar_lock        ),
-            .s_axi_arcache  ( master[ariane_soc::SPI].ar_cache       ),
-            .s_axi_arprot   ( master[ariane_soc::SPI].ar_prot        ),
-            .s_axi_arregion ( master[ariane_soc::SPI].ar_region      ),
-            .s_axi_arqos    ( master[ariane_soc::SPI].ar_qos         ),
-            .s_axi_arvalid  ( master[ariane_soc::SPI].ar_valid       ),
-            .s_axi_arready  ( master[ariane_soc::SPI].ar_ready       ),
-            .s_axi_rid      ( master[ariane_soc::SPI].r_id           ),
-            .s_axi_rdata    ( master[ariane_soc::SPI].r_data         ),
-            .s_axi_rresp    ( master[ariane_soc::SPI].r_resp         ),
-            .s_axi_rlast    ( master[ariane_soc::SPI].r_last         ),
-            .s_axi_rvalid   ( master[ariane_soc::SPI].r_valid        ),
-            .s_axi_rready   ( master[ariane_soc::SPI].r_ready        ),
+axi2mem #(
+    .AXI_ID_WIDTH   ( AxiIdWidth       ),
+    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+    .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_USER_WIDTH ( AxiUserWidth     )
+) i_axi2spi (
+    .clk_i  ( clk_i                   ),
+    .rst_ni ( rst_ni                  ),
+    .slave  ( master[ariane_soc::SPI] ),
+    .req_o  ( spi_en                  ),
+    .we_o   ( spi_we                  ),
+    .addr_o ( spi_addr                ),
+    .be_o   ( spi_be                  ),
+    .data_o ( spi_wrdata              ),
+    .data_i ( spi_rdata               )
+);
 
-            .m_axi_awaddr   ( s_axi_spi_awaddr   ),
-            .m_axi_awlen    ( s_axi_spi_awlen    ),
-            .m_axi_awsize   ( s_axi_spi_awsize   ),
-            .m_axi_awburst  ( s_axi_spi_awburst  ),
-            .m_axi_awlock   ( s_axi_spi_awlock   ),
-            .m_axi_awcache  ( s_axi_spi_awcache  ),
-            .m_axi_awprot   ( s_axi_spi_awprot   ),
-            .m_axi_awregion ( s_axi_spi_awregion ),
-            .m_axi_awqos    ( s_axi_spi_awqos    ),
-            .m_axi_awvalid  ( s_axi_spi_awvalid  ),
-            .m_axi_awready  ( s_axi_spi_awready  ),
-            .m_axi_wdata    ( s_axi_spi_wdata    ),
-            .m_axi_wstrb    ( s_axi_spi_wstrb    ),
-            .m_axi_wlast    ( s_axi_spi_wlast    ),
-            .m_axi_wvalid   ( s_axi_spi_wvalid   ),
-            .m_axi_wready   ( s_axi_spi_wready   ),
-            .m_axi_bresp    ( s_axi_spi_bresp    ),
-            .m_axi_bvalid   ( s_axi_spi_bvalid   ),
-            .m_axi_bready   ( s_axi_spi_bready   ),
-            .m_axi_araddr   ( s_axi_spi_araddr   ),
-            .m_axi_arlen    ( s_axi_spi_arlen    ),
-            .m_axi_arsize   ( s_axi_spi_arsize   ),
-            .m_axi_arburst  ( s_axi_spi_arburst  ),
-            .m_axi_arlock   ( s_axi_spi_arlock   ),
-            .m_axi_arcache  ( s_axi_spi_arcache  ),
-            .m_axi_arprot   ( s_axi_spi_arprot   ),
-            .m_axi_arregion ( s_axi_spi_arregion ),
-            .m_axi_arqos    ( s_axi_spi_arqos    ),
-            .m_axi_arvalid  ( s_axi_spi_arvalid  ),
-            .m_axi_arready  ( s_axi_spi_arready  ),
-            .m_axi_rdata    ( s_axi_spi_rdata    ),
-            .m_axi_rresp    ( s_axi_spi_rresp    ),
-            .m_axi_rlast    ( s_axi_spi_rlast    ),
-            .m_axi_rvalid   ( s_axi_spi_rvalid   ),
-            .m_axi_rready   ( s_axi_spi_rready   )
-        );
-
-        xlnx_axi_quad_spi i_xlnx_axi_quad_spi (
-            .ext_spi_clk    ( clk_i                  ),
-            .s_axi4_aclk    ( clk_i                  ),
-            .s_axi4_aresetn ( rst_ni                 ),
-            .s_axi4_awaddr  ( s_axi_spi_awaddr[23:0] ),
-            .s_axi4_awlen   ( s_axi_spi_awlen        ),
-            .s_axi4_awsize  ( s_axi_spi_awsize       ),
-            .s_axi4_awburst ( s_axi_spi_awburst      ),
-            .s_axi4_awlock  ( s_axi_spi_awlock       ),
-            .s_axi4_awcache ( s_axi_spi_awcache      ),
-            .s_axi4_awprot  ( s_axi_spi_awprot       ),
-            .s_axi4_awvalid ( s_axi_spi_awvalid      ),
-            .s_axi4_awready ( s_axi_spi_awready      ),
-            .s_axi4_wdata   ( s_axi_spi_wdata        ),
-            .s_axi4_wstrb   ( s_axi_spi_wstrb        ),
-            .s_axi4_wlast   ( s_axi_spi_wlast        ),
-            .s_axi4_wvalid  ( s_axi_spi_wvalid       ),
-            .s_axi4_wready  ( s_axi_spi_wready       ),
-            .s_axi4_bresp   ( s_axi_spi_bresp        ),
-            .s_axi4_bvalid  ( s_axi_spi_bvalid       ),
-            .s_axi4_bready  ( s_axi_spi_bready       ),
-            .s_axi4_araddr  ( s_axi_spi_araddr[23:0] ),
-            .s_axi4_arlen   ( s_axi_spi_arlen        ),
-            .s_axi4_arsize  ( s_axi_spi_arsize       ),
-            .s_axi4_arburst ( s_axi_spi_arburst      ),
-            .s_axi4_arlock  ( s_axi_spi_arlock       ),
-            .s_axi4_arcache ( s_axi_spi_arcache      ),
-            .s_axi4_arprot  ( s_axi_spi_arprot       ),
-            .s_axi4_arvalid ( s_axi_spi_arvalid      ),
-            .s_axi4_arready ( s_axi_spi_arready      ),
-            .s_axi4_rdata   ( s_axi_spi_rdata        ),
-            .s_axi4_rresp   ( s_axi_spi_rresp        ),
-            .s_axi4_rlast   ( s_axi_spi_rlast        ),
-            .s_axi4_rvalid  ( s_axi_spi_rvalid       ),
-            .s_axi4_rready  ( s_axi_spi_rready       ),
-
-            .io0_i          ( '0                     ),
-            .io0_o          ( spi_mosi               ),
-            .io0_t          ( '0                     ),
-            .io1_i          ( spi_miso               ),
-            .io1_o          (                        ),
-            .io1_t          ( '0                     ),
-            .ss_i           ( '0                     ),
-            .ss_o           ( spi_ss                 ),
-            .ss_t           ( '0                     ),
-            .sck_o          ( spi_clk_o              ),
-            .sck_i          ( '0                     ),
-            .sck_t          (                        ),
-            .ip2intc_irpt   ( irq_sources[1]         )
-            // .ip2intc_irpt   ( irq_sources[1]         )
-        );
-        // assign irq_sources [1] = 1'b0;
+sd_bus sd1
+  (
+   .spisd_en     ( spi_en                  ),
+   .spisd_we     ( spi_we                  ),
+   .spisd_addr   ( spi_addr                ),
+   .spisd_be     ( spi_be                  ),
+   .spisd_wrdata ( spi_wrdata              ),
+   .spisd_rddata ( spi_rdata               ),
+   .clk_200MHz   ( clk_200MHz_i            ),
+   .msoc_clk     ( clk_i                   ),
+   .rstn         ( rst_ni                  ),
+   .sd_sclk,
+   .sd_detect,
+   .sd_dat,
+   .sd_cmd,
+   .sd_reset,
+   .sd_irq       ( irq_sources[1]          )
+   );
+       
     end else begin
-        assign spi_clk_o = 1'b0;
-        assign spi_mosi = 1'b0;
-        assign spi_ss = 1'b0;
+        assign sd_sclk = 1'b0;
+        assign sd_dat = 4'bzzzz;
+        assign sd_cmd = 1'bz;
 
         assign irq_sources [1] = 1'b0;
         assign master[ariane_soc::SPI].aw_ready = 1'b1;
@@ -415,4 +326,49 @@ axi_demux_raw #(
         assign master[ariane_soc::Ethernet].r_data = 'hdeadbeef;
         assign master[ariane_soc::Ethernet].r_last = 1'b1;
     end
+
+    // 5. GPIO
+
+    if (InclGPIO) begin : gen_gpio
+
+logic                    gpio_en, gpio_we, gpio_int_n, gpio_pme_n, gpio_mdio_i, gpio_mdio_o, gpio_mdio_oe;
+logic [AxiAddrWidth-1:0] gpio_addr, gpio_addr_prev;
+logic [AxiDataWidth-1:0] gpio_wrdata, gpio_rdata;
+logic [AxiDataWidth/8-1:0] gpio_be;
+
+axi2mem #(
+    .AXI_ID_WIDTH   ( AxiIdWidth       ),
+    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+    .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_USER_WIDTH ( AxiUserWidth     )
+) i_axi2gpio (
+    .clk_i  ( clk_i                    ),
+    .rst_ni ( rst_ni                   ),
+    .slave  ( master[ariane_soc::GPIO] ),
+    .req_o  ( gpio_en                  ),
+    .we_o   ( gpio_we                  ),
+    .addr_o ( gpio_addr                ),
+    .be_o   ( gpio_be                  ),
+    .data_o ( gpio_wrdata              ),
+    .data_i ( gpio_rdata               )
+);
+
+    end // block: gen_gpio
+    else
+      begin
+        assign master[ariane_soc::GPIO].aw_ready = 1'b1;
+        assign master[ariane_soc::GPIO].ar_ready = 1'b1;
+        assign master[ariane_soc::GPIO].w_ready = 1'b1;
+
+        assign master[ariane_soc::GPIO].b_valid = master[ariane_soc::GPIO].aw_valid;
+        assign master[ariane_soc::GPIO].b_id = master[ariane_soc::GPIO].aw_id;
+        assign master[ariane_soc::GPIO].b_resp = axi_pkg::RESP_SLVERR;
+        assign master[ariane_soc::GPIO].b_user = '0;
+
+        assign master[ariane_soc::GPIO].r_valid = master[ariane_soc::GPIO].ar_valid;
+        assign master[ariane_soc::GPIO].r_resp = axi_pkg::RESP_SLVERR;
+        assign master[ariane_soc::GPIO].r_data = 'hdeadbeef;
+        assign master[ariane_soc::GPIO].r_last = 1'b1;
+    end
+     
 endmodule

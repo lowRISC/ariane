@@ -408,7 +408,7 @@ module ariane_testharness #(
     .tms             ( jtag_TMS             ),
     .tdi             ( jtag_TDI             ),
     .trst_n          ( jtag_TRSTn           ),
-    .tdo             ( jtag_TDO_data        ),
+    .tdo_data        ( jtag_TDO_data        ),
     .tdo_oe          ( jtag_TDO_driven      )
   );
 

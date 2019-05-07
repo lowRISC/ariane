@@ -23,7 +23,7 @@ module rocket_shell (
   input logic  tms ,
   input logic  trst_n ,
   input logic  tdi ,
-  output logic tdo ,
+  output logic tdo_data ,
   output logic tdo_oe
 );
    
