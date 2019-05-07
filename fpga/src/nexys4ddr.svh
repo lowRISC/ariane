@@ -12,7 +12,8 @@
 // Author: Florian Zaruba <zarubaf@iis.ee.ethz.ch>
 
 `define NEXYS4DDR
-
+`define SYNTHESIS
+`define FPGA_TARGET_XILINX
 `define ARIANE_DATA_WIDTH 64
 
 // Instantiate protocl checker

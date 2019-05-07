@@ -82,27 +82,9 @@ xlnx_clk_nexys i_xlnx_clk_gen (
   .clk_out3 ( clk_rmii_quad  ), // 50 MHz quadrature (90 deg phase shift)
   .clk_out4 ( clk_pixel      ), // 120 MHz clock
   .resetn   ( cpu_resetn     ),
-  .locked   ( clk_locked_wiz ),
+  .locked   ( rst_n          ),
   .clk_in1  ( clk_p          )
 );
-
-logic rst_done;   
-logic [5:0] rst_count;
-   
-always @(posedge clk_p or negedge cpu_resetn)
-  if (!cpu_resetn)
-    begin
-       rst_count <= '0;
-       rst_done = '0;
-       rst_n = '0;
-    end
-  else
-    begin
-       rst_done = &rst_count;
-       rst_count <= rst_count + !rst_done;
-       if (rst_done && clk_locked_wiz)
-         rst_n = '1;
-    end
 
 // ---------------
 // DDR
@@ -263,6 +245,10 @@ fan_ctrl i_fan_ctrl (
     .fan_pwm_o     ( fan_pwm    )
 );
 
+`ifdef ARIANE_SHELL   
 ariane_shell shell1(.*);
-
+`else
+rocket_shell shell1(.*);
+`endif
+   
 endmodule

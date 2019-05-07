@@ -120,6 +120,7 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         $(wildcard src/axi_mem_if/src/*.sv)                                    \
         fpga/src/bootram.sv                                                    \
         fpga/src/ariane_shell.sv                                               \
+        fpga/src/rocket_shell.sv                                               \
         $(filter-out fpga/src/OpenIP/axi/common.sv                             \
 			fpga/src/OpenIP/axi/dummy_slave.sv                     \
 			fpga/src/OpenIP/axi/dummy_master.sv                    \
@@ -193,7 +194,13 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         tb/ariane_peripherals.sv                                               \
         tb/common/uart.sv                                                      \
         tb/common/SimDTM.sv                                                    \
-        tb/common/SimJTAG.sv
+        tb/common/SimJTAG.sv                                                   \
+        rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.v \
+	rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.behav_srams.v \
+	rocket-chip/vsrc/AsyncResetReg.v \
+	rocket-chip/vsrc/ClockDivider2.v \
+	rocket-chip/vsrc/ClockDivider3.v \
+	rocket-chip/vsrc/plusarg_reader.v \
 
 src := $(addprefix $(root-dir), $(src))
 
@@ -533,14 +540,17 @@ vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate 
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
 	            $(filter-out src/fpu_wrap.sv fpga/src/axi_slice/src/axi_slice_wrap.sv, $(filter-out %.vhd, $(src)))             \
 	            +define+$(defines)                                                     \
-	            +define+SIMPLE_XBAR                                                    \
+	            +define+RANDOMIZE_MEM_INIT                                             \
+	            +define+RANDOMIZE_REG_INIT                                             \
+	            +define+RANDOMIZE_GARBAGE_ASSIGN                                       \
+	            +define+RANDOMIZE_INVALID_ASSIGN                                       \
 	            +define+SIMULATION                                                     \
 	            $(list_incdir)                                                         \
 		    src/util/sram.sv                                                       \
                     fpga/src/apb_uart/src/*.sv                                             \
-                    fpga/src/OpenIP/axi/regslice.sv  \
+                    fpga/src/OpenIP/axi/regslice.sv                                        \
 	            tb/ariane_tb.sv                                                        \
-                    src/tech_cells_generic/src/cluster_clock_gating.sv
+                    src/tech_cells_generic/src/cluster_clock_gating.sv                     \
 
 vlogan_command_ddr := vlogan -work xil_defaultlib -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \

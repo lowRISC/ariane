@@ -391,7 +391,12 @@ module ariane_testharness #(
   // Shell
   // ---------------
 
-  ariane_shell i_shell (
+`ifdef ARIANE_SHELL   
+  ariane_shell i_shell
+`else
+  rocket_shell i_shell
+`endif
+    (
     .clk             ( clk_i                ),
     .rst_n           ( rst_ni               ),
     .irq_sources,

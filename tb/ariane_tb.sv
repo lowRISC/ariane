@@ -126,7 +126,11 @@ module ariane_tb;
     initial begin
         automatic logic [7:0][7:0] mem_row;
         longint address, len;
-        byte buffer[];       
+        byte buffer[];
+        int unsigned rand_value;
+        rand_value = $urandom;
+        rand_value = $random(rand_value);
+        $display("testing $random %0x seed %d", rand_value, unsigned'($get_initial_random_seed));
 `ifdef VCS
        $vcdpluson();
 `else       
@@ -166,7 +170,7 @@ UVM_LOW)
     .AXI_DATA_WIDTH ( 64     ),
     .AXI_ID_WIDTH   ( 5      ),
     .AXI_USER_WIDTH ( 1      )
-) axi_dummy[14:0] (), axi_master[3:0] (), axi_slave[3:0] (), axi_master4[3:0] ();
+) axi_dummy[17:0] (), axi_master[3:0] (), axi_slave[3:0] (), axi_master4[3:0] ();
    AXI_LITE #(
     .AXI_ADDR_WIDTH ( 64     ),
     .AXI_DATA_WIDTH ( 64     ),
@@ -202,6 +206,7 @@ UVM_LOW)
               .BASE(0),
               .MASK(0));
    stream_mux #(.N_INP(2)) dummy12 ();
+   ariane_shell dummy13(.dram(axi_dummy[15]), .iobus(axi_dummy[16]));
    
 `endif   
    
