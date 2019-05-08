@@ -30,13 +30,10 @@ source scripts/add_sources.tcl
 
 set_property top ${project}_xilinx [current_fileset]
 
-if {$::env(BOARD) eq "nexys4_ddr"} {
-    read_verilog -sv {src/nexys4ddr.svh ../src/common_cells/include/common_cells/registers.svh }
-    set file "src/nexys4ddr.svh"
-    set registers "../src/common_cells/include/common_cells/registers.svh"
-} else {
-    exit 1
-}
+set file src/$::env(BOARD)_$::env(CPU).svh
+set registers "../src/common_cells/include/common_cells/registers.svh"
+
+read_verilog -sv $file $registers
 
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file" "*$registers"]]
 set_property -dict { file_type {Verilog Header} is_global_include 1} -objects $file_obj

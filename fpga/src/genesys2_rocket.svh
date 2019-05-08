@@ -12,10 +12,13 @@
 // Author: Florian Zaruba <zarubaf@iis.ee.ethz.ch>
 
 `define GENESYSII
-
+`define SYNTHESIS
+`define FPGA_TARGET_XILINX
 `define ARIANE_DATA_WIDTH 64
 
-// Instantiate protocl checker
+// `define ARIANE_SHELL
+// `define FPNEW_TOP_DUMMY
+// Instantiate protocol checker
 // `define PROTOCOL_CHECKER
 
 // write-back cache
@@ -23,3 +26,10 @@
 
 // write-through cache
 `define WT_DCACHE
+// Spansion QSPI configuration memory
+`define QSPI_CONFIG_MEM
+
+// Logic analysers enabled
+
+`define XLNX_ILA_QSPI
+// `define XLNX_ILA_TRACE

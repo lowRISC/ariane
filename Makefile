@@ -174,12 +174,12 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
 
 src := $(addprefix $(root-dir), $(src))
 
-rocket_src := rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.v \
-	      rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.behav_srams.v \
-	      rocket-chip/vsrc/AsyncResetReg.v \
-	      rocket-chip/vsrc/ClockDivider2.v \
-	      rocket-chip/vsrc/ClockDivider3.v \
-	      rocket-chip/vsrc/plusarg_reader.v \
+rocket_src := ../rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.v \
+	      ../rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.behav_srams.v \
+	      ../rocket-chip/vsrc/AsyncResetReg.v \
+	      ../rocket-chip/vsrc/ClockDivider2.v \
+	      ../rocket-chip/vsrc/ClockDivider3.v \
+	      ../rocket-chip/vsrc/plusarg_reader.v \
 
 rocket_src := $(addprefix $(root-dir), $(rocket_src))
 
@@ -743,16 +743,28 @@ ariane: $(ariane_pkg) $(util) $(src) $(fpga_src)
 	@echo "[FPGA] Generate sources"
 	@echo read_verilog -sv {$(ariane_pkg) $(filter-out $(fpga_filter), $(util) $(src)) $(fpga_src) $(open_src)} > fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"
-	cd fpga && make BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" CLK_PERIOD_NS="20"
+	cd fpga && make BOARD=$(BOARD) XILINX_PART=$(XILINX_PART) XILINX_BOARD=$(XILINX_BOARD) CPU="ariane" CLK_PERIOD_NS="20"
 
 rocket: $(ariane_pkg) $(util) $(src) $(fpga_src) $(rocket_src)
 	@echo "[FPGA] Generate sources"
 	@echo read_verilog -sv {$(ariane_pkg) $(filter-out $(fpga_filter), $(util) $(src)) $(fpga_src) $(open_src) $(rocket_src)} > fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"
-	cd fpga && make BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" CLK_PERIOD_NS="20"
+	cd fpga && make BOARD=$(BOARD) XILINX_PART=$(XILINX_PART) XILINX_BOARD=$(XILINX_BOARD) CPU="rocket" CLK_PERIOD_NS="20"
+
+nexys4_ddr_ariane:
+	make ariane BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1"
+
+nexys4_ddr_rocket:
+	make rocket BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1"
+
+genesys2_ariane:
+	make ariane BOARD="genesys2" XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20"
+
+genesys2_rocket:
+	make rocket BOARD="genesys2" XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20"
 
 $(rocket_src):
-	make -C rocket-chip/vsim verilog
+	make -C ../rocket-chip/vsim verilog
 
 fpga:
 	echo Use make ariane or make rocket, either could blow up ...
