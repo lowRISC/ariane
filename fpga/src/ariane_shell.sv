@@ -101,7 +101,6 @@ axi_node_wrap_with_slices #(
     .master       ( master     ),
     .start_addr_i ({
         ariane_soc::DebugBase,
-        ariane_soc::ROMBase,
         ariane_soc::CLINTBase,
         ariane_soc::PLICBase,
         ariane_soc::ExtIOBase,
@@ -109,7 +108,6 @@ axi_node_wrap_with_slices #(
     }),
     .end_addr_i   ({
         ariane_soc::DebugBase    + ariane_soc::DebugLength - 1,
-        ariane_soc::ROMBase      + ariane_soc::ROMLength - 1,
         ariane_soc::CLINTBase    + ariane_soc::CLINTLength - 1,
         ariane_soc::PLICBase     + ariane_soc::PLICLength - 1,
         ariane_soc::ExtIOBase    + ariane_soc::ExtIOLength - 1,
@@ -266,16 +264,16 @@ ariane_axi::resp_t   axi_ariane_resp;
 ariane #(
     .ArianeCfg ( ariane_soc::ArianeSocCfg )
 ) i_ariane (
-    .clk_i        ( clk                 ),
-    .rst_ni       ( ndmreset_n          ),
-    .boot_addr_i  ( ariane_soc::ROMBase ), // start fetching from ROM
-    .hart_id_i    ( '0                  ),
-    .irq_i        ( irq                 ),
-    .ipi_i        ( ipi                 ),
-    .time_irq_i   ( timer_irq           ),
-    .debug_req_i  ( debug_req_irq       ),
-    .axi_req_o    ( axi_ariane_req      ),
-    .axi_resp_i   ( axi_ariane_resp     )
+    .clk_i        ( clk                  ),
+    .rst_ni       ( ndmreset_n           ),
+    .boot_addr_i  ( ariane_soc::BOOTBase ), // start fetching from ROM
+    .hart_id_i    ( '0                   ),
+    .irq_i        ( irq                  ),
+    .ipi_i        ( ipi                  ),
+    .time_irq_i   ( timer_irq            ),
+    .debug_req_i  ( debug_req_irq        ),
+    .axi_req_o    ( axi_ariane_req       ),
+    .axi_resp_i   ( axi_ariane_resp      )
 );
 
 axi_master_connect i_axi_master_connect_ariane (.axi_req_i(axi_ariane_req), .axi_resp_o(axi_ariane_resp), .master(slave[0]));
@@ -319,41 +317,7 @@ clint #(
 
 axi_slave_connect i_axi_slave_connect_clint (.axi_req_o(axi_clint_req), .axi_resp_i(axi_clint_resp), .slave(master[ariane_soc::CLINT]));
 
-// ---------------
-// ROM
-// ---------------
-// ROM
-logic                    rom_req;
-logic [AxiAddrWidth-1:0] rom_addr;
-logic [AxiDataWidth-1:0] rom_rdata;
 
-axi2mem #(
-    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
-    .AXI_DATA_WIDTH ( AxiDataWidth     ),
-    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
-    .AXI_USER_WIDTH ( AxiUserWidth     )
-) i_axi2rom (
-    .clk_i  ( clk_i                   ),
-    .rst_ni ( ndmreset_n              ),
-    .slave  ( master[ariane_soc::ROM] ),
-    .req_o  ( rom_req                 ),
-    .we_o   (                         ),
-    .addr_o ( rom_addr                ),
-    .be_o   (                         ),
-    .data_o (                         ),
-    .data_i ( rom_rdata               )
-);
-
-bootrom i_bootrom (                         
-    .clk_i      ( clk_i     ),
-    .req_i      ( rom_req   ),
-    .addr_i     ( rom_addr  ),
-    .rdata_o    ( rom_rdata )
-);
-
-// ---------------------
-// Board peripherals
-// ---------------------
 // ---------------
 // DDR
 // ---------------
@@ -410,6 +374,10 @@ axi_riscv_atomics_wrap #(
     .slv    ( master[ariane_soc::DRAM] ),
     .mst    ( dram                     )
 );
+
+// ---------------------
+// Board peripherals
+// ---------------------
 
     // ---------------
     // 1. PLIC

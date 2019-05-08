@@ -26,7 +26,7 @@ $(ELF):
 #BBL=../../ariane-sdk-rng-tools/riscv-pk/build/bbl
 BBL=$(ELF)
 # Generate mcs from bitstream
-$(mcs): $(bit)
+$(mcs): $(bit) $(BBL)
 	$(VIVADO) $(VIVADOFLAGS) -source scripts/write_cfgmem.tcl -tclargs $@ $^ $(BBL)
 
 $(bit): $(ips)

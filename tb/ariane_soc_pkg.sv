@@ -28,8 +28,7 @@ package ariane_soc;
     ExtIO    = 1,
     PLIC     = 2,
     CLINT    = 3,
-    ROM      = 4,
-    Debug    = 5
+    Debug    = 4
   } axi_slaves_t;
 
   typedef enum int unsigned {
@@ -42,9 +41,7 @@ package ariane_soc;
 
   localparam NB_PERIPHERALS = Debug + 1;
 
-
   localparam logic[63:0] DebugLength    = 64'h1000;
-  localparam logic[63:0] ROMLength      = 64'h10000;
   localparam logic[63:0] CLINTLength    = 64'hC0000;
   localparam logic[63:0] PLICLength     = 64'h3FF_FFFF;
   localparam logic[63:0] ExtIOLength    = 64'h10000000;
@@ -60,7 +57,6 @@ package ariane_soc;
 
   typedef enum logic [63:0] {
     DebugBase    = 64'h0000_0000,
-    ROMBase      = 64'h0001_0000,
     CLINTBase    = 64'h0200_0000,
     PLICBase     = 64'h0C00_0000,
     ExtIOBase    = 64'h4000_0000,
@@ -84,8 +80,8 @@ package ariane_soc;
     NonIdempotentAddrBase: {64'b0},
     NonIdempotentLength:   {64'b0},
     NrExecuteRegionRules:  3,
-    ExecuteRegionAddrBase: {DRAMBase,   ROMBase,   DebugBase},
-    ExecuteRegionLength:   {DRAMLength, ROMLength, DebugLength},
+    ExecuteRegionAddrBase: {DRAMBase,   BOOTBase,   DebugBase},
+    ExecuteRegionLength:   {DRAMLength, BOOTLength, DebugLength},
     // cached region
     NrCachedRegionRules:    1,
     CachedRegionAddrBase:  {DRAMBase},
