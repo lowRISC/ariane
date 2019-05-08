@@ -26,8 +26,6 @@ module ariane_shell (
   output logic tdo_data ,
   output logic tdo_oe
 );
-// 24 MByte in 8 byte words
-localparam NumWords = (24 * 1024 * 1024) / 8;
 localparam NBSlave = 2; // debug, ariane
 localparam AxiAddrWidth = 64;
 localparam AxiDataWidth = 64;
@@ -52,16 +50,11 @@ AXI_BUS #(
 // disable test-enable
 logic ndmreset;
 logic debug_req_irq;
-logic time_irq;
 logic ipi;
 
-logic eth_clk;
-logic spi_clk_i;
-logic phy_tx_clk;
-logic sd_clk_sys;
-
 logic rtc;
-
+logic [5:0] count_rtc;
+   
 // Debug
 logic          debug_req_valid;
 logic          debug_req_ready;
@@ -294,8 +287,14 @@ axi_master_connect i_axi_master_connect_ariane (.axi_req_i(axi_ariane_req), .axi
 always_ff @(posedge clk or negedge ndmreset_n) begin
   if (~ndmreset_n) begin
     rtc <= 0;
+    count_rtc <= 0;
   end else begin
-    rtc <= rtc ^ 1'b1;
+    count_rtc <= count_rtc + 1'b1;
+    if (count_rtc == 49)
+      begin
+         count_rtc <= 0;
+         rtc <= rtc ^ 1'b1;
+      end
   end
 end
 
