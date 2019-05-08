@@ -171,14 +171,17 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         src/tech_cells_generic/src/pulp_clock_gating.sv                        \
         src/tech_cells_generic/src/cluster_clock_inverter.sv                   \
         src/tech_cells_generic/src/pulp_clock_mux2.sv                          \
-        rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.v \
-	rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.behav_srams.v \
-	rocket-chip/vsrc/AsyncResetReg.v \
-	rocket-chip/vsrc/ClockDivider2.v \
-	rocket-chip/vsrc/ClockDivider3.v \
-	rocket-chip/vsrc/plusarg_reader.v \
 
 src := $(addprefix $(root-dir), $(src))
+
+rocket_src := rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.v \
+	      rocket-chip/vsim/generated-src/freechips.rocketchip.system.DefaultConfig.behav_srams.v \
+	      rocket-chip/vsrc/AsyncResetReg.v \
+	      rocket-chip/vsrc/ClockDivider2.v \
+	      rocket-chip/vsrc/ClockDivider3.v \
+	      rocket-chip/vsrc/plusarg_reader.v \
+
+rocket_src := $(addprefix $(root-dir), $(rocket_src))
 
 tb_src := tb/ariane_testharness.sv                                               \
 	  tb/ariane_peripherals.sv                                               \
@@ -733,18 +736,26 @@ check-torture:
 	grep 'All signatures match for $(test-location)' $(riscv-torture-dir)/$(test-location).log
 	diff -s $(riscv-torture-dir)/$(test-location).spike.sig $(riscv-torture-dir)/$(test-location).rtlsim.sig
 
-fpga_filter := $(addprefix $(root-dir), bootrom/bootrom.sv)
-fpga_filter += $(addprefix $(root-dir), src/util/instruction_tracer.sv)
+#fpga_filter := $(addprefix $(root-dir), bootrom/bootrom.sv)
+fpga_filter := $(addprefix $(root-dir), src/util/instruction_tracer.sv)
 
-fpga: $(ariane_pkg) $(util) $(src) $(fpga_src)
+ariane: $(ariane_pkg) $(util) $(src) $(fpga_src)
 	@echo "[FPGA] Generate sources"
-	@echo read_verilog -sv {$(ariane_pkg)} > fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(util))}     >> fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(fpga_src)}   >> fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(open_src)}   >> fpga/scripts/add_sources.tcl
+	@echo read_verilog -sv {$(ariane_pkg) $(filter-out $(fpga_filter), $(util) $(src)) $(fpga_src) $(open_src)} > fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"
 	cd fpga && make BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" CLK_PERIOD_NS="20"
+
+rocket: $(ariane_pkg) $(util) $(src) $(fpga_src) $(rocket_src)
+	@echo "[FPGA] Generate sources"
+	@echo read_verilog -sv {$(ariane_pkg) $(filter-out $(fpga_filter), $(util) $(src)) $(fpga_src) $(open_src) $(rocket_src)} > fpga/scripts/add_sources.tcl
+	@echo "[FPGA] Generate Bitstream"
+	cd fpga && make BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" CLK_PERIOD_NS="20"
+
+$(rocket_src):
+	make -C rocket-chip/vsim verilog
+
+fpga:
+	echo Use make ariane or make rocket, either could blow up ...
 
 .PHONY: fpga
 

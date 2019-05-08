@@ -19,6 +19,10 @@ ips-target := $(join $(addsuffix /ip/, $(addprefix $(ip-dir)/, $(basename $(ips)
 all: $(mcs)
 
 ELF=src/etherboot/etherboot.elf
+
+$(ELF):
+	make -C src/etherboot all
+
 #BBL=../../ariane-sdk-rng-tools/riscv-pk/build/bbl
 BBL=$(ELF)
 # Generate mcs from bitstream
