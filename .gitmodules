@@ -52,6 +52,3 @@
 [submodule "src/axi_riscv_atomics"]
 	path = src/axi_riscv_atomics
 	url = https://github.com/lowRISC/axi_riscv_atomics
-[submodule "rocket-chip"]
-	path = rocket-chip
-	url = https://github.com/lowRISC/rocket-chip
