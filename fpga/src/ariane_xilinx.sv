@@ -16,9 +16,9 @@ module ariane_xilinx (
   input  logic         sys_clk_p   ,
   input  logic         sys_clk_n   ,
   input  logic         cpu_resetn  ,
-  inout  logic [31:0]  ddr3_dq     ,
-  inout  logic [ 3:0]  ddr3_dqs_n  ,
-  inout  logic [ 3:0]  ddr3_dqs_p  ,
+  inout  wire  [31:0]  ddr3_dq     ,
+  inout  wire  [ 3:0]  ddr3_dqs_n  ,
+  inout  wire  [ 3:0]  ddr3_dqs_p  ,
   output logic [14:0]  ddr3_addr   ,
   output logic [ 2:0]  ddr3_ba     ,
   output logic         ddr3_ras_n  ,
@@ -69,11 +69,12 @@ module ariane_xilinx (
   input  wire [7:0]    pci_exp_rxp     ,
   input  wire [7:0]    pci_exp_rxn     ,
 `endif
-  // SPI
-  output logic        spi_mosi    ,
-  input  logic        spi_miso    ,
-  output logic        spi_ss      ,
-  output logic        spi_clk_o   ,
+  // SD (shared with SPI)
+  output wire        sd_sclk,
+  input wire         sd_detect,
+  inout wire [3:0]   sd_dat,
+  inout wire         sd_cmd,
+  output reg         sd_reset,
   // common part
   input  logic        tck         ,
   input  logic        tms         ,
@@ -81,7 +82,10 @@ module ariane_xilinx (
   input  logic        tdi         ,
   output logic        tdo         ,
   input  logic        rx          ,
-  output logic        tx
+  output logic        tx          ,
+  // Quad-SPI
+  inout wire          QSPI_CSN    ,
+  inout wire [3:0]    QSPI_D
 );
 // 24 MByte in 8 byte words
 localparam NumWords = (24 * 1024 * 1024) / 8;
@@ -138,10 +142,10 @@ assign cpu_reset  = ~cpu_resetn;
 logic pll_locked;
 
 // ROM
-logic                    rom_req;
+logic                    rom_req, rom_we;
 logic [AxiAddrWidth-1:0] rom_addr;
-logic [AxiDataWidth-1:0] rom_rdata;
-
+logic [AxiDataWidth-1:0] rom_rdata, rom_wdata;
+logic [AxiDataWidth/8-1:0] rom_be;
 // Debug
 logic          debug_req_valid;
 logic          debug_req_ready;
@@ -154,6 +158,7 @@ logic dmactive;
 
 // IRQ
 logic [1:0] irq;
+logic    timer_irq;
 assign test_en    = 1'b0;
 
 logic [NBSlave-1:0] pc_asserted;
@@ -408,23 +413,27 @@ axi2mem #(
     .rst_ni ( ndmreset_n              ),
     .slave  ( master[ariane_soc::ROM] ),
     .req_o  ( rom_req                 ),
-    .we_o   (                         ),
+    .we_o   ( rom_we                  ),
     .addr_o ( rom_addr                ),
-    .be_o   (                         ),
-    .data_o (                         ),
+    .be_o   ( rom_be                  ),
+    .data_o ( rom_wdata               ),
     .data_i ( rom_rdata               )
 );
 
-bootrom i_bootrom (
+bootram i_bootram (
     .clk_i   ( clk       ),
     .req_i   ( rom_req   ),
+    .we_i    ( rom_we    ),
     .addr_i  ( rom_addr  ),
+    .be_i    ( rom_be    ),
+    .wdata_i ( rom_wdata ),
     .rdata_o ( rom_rdata )
 );
 
 // ---------------
 // Peripherals
 // ---------------
+
 ariane_peripherals #(
     .AxiAddrWidth ( AxiAddrWidth     ),
     .AxiDataWidth ( AxiDataWidth     ),
@@ -462,13 +471,15 @@ ariane_peripherals #(
     .eth_mdio,
     .eth_mdc,
     .phy_tx_clk_i   ( phy_tx_clk                  ),
-    .sd_clk_i       ( sd_clk_sys                  ),
-    .spi_clk_o      ( spi_clk_o                   ),
-    .spi_mosi       ( spi_mosi                    ),
-    .spi_miso       ( spi_miso                    ),
-    .spi_ss         ( spi_ss                      ),
+    .sd_sclk,
+    .sd_detect,
+    .sd_dat,
+    .sd_cmd,
+    .sd_reset,
     .leds_o         ( led                         ),
-    .dip_switches_i ( sw                          )
+    .dip_switches_i ( sw                          ),
+    .QSPI_CSN,
+    .QSPI_D
 );
 
 
@@ -540,13 +551,18 @@ axi_riscv_atomics_wrap #(
 );
 
 `ifdef PROTOCOL_CHECKER
-logic pc_status;
-// assign led[0] = pc_status;
-// assign led[7:1] = '0;
-
+   wire [159:0]              pc_status;
+   wire                      pc_asserted;
+   
+xlnx_ila_pc your_instance_name (
+	                        .clk(clk),           // input wire clk
+	                        .probe0(pc_status),  // input wire [159:0]  probe1
+	                        .probe1(pc_asserted) // input wire [0:0]  probe0  
+);
+   
 xlnx_protocol_checker i_xlnx_protocol_checker (
-  .pc_status(),
-  .pc_asserted(pc_status),
+  .pc_status,
+  .pc_asserted,
   .aclk(clk),
   .aresetn(ndmreset_n),
   .pc_axi_awid     (dram.aw_id),
@@ -699,7 +715,7 @@ xlnx_clk_gen i_xlnx_clk_gen (
 fan_ctrl i_fan_ctrl (
     .clk_i         ( clk        ),
     .rst_ni        ( ndmreset_n ),
-    .pwm_setting_i ( '1         ),
+    .pwm_setting_i ( 'd8        ),
     .fan_pwm_o     ( fan_pwm    )
 );
 

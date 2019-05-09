@@ -23,3 +23,7 @@
 
 // write-through cache
 `define WT_DCACHE
+// `define XLNX_ILA_TRACE   
+// `define XLNX_ILA_FPU
+// `define XLNX_ILA_PLIC
+`define QPSI_CONFIG_MEM
