@@ -43,8 +43,8 @@ set_property -dict {PACKAGE_PIN U18 IOSTANDARD LVCMOS33} [get_ports {sw[6]}]
 set_property -dict {PACKAGE_PIN R13 IOSTANDARD LVCMOS33} [get_ports {sw[7]}]
 
 ##SMSC Ethernet PHY
-set_property -dict {PACKAGE_PIN C9  IOSTANDARD LVCMOS33} [get_ports o_emdc]
-set_property -dict {PACKAGE_PIN A9  IOSTANDARD LVCMOS33} [get_ports io_emdio]
+set_property -dict {PACKAGE_PIN C9  IOSTANDARD LVCMOS33} [get_ports eth_mdc]
+set_property -dict {PACKAGE_PIN A9  IOSTANDARD LVCMOS33} [get_ports eth_mdio]
 set_property -dict {PACKAGE_PIN B3  IOSTANDARD LVCMOS33} [get_ports o_erstn]
 set_property -dict {PACKAGE_PIN D9  IOSTANDARD LVCMOS33} [get_ports i_erx_dv]
 set_property -dict {PACKAGE_PIN C10 IOSTANDARD LVCMOS33} [get_ports i_erx_er]

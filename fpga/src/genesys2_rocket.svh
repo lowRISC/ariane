@@ -15,6 +15,7 @@
 `define SYNTHESIS
 `define FPGA_TARGET_XILINX
 `define ARIANE_DATA_WIDTH 64
+`define RGMII
 
 // `define ARIANE_SHELL
 // `define FPNEW_TOP_DUMMY
@@ -31,5 +32,5 @@
 
 // Logic analysers enabled
 
-`define XLNX_ILA_QSPI
+// `define XLNX_ILA_QSPI
 // `define XLNX_ILA_TRACE

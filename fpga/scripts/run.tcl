@@ -23,6 +23,7 @@ read_ip xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter.xci
 read_ip xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter.xci
 read_ip xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio.xci
 read_ip xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi.xci
+read_ip xilinx/xlnx_clk_gen/ip/xlnx_clk_gen.xci
 read_ip xilinx/xlnx_clk_nexys/ip/xlnx_clk_nexys.xci
 read_ip xilinx/xlnx_clk_sd/ip/xlnx_clk_sd.xci
 
@@ -40,7 +41,7 @@ set_property -dict { file_type {Verilog Header} is_global_include 1} -objects $f
 
 update_compile_order -fileset sources_1
 
-add_files -fileset constrs_1 -norecurse constraints/$project.xdc
+add_files -fileset constrs_1 -norecurse constraints/$::env(BOARD).xdc
 
 set_property include_dirs src/axi_sd_bridge/include [current_fileset]
 
@@ -83,9 +84,9 @@ wait_on_run impl_1
 open_run impl_1
 
 # output Verilog netlist + SDC for timing simulation
-write_verilog -force -mode funcsim work-fpga/${project}_funcsim.v
-write_verilog -force -mode timesim work-fpga/${project}_timesim.v
-write_sdf     -force work-fpga/${project}_timesim.sdf
+write_verilog -force -mode funcsim work-fpga/$::env(BOARD)_$::env(CPU)/${project}_funcsim.v
+write_verilog -force -mode timesim work-fpga/$::env(BOARD)_$::env(CPU)/${project}_timesim.v
+write_sdf     -force work-fpga/$::env(BOARD)_$::env(CPU)/${project}_timesim.sdf
 
 # reports
 exec mkdir -p reports/

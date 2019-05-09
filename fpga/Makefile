@@ -1,7 +1,7 @@
 VIVADO ?= vivado
 VIVADOFLAGS ?= -nojournal -mode batch -source scripts/prologue.tcl
 
-work-dir := work-fpga
+work-dir := work-fpga/$(BOARD)_$(CPU)
 bit := $(work-dir)/ariane_xilinx.bit
 mcs := $(work-dir)/ariane_xilinx.mcs
 ip-dir := xilinx
@@ -9,6 +9,7 @@ ips := xlnx_axi_clock_converter.xci  \
        xlnx_axi_dwidth_converter.xci \
        xlnx_axi_quad_spi.xci         \
        xlnx_axi_gpio.xci             \
+       xlnx_clk_gen.xci              \
        xlnx_clk_nexys.xci            \
        xlnx_clk_sd.xci               \
        xlnx_mig_7_ddr3.xci
@@ -45,22 +46,22 @@ mcs: $(mcs)
 program:
 	$(VIVADO) $(VIVADOFLAGS) -source scripts/program.tcl
 
-newmcs: work-fpga/ariane_xilinx.new.mcs
+newmcs: $(work-dir)/ariane_xilinx.new.mcs
 
-work-fpga/ariane_xilinx.new.mcs: work-fpga/ariane_xilinx.new.bit
+$(work-dir)/ariane_xilinx.new.mcs: $(work-dir)/ariane_xilinx.new.bit
 	env XILINX_PART="xc7a100t-csg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" vivado -nojournal -mode batch -source scripts/prologue.tcl -source scripts/write_cfgmem.tcl -tclargs $@ $< $(BBL)
 
-new: work-fpga/ariane_xilinx.bit search-ramb.log scripts/cnvmem.v boot.bmm 
+new: $(work-dir)/ariane_xilinx.bit search-ramb.log scripts/cnvmem.v boot.bmm 
 	riscv64-unknown-elf-objcopy -O verilog $(ELF) cnvmem.mem
 	iverilog scripts/cnvmem.v -o cnvmem
 	./cnvmem
 	mv bootram.sv src/bootram.sv
-	data2mem -bm boot.mem -bd boot.mem -bt $< -o b work-fpga/ariane_xilinx.new.bit
+	data2mem -bm boot.mem -bd boot.mem -bt $< -o b $(work-dir)/ariane_xilinx.new.bit
 	echo '_start: .globl _start; .incbin "boot.bin"' | riscv64-unknown-elf-gcc -nostdlib -x assembler -Ttext=0x10000 - -o bootrom.elf
 	riscv64-unknown-elf-objcopy -O verilog bootrom.elf bootrom.vlog
 
-search-ramb.log: scripts/search_ramb.tcl work-fpga/ariane_xilinx_routed.dcp
-	vivado -mode batch -source $< -tclargs work-fpga/ariane_xilinx_routed > $@
+search-ramb.log: scripts/search_ramb.tcl $(work-dir)/ariane_xilinx_routed.dcp
+	vivado -mode batch -source $< -tclargs $(work-dir)/ariane_xilinx_routed > $@
 
 boot.bmm: search-ramb.log
 	python scripts/bmm_gen.py $< $@ 128 65536

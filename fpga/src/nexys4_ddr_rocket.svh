@@ -15,8 +15,10 @@
 `define SYNTHESIS
 `define FPGA_TARGET_XILINX
 `define ARIANE_DATA_WIDTH 64
+`define RMII
+
 `define ROCKET_SHELL
-`define FPNEW_TOP_DUMMY
+// `define FPNEW_TOP_DUMMY
 // Instantiate protocol checker
 // `define PROTOCOL_CHECKER
 
