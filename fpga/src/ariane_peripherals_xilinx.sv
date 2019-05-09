@@ -427,9 +427,9 @@ sd_bus sd1
        .phy_int_n(eth_int_n),
        .phy_pme_n(eth_pme_n),
        .phy_mdc(eth_mdc),
-       .phy_mdio_i(phy_mdio_i),
-       .phy_mdio_o(phy_mdio_o),
-       .phy_mdio_oe(phy_mdio_oe),
+       .phy_mdio_i(eth_mdio_i),
+       .phy_mdio_o(eth_mdio_o),
+       .phy_mdio_oe(eth_mdio_oe),
        .eth_irq(irq_sources[2])
     );
 
