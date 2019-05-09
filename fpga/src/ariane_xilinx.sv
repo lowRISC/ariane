@@ -66,8 +66,6 @@ module ariane_xilinx (
   output reg          o_erefclk, // RMII clock out
   output reg [1:0]    o_etxd, // RMII transmit data
   output reg          o_etx_en, // RMII transmit enable
-  output wire         o_emdc, // MDIO clock
-  inout wire          io_emdio, // MDIO inout
   output wire         o_erstn, // PHY reset active low 
 `endif
   inout  wire          eth_mdio    ,
