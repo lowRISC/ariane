@@ -174,7 +174,7 @@ module dummy;
     .AXI_DATA_WIDTH ( 64     ),
     .AXI_ID_WIDTH   ( 5      ),
     .AXI_USER_WIDTH ( 1      )
-) axi_dummy[17:0] (), axi_master[3:0] (), axi_slave[3:0] (), axi_master4[3:0] ();
+) axi_dummy[18:0] (), axi_master[3:0] (), axi_slave[3:0] (), axi_master4[3:0] ();
    AXI_LITE #(
     .AXI_ADDR_WIDTH ( 64     ),
     .AXI_DATA_WIDTH ( 64     ),
@@ -211,6 +211,7 @@ module dummy;
               .MASK(0));
    stream_mux #(.N_INP(2)) dummy12 ();
    ariane_shell dummy13(.dram(axi_dummy[15]), .iobus(axi_dummy[16]));
+   rocket_shell dummy14(.dram(axi_dummy[17]), .iobus(axi_dummy[18]));
 
 ClockDivider2 ();
 

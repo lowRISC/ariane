@@ -223,8 +223,7 @@ fpga_src := $(addprefix $(root-dir), $(fpga_src))
 sim_src := fpga/xilinx/xlnx_clk_sd/ip/xlnx_clk_sd_sim_netlist.v \
 	   fpga/xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter_sim_netlist.v \
 	   fpga/xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio_sim_netlist.v \
-	   fpga/xilinx/xlnx_clk_gen/ip/xlnx_clk_gen_sim_netlist.v \
-	   fpga/xilinx/xlnx_clk_nexys/ip/xlnx_clk_nexys_sim_netlist.v \
+	   fpga/xilinx/xlnx_clk_$(BOARD)/ip/xlnx_clk_$(BOARD)_sim_netlist.v \
 	   fpga/xilinx/xlnx_mig_7_ddr_$(BOARD)/ip/xlnx_mig_7_ddr_$(BOARD)_sim_netlist.v \
 	   fpga/xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi_sim_netlist.v \
 	   fpga/xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter_sim_netlist.v \
@@ -638,23 +637,23 @@ vcs_command_orig := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_gene
 	            tb/ariane_tb.sv                                                        \
 
 sim-vcs-fpga: $(sim_src)
-	@echo "[Vcs] Building Model"
+	@echo "[Vcs] Building Model, board: " $(BOARD)
 	$(vcs_command_fpga) $(DEFINE)
 
 sim-vcs-fpga-genesys-ariane:
-	make sim-vcs-fpga BOARD="genesys2" DEFINE="+define+GENESYSII +define+RGMII +define+ARIANE_SHELL"
+	make sim-vcs-fpga BOARD="genesys2 XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20" DEFINE="+define+GENESYSII +define+RGMII +define+ARIANE_SHELL"
 
 sim-vcs-fpga-genesys-rocket:
 	@echo "[Vcs] Building Model"
-	$(vcs_command_fpga) +define+GENESYSII +define+RGMII +define+ROCKET_SHELL
+	make sim-vcs-fpga BOARD="genesys2" XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20" DEFINE="+define+GENESYSII +define+RGMII +define+ROCKET_SHELL"
 
 sim-vcs-fpga-nexys-ariane:
 	@echo "[Vcs] Building Model"
-	$(vcs_command_fpga) +define+NEXYS4DDR +define+RMII +define+ARIANE_SHELL
+	make sim-vcs-fpga BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" DEFINE="+define+NEXYS4DDR +define+RMII +define+ARIANE_SHELL"
 
 sim-vcs-fpga-nexys-rocket:
 	@echo "[Vcs] Building Model"
-	$(vcs_command_fpga) +define+NEXYS4DDR +define+RMII +define+ROCKET_SHELL
+	make sim-vcs-fpga BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" DEFINE="+define+NEXYS4DDR +define+RMII +define+ROCKET_SHELL"
 
 sim-vcs-debug:
 	@echo "[Vcs] Building Model"
@@ -761,13 +760,13 @@ ariane: $(ariane_pkg) $(util) $(src) $(fpga_src)
 	@echo "[FPGA] Generate sources"
 	@echo read_verilog -sv {$(ariane_pkg) $(filter-out $(fpga_filter), $(util) $(src)) $(fpga_src) $(open_src)} > fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"
-	cd fpga && make BOARD=$(BOARD) XILINX_PART=$(XILINX_PART) XILINX_BOARD=$(XILINX_BOARD) CPU="ariane" CLK_PERIOD_NS="20"
+	make -C fpga BOARD=$(BOARD) XILINX_PART=$(XILINX_PART) XILINX_BOARD=$(XILINX_BOARD) CPU="ariane" CLK_PERIOD_NS="20"
 
 rocket: $(ariane_pkg) $(util) $(src) $(fpga_src) $(rocket_src)
 	@echo "[FPGA] Generate sources"
 	@echo read_verilog -sv {$(ariane_pkg) $(filter-out $(fpga_filter), $(util) $(src)) $(fpga_src) $(open_src) $(rocket_src)} > fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"
-	cd fpga && make BOARD=$(BOARD) XILINX_PART=$(XILINX_PART) XILINX_BOARD=$(XILINX_BOARD) CPU="rocket" CLK_PERIOD_NS="20"
+	make -C fpga BOARD=$(BOARD) XILINX_PART=$(XILINX_PART) XILINX_BOARD=$(XILINX_BOARD) CPU="rocket" CLK_PERIOD_NS="20"
 
 nexys4_ddr_ariane:
 	make ariane BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1"

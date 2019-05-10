@@ -100,7 +100,7 @@ localparam AxiUserWidth = 1;
 
 // MIG clock
 logic mig_sys_clk, mig_ui_clk, mig_ui_rst, sys_rst,
-      clk, clk_rmii, clk_rmii_quad, clk_pixel, clk_locked_wiz;
+      clk, clk_rmii, clk_rmii_quad, clk_pixel, pll_locked;
 logic rst_n, tdo_oe, tdo_data, ndmreset_n;
 
 IOBUF #(
@@ -118,14 +118,13 @@ IOBUF #(
 `ifdef GENESYSII
 
 logic eth_clk;
-logic pll_locked;
 
-xlnx_clk_gen i_xlnx_clk_gen (
+xlnx_clk_genesys2 i_xlnx_clk_gen (
   .clk_out1 ( clk           ), // 50 MHz
   .clk_out2 ( phy_tx_clk    ), // 125 MHz (for RGMII PHY)
   .clk_out3 ( eth_clk       ), // 125 MHz quadrature (90 deg phase shift)
   .clk_out4 ( sd_clk_sys    ), // 50 MHz clock
-  .reset    ( cpu_reset     ),
+  .reset    ( ~cpu_resetn   ),
   .locked   ( pll_locked    ),
   .clk_in1  ( mig_ui_clk    )
 );
@@ -134,7 +133,7 @@ assign mig_sys_clk = mig_ui_clk;
    
 `elsif NEXYS4DDR
 
-xlnx_clk_nexys i_xlnx_clk_gen (
+xlnx_clk_nexys4_ddr i_xlnx_clk_gen (
   .clk_out1 ( mig_sys_clk    ), // 200 MHz
   .clk_out2 ( clk_rmii       ), // 50 MHz (for RGMII PHY)
   .clk_out3 ( clk_rmii_quad  ), // 50 MHz quadrature (90 deg phase shift)
@@ -497,9 +496,6 @@ logic spi_clk_i;
 logic phy_tx_clk;
 logic sd_clk_sys;
 
-logic cpu_reset;
-
-assign cpu_reset  = ~cpu_resetn;
 assign sys_rst = ~rst_n;
 
 logic [ariane_soc::NumSources-1:0] irq_sources;
