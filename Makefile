@@ -223,11 +223,15 @@ fpga_src := $(addprefix $(root-dir), $(fpga_src))
 sim_src := fpga/xilinx/xlnx_clk_sd/ip/xlnx_clk_sd_sim_netlist.v \
 	   fpga/xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter_sim_netlist.v \
 	   fpga/xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio_sim_netlist.v \
+	   fpga/xilinx/xlnx_clk_gen/ip/xlnx_clk_gen_sim_netlist.v \
 	   fpga/xilinx/xlnx_clk_nexys/ip/xlnx_clk_nexys_sim_netlist.v \
-	   fpga/xilinx/xlnx_mig_7_ddr3/ip/xlnx_mig_7_ddr3_sim_netlist.v \
+	   fpga/xilinx/xlnx_mig_7_ddr_$(BOARD)/ip/xlnx_mig_7_ddr_$(BOARD)_sim_netlist.v \
 	   fpga/xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi_sim_netlist.v \
 	   fpga/xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter_sim_netlist.v \
            fpga/xilinx/xilinx_stubs.sv
+
+fpga/xilinx/xlnx_mig_7_ddr_$(BOARD)/ip/xlnx_mig_7_ddr_$(BOARD)_sim_netlist.v:
+	make -C fpga xlnx_mig_7_ddr_$(BOARD).xci
 
 # look for testbenches
 tbs := tb/ariane_tb.sv tb/ariane_testharness.sv
@@ -568,7 +572,7 @@ vcs_command := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate 
 	            tb/ariane_tb.sv                                                        \
                     src/tech_cells_generic/src/cluster_clock_gating.sv                     \
 
-vcs_command_fpga := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps -error=noZMMCM \
+vcs_command_fpga := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_generate +warn=noOBSV2G -debug_access+all -timescale=1ns/1ps -error=noZMMCM +lint=TFIPC-L \
 	            $(filter-out %.vhd, $(ariane_pkg))                                     \
 	            $(filter-out src/fpu_wrap.sv fpga/src/axi_slice/src/axi_slice_wrap.sv, $(filter-out %.vhd, $(src)))             \
 	            +define+$(defines)                                                     \
@@ -577,11 +581,14 @@ vcs_command_fpga := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_gene
 	            +define+RANDOMIZE_GARBAGE_ASSIGN                                       \
 	            +define+RANDOMIZE_INVALID_ASSIGN                                       \
 	            +define+SIMULATION                                                     \
+	            +define+FPGA_TARGET_XILINX                                             \
+	            +define+ARIANE_DATA_WIDTH=64                                           \
+	            +define+WT_DCACHE                                                      \
 	            $(list_incdir)                                                         \
 		    src/util/sram.sv                                                       \
 	            fpga/xilinx/xilinx_tb.sv                                               \
                     src/tech_cells_generic/src/cluster_clock_gating.sv                     \
-                    $(fpga_src) $(open_src) $(sim_src)                                     \
+                    $(fpga_src) $(open_src) $(sim_src) $(rocket_src)                       \
                     tb/common/SimJTAG.sv                                                   \
                     -y $(XILINX_VIVADO)/data/verilog/src/unisims                           \
                     -y $(XILINX_VIVADO)/data/verilog/src/retarget                          \
@@ -630,13 +637,24 @@ vcs_command_orig := vcs -q -full64 -sverilog -assert svaext +lint=PCWM -v2k_gene
 		    fpga/xilinx/xlnx_ila_5/ip/sim/xlnx_ila_5.v                             \
 	            tb/ariane_tb.sv                                                        \
 
-sim-vcs:
+sim-vcs-fpga: $(sim_src)
 	@echo "[Vcs] Building Model"
-	$(vcs_command)
+	$(vcs_command_fpga) $(DEFINE)
 
-sim-vcs-fpga:
+sim-vcs-fpga-genesys-ariane:
+	make sim-vcs-fpga BOARD="genesys2" DEFINE="+define+GENESYSII +define+RGMII +define+ARIANE_SHELL"
+
+sim-vcs-fpga-genesys-rocket:
 	@echo "[Vcs] Building Model"
-	$(vcs_command_fpga)
+	$(vcs_command_fpga) +define+GENESYSII +define+RGMII +define+ROCKET_SHELL
+
+sim-vcs-fpga-nexys-ariane:
+	@echo "[Vcs] Building Model"
+	$(vcs_command_fpga) +define+NEXYS4DDR +define+RMII +define+ARIANE_SHELL
+
+sim-vcs-fpga-nexys-rocket:
+	@echo "[Vcs] Building Model"
+	$(vcs_command_fpga) +define+NEXYS4DDR +define+RMII +define+ROCKET_SHELL
 
 sim-vcs-debug:
 	@echo "[Vcs] Building Model"

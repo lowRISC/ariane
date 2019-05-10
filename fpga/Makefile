@@ -12,7 +12,7 @@ ips := xlnx_axi_clock_converter.xci  \
        xlnx_clk_gen.xci              \
        xlnx_clk_nexys.xci            \
        xlnx_clk_sd.xci               \
-       xlnx_mig_7_ddr3.xci
+       xlnx_mig_7_ddr_$(BOARD).xci
 
 ips := $(addprefix $(work-dir)/, $(ips))
 ips-target := $(join $(addsuffix /ip/, $(addprefix $(ip-dir)/, $(basename $(ips)))), $(ips))
@@ -24,6 +24,7 @@ ELF=src/etherboot/etherboot.elf
 $(ELF):
 	make -C src/etherboot all
 
+ips: 
 #BBL=../../ariane-sdk-rng-tools/riscv-pk/build/bbl
 BBL=$(ELF)
 # Generate mcs from bitstream

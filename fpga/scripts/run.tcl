@@ -15,7 +15,7 @@
 # Author: Florian Zaruba <zarubaf@iis.ee.ethz.ch>
 # This version modified by Jonathan Kimmitt to support Nexys4DDR
 
-read_ip xilinx/xlnx_mig_7_ddr3/ip/xlnx_mig_7_ddr3.xci
+read_ip xilinx/xlnx_mig_7_ddr_$::env(BOARD)/ip/xlnx_mig_7_ddr_$::env(BOARD).xci
 read_ip xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter.xci
 read_ip xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter.xci
 read_ip xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio.xci

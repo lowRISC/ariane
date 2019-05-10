@@ -99,9 +99,9 @@ localparam AxiIdWidthSlaves = AxiIdWidthMaster + $clog2(NBSlave); // 5
 localparam AxiUserWidth = 1;
 
 // MIG clock
-logic mig_sys_clk, mig_ui_clk, mig_ui_rst, mig_ui_rstn, sys_rst,
+logic mig_sys_clk, mig_ui_clk, mig_ui_rst, sys_rst,
       clk, clk_rmii, clk_rmii_quad, clk_pixel, clk_locked_wiz;
-logic rst_n, tdo_oe, tdo_data, ndmreset_n, locked;
+logic rst_n, tdo_oe, tdo_data, ndmreset_n;
 
 IOBUF #(
           .DRIVE(12), // Specify the output drive strength
@@ -115,14 +115,10 @@ IOBUF #(
           .T(~tdo_oe)    // 3-state enable input, high=input, low=output
        );
 
-assign mig_ui_rstn = !mig_ui_rst;
-assign clk = mig_ui_clk;
-
 `ifdef GENESYSII
 
 logic eth_clk;
 logic pll_locked;
-logic ddr_sync_reset;
 
 xlnx_clk_gen i_xlnx_clk_gen (
   .clk_out1 ( clk           ), // 50 MHz
@@ -131,9 +127,11 @@ xlnx_clk_gen i_xlnx_clk_gen (
   .clk_out4 ( sd_clk_sys    ), // 50 MHz clock
   .reset    ( cpu_reset     ),
   .locked   ( pll_locked    ),
-  .clk_in1  ( mig_sys_clk   )
+  .clk_in1  ( mig_ui_clk    )
 );
 
+assign mig_sys_clk = mig_ui_clk;
+   
 `elsif NEXYS4DDR
 
 xlnx_clk_nexys i_xlnx_clk_gen (
@@ -142,12 +140,14 @@ xlnx_clk_nexys i_xlnx_clk_gen (
   .clk_out3 ( clk_rmii_quad  ), // 50 MHz quadrature (90 deg phase shift)
   .clk_out4 ( clk_pixel      ), // 120 MHz clock
   .resetn   ( cpu_resetn     ),
-  .locked   ( locked         ),
+  .locked   ( pll_locked     ),
   .clk_in1  ( clk_p          )
 );
 
+assign clk = mig_ui_clk;
+
 `endif
-   
+ 
 logic rst_done;   
 logic [5:0] rst_count;
    
@@ -162,7 +162,7 @@ always @(posedge mig_ui_clk or posedge mig_ui_rst)
     begin
        rst_done = &rst_count;
        rst_count <= rst_count + !rst_done;
-       if (rst_done && locked)
+       if (rst_done && pll_locked)
          rst_n = '1;
     end
 
@@ -179,7 +179,7 @@ AXI_BUS #(
 
 `ifdef GENESYSII
 
-   logic [AxiIdWidthSlaves-1:0] s_axi_awid;
+logic [AxiIdWidthSlaves-1:0] s_axi_awid;
 logic [AxiAddrWidth-1:0]     s_axi_awaddr;
 logic [7:0]                  s_axi_awlen;
 logic [2:0]                  s_axi_awsize;
@@ -221,7 +221,7 @@ logic                        s_axi_rready;
 
 xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .s_axi_aclk     ( clk              ),
-  .s_axi_aresetn  ( rst_n       ),
+  .s_axi_aresetn  ( rst_n            ),
   .s_axi_awid     ( dram.aw_id       ),
   .s_axi_awaddr   ( dram.aw_addr     ),
   .s_axi_awlen    ( dram.aw_len      ),
@@ -262,8 +262,8 @@ xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .s_axi_rvalid   ( dram.r_valid     ),
   .s_axi_rready   ( dram.r_ready     ),
   // to size converter
-  .m_axi_aclk     ( mig_sys_clk      ),
-  .m_axi_aresetn  ( rst_n       ),
+  .m_axi_aclk     ( mig_ui_clk       ),
+  .m_axi_aresetn  ( rst_n            ),
   .m_axi_awid     ( s_axi_awid       ),
   .m_axi_awaddr   ( s_axi_awaddr     ),
   .m_axi_awlen    ( s_axi_awlen      ),
@@ -305,9 +305,10 @@ xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .m_axi_rready   ( s_axi_rready     )
 );
 
-xlnx_mig_7_ddr3 i_ddr (
+xlnx_mig_7_ddr_genesys2 i_ddr (
     .sys_clk_p,
     .sys_clk_n,
+    .sys_rst         ( cpu_resetn    ),
     .ddr3_dq,
     .ddr3_dqs_n,
     .ddr3_dqs_p,
@@ -330,8 +331,8 @@ xlnx_mig_7_ddr3 i_ddr (
     .app_sr_active   (                ), // keep open
     .app_ref_ack     (                ), // keep open
     .app_zq_ack      (                ), // keep open
-    .ui_clk          ( mig_sys_clk    ),
-    .ui_clk_sync_rst ( ddr_sync_reset ),
+    .ui_clk          ( mig_ui_clk     ),
+    .ui_clk_sync_rst ( mig_ui_rst     ),
     .aresetn         ( rst_n          ),
     .s_axi_awid,
     .s_axi_awaddr    ( s_axi_awaddr[29:0] ),
@@ -371,14 +372,13 @@ xlnx_mig_7_ddr3 i_ddr (
     .s_axi_rlast,
     .s_axi_rvalid,
     .init_calib_complete (            ), // keep open
-    .device_temp         (            ), // keep open
-    .sys_rst             ( cpu_resetn )
+    .device_temp         (            )  // keep open
 );
 `elsif NEXYS4DDR
    
-xlnx_mig_7_ddr3 i_ddr (
+xlnx_mig_7_ddr_nexys4_ddr i_ddr (
     .sys_clk_i          ( mig_sys_clk ),
-    .sys_rst            ( locked      ),
+    .sys_rst            ( pll_locked  ),
     .ui_addn_clk_0      (             ),
     .ui_addn_clk_1      (             ),  // output                                       ui_addn_clk_1
     .ui_addn_clk_2      (             ),  // output                                       ui_addn_clk_2
@@ -461,8 +461,8 @@ axi2mem #(
     .AXI_DATA_WIDTH ( AxiDataWidth     ),
     .AXI_USER_WIDTH ( AxiUserWidth     )
 ) i_axi2rom (
-    .clk_i  ( clk_i                    ),
-    .rst_ni ( rst_ni                   ),
+    .clk_i  ( clk                      ),
+    .rst_ni ( rst_n                    ),
     .slave  ( dram                     ),
     .req_o  ( ddr_req                  ),
     .we_o   ( ddr_we                   ),
@@ -476,8 +476,8 @@ sram #(
     .DATA_WIDTH ( AxiDataWidth ),
     .NUM_WORDS  ( NUM_WORDS    )
   ) i_sram (
-    .clk_i      ( clk_i                                                                       ),
-    .rst_ni     ( rst_ni                                                                      ),
+    .clk_i      ( clk                                                                         ),
+    .rst_ni     ( rst_n                                                                       ),
     .req_i      ( req                                                                         ),
     .we_i       ( we                                                                          ),
     .addr_i     ( addr[$clog2(NUM_WORDS)-1+$clog2(AxiDataWidth/8):$clog2(AxiDataWidth/8)] ),
@@ -486,15 +486,12 @@ sram #(
     .rdata_o    ( rdata                                                                       )
   );
 
-assign mig_ui_rst = !locked;   
+assign mig_ui_rst = !pll_locked;   
   
 `endif
 
 // disable test-enable
-logic test_en;
-logic debug_req_irq;
-logic time_irq;
-logic ipi;
+wire test_en = 1'b0;
 
 logic spi_clk_i;
 logic phy_tx_clk;

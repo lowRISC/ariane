@@ -16,12 +16,34 @@
 import ariane_pkg::*;
 
 module xilinx_tb;
-    localparam int unsigned CLOCK_PERIOD = 10ns;
     longint unsigned cycles;
     longint unsigned max_cycles;
-
+    logic    clk;
+    logic    cpu_resetn;   
+`ifdef GENESYSII
+    localparam int unsigned CLOCK_PERIOD = 5ns;
+    logic         sys_clk_p   ;
+    logic         sys_clk_n   ;
+    wire  [31:0]  ddr3_dq     ;
+    wire  [ 3:0]  ddr3_dqs_n  ;
+    wire  [ 3:0]  ddr3_dqs_p  ;
+    logic [14:0]  ddr3_addr   ;
+    logic [ 2:0]  ddr3_ba     ;
+    logic         ddr3_ras_n  ;
+    logic         ddr3_cas_n  ;
+    logic         ddr3_we_n   ;
+    logic         ddr3_reset_n;
+    logic [ 0:0]  ddr3_ck_p   ;
+    logic [ 0:0]  ddr3_ck_n   ;
+    logic [ 0:0]  ddr3_cke    ;
+    logic [ 0:0]  ddr3_cs_n   ;
+    logic [ 3:0]  ddr3_dm     ;
+    logic [ 0:0]  ddr3_odt    ;
+    assign sys_clk_p = clk;
+    assign sys_clk_n = ~clk;   
+`elsif NEXYS4DDR
+    localparam int unsigned CLOCK_PERIOD = 10ns;
     logic        clk_p       ;
-    logic        cpu_resetn  ;
     wire  [15:0] ddr2_dq     ;
     wire  [ 1:0] ddr2_dqs_n  ;
     wire  [ 1:0] ddr2_dqs_p  ;
@@ -35,46 +57,69 @@ module xilinx_tb;
     logic [ 0:0] ddr2_cke    ;
     logic [ 1:0] ddr2_dm     ;
     logic [ 0:0] ddr2_odt    ;
-    //! Ethernet MAC PHY interface signals
-    logic [1:0]    i_erxd; // RMII receive data
-    logic         i_erx_dv; // PHY data valid
-    logic         i_erx_er; // PHY coding error
-    logic         i_emdint; // PHY interrupt in active low
-    wire          o_erefclk; // RMII clock out
-    wire [1:0]    o_etxd; // RMII transmit data
-    wire          o_etx_en; // RMII transmit enable
-    wire          o_emdc; // MDIO clock
-    tri1          io_emdio; // MDIO inout
-    wire          o_erstn; // PHY reset active low 
+    assign clk_p = clk;
+`endif
+`ifdef RGMII
+    wire          eth_rst_n   ;
+    reg           eth_rxck    ;
+    reg           eth_rxctl   ;
+    reg  [3:0]    eth_rxd     ;
+    wire          eth_txck    ;
+    wire          eth_txctl   ;
+    wire [3:0]    eth_txd     ;
+    initial
+      begin
+         eth_rxck = 0;
+         eth_rxctl = 0;
+         eth_rxd = 0;
+      end
+`endif
+`ifdef RMII
+  //! Ethernet MAC PHY interface signals
+    wire [1:0]    i_erxd; // RMII receive data
+    wire          i_erx_dv; // PHY data valid
+    wire          i_erx_er; // PHY coding error
+    wire          i_emdint; // PHY interrupt in active low
+    reg           o_erefclk; // RMII clock out
+    reg [1:0]     o_etxd; // RMII transmit data
+    reg           o_etx_en; // RMII transmit enable
+    wire          o_erstn;  // PHY reset active low 
+    initial
+      begin
+         i_erxd = 0;
+         i_erx_dv = 0;
+         i_erx_er = 0;
+         i_emdint = 0;
+      end
+`endif
+    wire          eth_mdc;  // MDIO clock
+    tri1          eth_mdio; // MDIO inout
+
     logic [ 7:0]  led         ;
     logic [ 7:0]  sw          ;
     logic         fan_pwm     ;
     // SD (shared with SPI)
-    wire         sd_sclk;
-    logic        sd_detect;
-    tri1 [3:0]   sd_dat;
-    tri1         sd_cmd;
-    wire         sd_reset;
+    wire          sd_sclk;
+    logic         sd_detect;
+    tri1 [3:0]    sd_dat;
+    tri1          sd_cmd;
+    wire          sd_reset;
     // common part
-    logic        tck         ;
-    logic        tms         ;
-    logic        trst_n      ;
-    logic        tdi         ;
-    wire         tdo         ;
-    logic        rx          ;
-    logic        tx          ;
+    logic         tck         ;
+    logic         tms         ;
+    logic         trst_n      ;
+    logic         tdi         ;
+    wire          tdo         ;
+    logic         rx          ;
+    logic         tx          ;
     // Quad-SPI
-    tri1         QSPI_CSN   ;
-    tri1 [3:0]   QSPI_D    ;
+    tri1          QSPI_CSN   ;
+    tri1 [3:0]    QSPI_D    ;
 
     ariane_xilinx dut (.*);
 
     // Clock process
     initial begin
-       i_erxd = 0;
-       i_erx_dv = 0;
-       i_erx_er = 0;
-       i_emdint = 0;
        sw = 0;
        sd_detect = 0;
        tck = 0;
@@ -83,20 +128,20 @@ module xilinx_tb;
        tdi = 0;
        rx = 1'b1;
        
-        clk_p = 1'b0;
+        clk = 1'b0;
         cpu_resetn = 1'b0;
         repeat(8)
             #(CLOCK_PERIOD/2)
                  begin
-                    clk_p = ~clk_p;
+                    clk = ~clk;
                     tck = ~tck;
                  end
         cpu_resetn = 1'b1;
         trst_n = 1'b1;
        
         forever begin
-            #(CLOCK_PERIOD/2) clk_p = 1'b1;
-            #(CLOCK_PERIOD/2) clk_p = 1'b0;
+            #(CLOCK_PERIOD/2) clk = 1'b1;
+            #(CLOCK_PERIOD/2) clk = 1'b0;
 
             //if (cycles > max_cycles)
             //    $fatal(1, "Simulation reached maximum cycle count of %d", max_cycles);
@@ -117,7 +162,13 @@ module xilinx_tb;
      end
 
 `ifdef VCS
-// tediously connect unused module interfaces at the top level   
+endmodule // xilinx_tb
+
+module dummy;
+   
+// tediously connect unused module interfaces at the top level
+// and unused modules to avoid cluttering the GUI display with loads of toplevels
+   
    AXI_BUS  #(
     .AXI_ADDR_WIDTH ( 64     ),
     .AXI_DATA_WIDTH ( 64     ),
@@ -152,15 +203,91 @@ module xilinx_tb;
     .DATA_WIDTH ( 64     ),
     .USER_WIDTH ( 1      ),
     .ID_WIDTH   ( 5      )
-   ) dummy11 (.clk(clk_p),
-              .rstn(cpu_resetn),
+   ) dummy11 (.clk(1'b0),
+              .rstn(1'b0),
               .master(axi_dummy[14]),
               .slave(axi_master4),
               .BASE(0),
               .MASK(0));
    stream_mux #(.N_INP(2)) dummy12 ();
    ariane_shell dummy13(.dram(axi_dummy[15]), .iobus(axi_dummy[16]));
-   
+
+ClockDivider2 ();
+
+ClockDivider3 ();
+
+TestHarness ();
+
+amo_alu ();
+
+apb_regs_top ();
+
+axi2apb ();
+
+axi_delayer ();
+
+axi_regs_top ();
+
+axififo ();
+
+binary_to_gray ();
+
+bscan_generic ();
+
+cache_ctrl ();
+
+clock_buffer_generic ();
+
+div_sqrt_mvp_wrapper ();
+
+dword_interface ();
+
+edge_detect ();
+
+edge_detector ();
+
+fpnew_f2fcast ();
+
+fpnew_f2icast ();
+
+fpnew_i2fcast ();
+
+fpnew_top_dummy ();
+
+framing_top_rmii ();
+
+generic_fifo ();
+
+gray_to_binary ();
+
+io_buffer_generic ();
+
+oddr_buffer_generic ();
+
+pulp_sync ();
+
+sd_clock_divider ();
+
+slave_adapter ();
+
+std_icache ();
+
+stream_demux ();
+
+synchronizer ();
+
+tag_cmp ();
+
+wt_l15_adapter ();
+
+xlnx_axi_dwidth_converter ();
+
+xlnx_axi_gpio ();
+
+xlnx_axi_quad_spi ();
+
+xlnx_clk_nexys ();
+
 `endif   
    
 endmodule
