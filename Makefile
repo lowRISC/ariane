@@ -229,9 +229,6 @@ sim_src := fpga/xilinx/xlnx_clk_sd/ip/xlnx_clk_sd_sim_netlist.v \
 	   fpga/xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter_sim_netlist.v \
            fpga/xilinx/xilinx_stubs.sv
 
-fpga/xilinx/xlnx_mig_7_ddr_$(BOARD)/ip/xlnx_mig_7_ddr_$(BOARD)_sim_netlist.v:
-	make -C fpga xlnx_mig_7_ddr_$(BOARD).xci
-
 # look for testbenches
 tbs := tb/ariane_tb.sv tb/ariane_testharness.sv
 # RISCV asm tests and benchmark setup (used for CI)
@@ -644,16 +641,19 @@ sim-vcs-fpga-genesys-ariane:
 	make sim-vcs-fpga BOARD="genesys2 XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20" DEFINE="+define+GENESYSII +define+RGMII +define+ARIANE_SHELL"
 
 sim-vcs-fpga-genesys-rocket:
-	@echo "[Vcs] Building Model"
 	make sim-vcs-fpga BOARD="genesys2" XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20" DEFINE="+define+GENESYSII +define+RGMII +define+ROCKET_SHELL"
 
-sim-vcs-fpga-nexys-ariane:
-	@echo "[Vcs] Building Model"
-	make sim-vcs-fpga BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" DEFINE="+define+NEXYS4DDR +define+RMII +define+ARIANE_SHELL"
+sim-vcs-fpga-nexys4-ariane:
+	make sim-vcs-fpga BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" CLK_PERIOD_NS="20" DEFINE="+define+NEXYS4DDR +define+RMII +define+ARIANE_SHELL"
 
-sim-vcs-fpga-nexys-rocket:
-	@echo "[Vcs] Building Model"
-	make sim-vcs-fpga BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" DEFINE="+define+NEXYS4DDR +define+RMII +define+ROCKET_SHELL"
+sim-vcs-fpga-nexys4-rocket:
+	make sim-vcs-fpga BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" CLK_PERIOD_NS="20" DEFINE="+define+NEXYS4DDR +define+RMII +define+ROCKET_SHELL"
+
+sim-vcs-fpga-video-ariane:
+	make sim-vcs-fpga BOARD="nexys_video" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" CLK_PERIOD_NS="20" DEFINE="+define+NEXYS_VIDEO +define+RGMII +define+ARIANE_SHELL"
+
+sim-vcs-fpga-video-rocket:
+	make sim-vcs-fpga BOARD="nexys_video" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1" CLK_PERIOD_NS="20" DEFINE="+define+NEXYS_VIDEO +define+RGMII +define+ROCKET_SHELL"
 
 sim-vcs-debug:
 	@echo "[Vcs] Building Model"
@@ -773,6 +773,12 @@ nexys4_ddr_ariane:
 
 nexys4_ddr_rocket:
 	make rocket BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1"
+
+nexys_video_ariane:
+	make ariane BOARD="nexys_video" XILINX_PART="xc7a200tsbg484-1" XILINX_BOARD="digilentinc.com:nexys_video:part0:1.1"
+
+nexys_video_rocket:
+	make rocket BOARD="nexys_video" XILINX_PART="xc7a200tsbg484-1" XILINX_BOARD="digilentinc.com:nexys_video:part0:1.1"
 
 genesys2_ariane:
 	make ariane BOARD="genesys2" XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20"

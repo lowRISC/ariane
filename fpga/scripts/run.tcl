@@ -59,15 +59,16 @@ launch_runs synth_1
 wait_on_run synth_1
 open_run synth_1
 
-exec mkdir -p reports/
-exec rm -rf reports/*
+set reports reports/$::env(BOARD)
+exec mkdir -p $reports
+exec rm -rf $reports/*
 
-check_timing -verbose                                                   -file reports/$project.check_timing.rpt
-report_timing -max_paths 100 -nworst 100 -delay_type max -sort_by slack -file reports/$project.timing_WORST_100.rpt
-report_timing -nworst 1 -delay_type max -sort_by group                  -file reports/$project.timing.rpt
-report_utilization -hierarchical                                        -file reports/$project.utilization.rpt
-report_cdc                                                              -file reports/$project.cdc.rpt
-report_clock_interaction                                                -file reports/$project.clock_interaction.rpt
+check_timing -verbose                                                   -file $reports/$project.check_timing.rpt
+report_timing -max_paths 100 -nworst 100 -delay_type max -sort_by slack -file $reports/$project.timing_WORST_100.rpt
+report_timing -nworst 1 -delay_type max -sort_by group                  -file $reports/$project.timing.rpt
+report_utilization -hierarchical                                        -file $reports/$project.utilization.rpt
+report_cdc                                                              -file $reports/$project.cdc.rpt
+report_clock_interaction                                                -file $reports/$project.clock_interaction.rpt
 
 # set for RuntimeOptimized implementation
 set_property "steps.place_design.args.directive" "RuntimeOptimized" [get_runs impl_1]
@@ -85,9 +86,9 @@ write_verilog -force -mode timesim work-fpga/$::env(BOARD)_$::env(CPU)/${project
 write_sdf     -force work-fpga/$::env(BOARD)_$::env(CPU)/${project}_timesim.sdf
 
 # reports
-exec mkdir -p reports/
-exec rm -rf reports/*
-check_timing                                                              -file reports/${project}.check_timing.rpt
-report_timing -max_paths 100 -nworst 100 -delay_type max -sort_by slack   -file reports/${project}.timing_WORST_100.rpt
-report_timing -nworst 1 -delay_type max -sort_by group                    -file reports/${project}.timing.rpt
-report_utilization -hierarchical                                          -file reports/${project}.utilization.rpt
+exec mkdir -p $reports/
+exec rm -rf $reports/*
+check_timing                                                              -file $reports/${project}.check_timing.rpt
+report_timing -max_paths 100 -nworst 100 -delay_type max -sort_by slack   -file $reports/${project}.timing_WORST_100.rpt
+report_timing -nworst 1 -delay_type max -sort_by group                    -file $reports/${project}.timing.rpt
+report_utilization -hierarchical                                          -file $reports/${project}.utilization.rpt

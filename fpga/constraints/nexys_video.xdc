@@ -77,6 +77,18 @@ set_property -dict { PACKAGE_PIN T20   IOSTANDARD LVCMOS33 } [get_ports { sd_dat
 set_property -dict { PACKAGE_PIN U18   IOSTANDARD LVCMOS33 } [get_ports { sd_dat[3] }]; #IO_L9N_T1_DQS_D13_14 Sch=sd_dat[3]
 set_property -dict { PACKAGE_PIN V20  IOSTANDARD LVCMOS33 } [get_ports { sd_reset }]; #IO_L12N_T1_MRCC_12 Sch=sd_reset
 
+# Flash/QSPI Pins
+set_property PACKAGE_PIN T19 [get_ports QSPI_CSN]
+set_property IOSTANDARD LVCMOS33 [get_ports QSPI_CSN]
+set_property PACKAGE_PIN P22 [get_ports QSPI_D[0]]
+set_property IOSTANDARD LVCMOS33 [get_ports QSPI_D[0]]
+set_property PACKAGE_PIN R22 [get_ports QSPI_D[1]]
+set_property IOSTANDARD LVCMOS33 [get_ports QSPI_D[1]]
+set_property PACKAGE_PIN P21 [get_ports QSPI_D[2]]
+set_property IOSTANDARD LVCMOS33 [get_ports QSPI_D[2]]
+set_property PACKAGE_PIN R21 [get_ports QSPI_D[3]]
+set_property IOSTANDARD LVCMOS33 [get_ports QSPI_D[3]]
+
 # Fan PWM
 set_property -dict { PACKAGE_PIN U15   IOSTANDARD LVCMOS25 } [get_ports { fan_pwm }]; #IO_L14P_T2_SRCC_13 Sch=fan_pwm
 

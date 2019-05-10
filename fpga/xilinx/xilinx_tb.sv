@@ -58,6 +58,25 @@ module xilinx_tb;
     logic [ 1:0] ddr2_dm     ;
     logic [ 0:0] ddr2_odt    ;
     assign clk_p = clk;
+`elsif NEXYS_VIDEO
+    localparam int unsigned CLOCK_PERIOD = 10ns;
+    logic        clk_p       ;
+    logic        cpu_resetn  ;
+    wire  [15:0] ddr3_dq     ;
+    wire   [1:0] ddr3_dqs_n  ;
+    wire   [1:0] ddr3_dqs_p  ;
+    logic [14:0] ddr3_addr   ;
+    logic  [2:0] ddr3_ba     ;
+    logic        ddr3_ras_n  ;
+    logic        ddr3_cas_n  ;
+    logic        ddr3_we_n   ;
+    logic        ddr3_reset_n;
+    logic        ddr3_ck_n   ;
+    logic        ddr3_ck_p   ;
+    logic        ddr3_cke    ;
+    logic  [1:0] ddr3_dm     ;
+    logic        ddr3_odt    ;
+    assign clk_p = clk;
 `endif
 `ifdef RGMII
     wire          eth_rst_n   ;
@@ -286,8 +305,6 @@ xlnx_axi_dwidth_converter ();
 xlnx_axi_gpio ();
 
 xlnx_axi_quad_spi ();
-
-xlnx_clk_nexys ();
 
 `endif   
    

@@ -47,6 +47,23 @@ module ariane_xilinx (
   output logic [ 0:0] ddr2_cke    ,
   output logic [ 1:0] ddr2_dm     ,
   output logic [ 0:0] ddr2_odt    ,
+`elsif NEXYS_VIDEO
+  input  logic        clk_p       ,
+  input  logic        cpu_resetn  ,
+  inout wire   [15:0] ddr3_dq     ,
+  inout wire    [1:0] ddr3_dqs_n  ,
+  inout wire    [1:0] ddr3_dqs_p  ,
+  output logic [14:0] ddr3_addr   ,
+  output logic  [2:0] ddr3_ba     ,
+  output logic        ddr3_ras_n  ,
+  output logic        ddr3_cas_n  ,
+  output logic        ddr3_we_n   ,
+  output logic        ddr3_reset_n,
+  output logic        ddr3_ck_n   ,
+  output logic        ddr3_ck_p   ,
+  output logic        ddr3_cke    ,
+  output logic  [1:0] ddr3_dm     ,
+  output logic        ddr3_odt    ,
 `endif
 `ifdef RGMII
   output wire          eth_rst_n   ,
@@ -100,7 +117,7 @@ localparam AxiUserWidth = 1;
 
 // MIG clock
 logic mig_sys_clk, mig_ui_clk, mig_ui_rst, sys_rst,
-      clk, clk_rmii, clk_rmii_quad, clk_pixel, pll_locked;
+      clk, clk_rmii, clk_rmii_quad, clk_pixel, phy_tx_clk, eth_clk, pll_locked;
 logic rst_n, tdo_oe, tdo_data, ndmreset_n;
 
 IOBUF #(
@@ -117,14 +134,12 @@ IOBUF #(
 
 `ifdef GENESYSII
 
-logic eth_clk;
-
 xlnx_clk_genesys2 i_xlnx_clk_gen (
   .clk_out1 ( clk           ), // 50 MHz
   .clk_out2 ( phy_tx_clk    ), // 125 MHz (for RGMII PHY)
   .clk_out3 ( eth_clk       ), // 125 MHz quadrature (90 deg phase shift)
   .clk_out4 ( sd_clk_sys    ), // 50 MHz clock
-  .reset    ( ~cpu_resetn   ),
+  .resetn   ( cpu_resetn    ),
   .locked   ( pll_locked    ),
   .clk_in1  ( mig_ui_clk    )
 );
@@ -144,6 +159,18 @@ xlnx_clk_nexys4_ddr i_xlnx_clk_gen (
 );
 
 assign clk = mig_ui_clk;
+
+`elsif NEXYS_VIDEO
+
+xlnx_clk_nexys_video i_xlnx_clk_gen (
+  .clk_out1 ( mig_sys_clk    ), // 200 MHz
+  .clk_out2 ( phy_tx_clk     ), // 125 MHz (for RGMII PHY)
+  .clk_out3 ( eth_clk        ), // 125 MHz quadrature (90 deg phase shift)
+  .clk_out4 ( clk            ), // 50 MHz clock
+  .resetn   ( cpu_resetn     ),
+  .locked   ( pll_locked     ),
+  .clk_in1  ( clk_p          )
+);
 
 `endif
  
@@ -177,7 +204,14 @@ AXI_BUS #(
 ) dram(), iobus();
 
 `ifdef GENESYSII
+ `define CLOCK_CONVERTER
+`endif
 
+`ifdef NEXYS_VIDEO
+ `define CLOCK_CONVERTER
+`endif
+
+`ifdef CLOCK_CONVERTER   
 logic [AxiIdWidthSlaves-1:0] s_axi_awid;
 logic [AxiAddrWidth-1:0]     s_axi_awaddr;
 logic [7:0]                  s_axi_awlen;
@@ -303,7 +337,9 @@ xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .m_axi_rvalid   ( s_axi_rvalid     ),
   .m_axi_rready   ( s_axi_rready     )
 );
+`endif //  `ifdef CLOCK_CONVERTER
 
+`ifdef GENESYSII
 xlnx_mig_7_ddr_genesys2 i_ddr (
     .sys_clk_p,
     .sys_clk_n,
@@ -446,6 +482,74 @@ xlnx_mig_7_ddr_nexys4_ddr i_ddr (
     .s_axi_rready    ( dram.r_ready   ),
     .init_calib_complete (            ) // keep open
 );
+`elsif NEXYS_VIDEO
+   
+xlnx_mig_7_ddr_nexys_video i_ddr (
+    .sys_clk_i          ( mig_sys_clk ),
+    .sys_rst            ( pll_locked  ),
+    .ddr3_dq,
+    .ddr3_dqs_n,
+    .ddr3_dqs_p,
+    .ddr3_addr,
+    .ddr3_ba,
+    .ddr3_ras_n,
+    .ddr3_cas_n,
+    .ddr3_we_n,
+    .ddr3_ck_p,
+    .ddr3_ck_n,
+    .ddr3_cke,
+    .ddr3_dm,
+    .ddr3_odt,
+    .ui_clk          ( mig_ui_clk     ),
+    .ui_clk_sync_rst ( mig_ui_rst     ),
+    .mmcm_locked     (                ), // keep open
+    .aresetn         ( rst_n          ),
+    .app_sr_req      ( '0             ),
+    .app_ref_req     ( '0             ),
+    .app_zq_req      ( '0             ),
+    .app_sr_active   (                ), // keep open
+    .app_ref_ack     (                ), // keep open
+    .app_zq_ack      (                ), // keep open
+    .s_axi_awid,
+    .s_axi_awaddr    ( s_axi_awaddr[29:0] ),
+    .s_axi_awlen,
+    .s_axi_awsize,
+    .s_axi_awburst,
+    .s_axi_awlock,
+    .s_axi_awcache,
+    .s_axi_awprot,
+    .s_axi_awqos,
+    .s_axi_awvalid,
+    .s_axi_awready,
+    .s_axi_wdata,
+    .s_axi_wstrb,
+    .s_axi_wlast,
+    .s_axi_wvalid,
+    .s_axi_wready,
+    .s_axi_bready,
+    .s_axi_bid,
+    .s_axi_bresp,
+    .s_axi_bvalid,
+    .s_axi_arid,
+    .s_axi_araddr     ( s_axi_araddr[29:0] ),
+    .s_axi_arlen,
+    .s_axi_arsize,
+    .s_axi_arburst,
+    .s_axi_arlock,
+    .s_axi_arcache,
+    .s_axi_arprot,
+    .s_axi_arqos,
+    .s_axi_arvalid,
+    .s_axi_arready,
+    .s_axi_rready,
+    .s_axi_rid,
+    .s_axi_rdata,
+    .s_axi_rresp,
+    .s_axi_rlast,
+    .s_axi_rvalid,
+    .init_calib_complete (            ) // keep open
+);
+
 `else // simulation
 localparam NUM_WORDS = 16 * 1024 * 1024;
    
@@ -493,7 +597,6 @@ assign mig_ui_rst = !pll_locked;
 wire test_en = 1'b0;
 
 logic spi_clk_i;
-logic phy_tx_clk;
 logic sd_clk_sys;
 
 assign sys_rst = ~rst_n;
