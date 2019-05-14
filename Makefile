@@ -677,6 +677,10 @@ sim-vcs-orig:
 	@echo "[Vcs] Building Model"
 	$(vcs_command_orig)
 
+sim-vcs-pp:
+	@echo "[Vcs] Post process"
+	dve -vpd vcdplus.vpd&
+
 $(addsuffix -verilator,$(riscv-asm-tests)): verilate
 	$(ver-library)/Variane_testharness $(riscv-test-dir)/$(subst -verilator,,$@)
 
