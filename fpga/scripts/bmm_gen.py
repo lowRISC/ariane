@@ -17,7 +17,7 @@ f.close()
 rams = []
 
 for i, line in enumerate(lines):
-    ram_match = re.match(r"shell1/i_bootram/ram_reg_(\d+)", line)
+    ram_match = re.match(r"i_ariane_peripherals/i_bootram/ram_reg_(\d+)", line)
     if ram_match:
         loc_match = re.match(r"LOC[\w\s]+RAMB(\d+)_X(\d+)Y(\d+)", lines[i+2])
 	if loc_match:

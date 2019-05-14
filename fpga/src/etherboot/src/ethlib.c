@@ -493,7 +493,7 @@ void set_dummy_mac(void)
 {
   enum {oem_mac_addr = 0x20}; // The address of the OEM MAC address in OTP qspi flash
   uint32_t macaddr_lo, macaddr_hi;
-  uint32_t i, data = ((sizeof(mac_addr)+1) << 24) | oem_mac_addr; // +1 for dummy byte
+  uint32_t i, data = ((sizeof(mac_addr)+3) << 24) | (oem_mac_addr-2); // +1 for dummy byte +2 for luck
   uint64_t rslt = qspi_send(CMD_OTPR, 1, 0, &data);
 #ifndef SIMULATION  
   printf("Setup MAC addr\n");
@@ -507,10 +507,10 @@ void set_dummy_mac(void)
     mac_addr.addr[4] = (uint8_t)0xE4;
     mac_addr.addr[5] = (uint8_t)(0xE0|(gpio_sw()&0xF));
     }
-  else for (i = 0; i < 6; i++)
+  else for (i = 2; i < 8; i++)
     {
-      mac_addr.addr[i] = (uint8_t)(rslt >> ((5-i)*8));
-      printf("QSPI OEM[%d] = %x\n", i, mac_addr.addr[i]);
+      mac_addr.addr[i-2] = (uint8_t)(rslt >> ((7-i)*8));
+      printf("QSPI OEM[%d] = %x\n", i-2, mac_addr.addr[i-2]);
     }  
   memcpy (&macaddr_lo, mac_addr.addr+2, sizeof(uint32_t));
   memcpy (&macaddr_hi, mac_addr.addr+0, sizeof(uint16_t));

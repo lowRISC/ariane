@@ -8,4 +8,4 @@ set project_name [lindex $argv 0]
 open_checkpoint $project_name.dcp
 
 # search for all RAMB blocks
-foreach m [get_cells shell1/i_bootram/ram_reg_*] { put $m; report_property $m {LOC} }
+foreach m [get_cells i_ariane_peripherals/i_bootram/ram_reg_*] { put $m; report_property $m {LOC} }
