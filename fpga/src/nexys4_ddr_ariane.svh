@@ -18,7 +18,7 @@
 `define RMII
 
 `define ARIANE_SHELL
-`define FPNEW_TOP_DUMMY
+// `define FPNEW_TOP_DUMMY
 // Instantiate protocol checker
 // `define PROTOCOL_CHECKER
 

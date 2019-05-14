@@ -512,12 +512,7 @@ generate
     // FPU instance
     //---------------
 
-`ifdef FPNEW_TOP_DUMMY
-    fpnew_top_dummy
-`else     
-    fpnew_top
-`endif      
-   #(
+    fpnew_top #(
       .Features       ( FPU_FEATURES              ),
       .Implementation ( FPU_IMPLEMENTATION        ),
       .TagType        ( logic [TRANS_ID_BITS-1:0] )
