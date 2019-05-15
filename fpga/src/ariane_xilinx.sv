@@ -673,8 +673,12 @@ fan_ctrl i_fan_ctrl (
 
 `ifdef ARIANE_SHELL   
 ariane_shell shell1(.*);
-`else
+`elsif ROCKET_SHELL
 rocket_shell shell1(.*);
+`elsif BOOM_SHELL
+boom_shell shell1(.*);
+`else
+   if (1) $error("One of ARIANE_SHELL, ROCKET_SHELL, BOOM_SHELL should be defined");
 `endif
    
 endmodule

@@ -120,7 +120,6 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         $(wildcard src/axi_mem_if/src/*.sv)                                    \
         fpga/src/bootram.sv                                                    \
         fpga/src/ariane_shell.sv                                               \
-        fpga/src/rocket_shell.sv                                               \
         src/rv_plic/rtl/rv_plic_target.sv                                      \
         src/rv_plic/rtl/rv_plic_gateway.sv                                     \
         src/rv_plic/rtl/plic_regmap.sv                                         \
@@ -182,8 +181,16 @@ rocket_src := ../rocket-chip/vsim/generated-src/freechips.rocketchip.system.Defa
 	      ../rocket-chip/vsrc/ClockDivider2.v \
 	      ../rocket-chip/vsrc/ClockDivider3.v \
 	      ../rocket-chip/vsrc/plusarg_reader.v \
+              fpga/src/rocket_shell.sv
 
 rocket_src := $(addprefix $(root-dir), $(rocket_src))
+
+boom_src := ../boom-template/verisim/generated-src/boom.system.TestHarness.BoomConfig.v \
+            ../boom-template/rocket-chip/src/main/resources/vsrc/EICG_wrapper.v \
+            ../boom-template/rocket-chip/src/main/resources/vsrc/AsyncResetReg.v \
+              fpga/src/boom_shell.sv
+
+boom_src := $(addprefix $(root-dir), $(boom_src))
 
 tb_src := tb/ariane_testharness.sv                                               \
 	  tb/ariane_peripherals.sv                                               \
@@ -215,6 +222,7 @@ open_src := $(addprefix $(root-dir), $(open_src))
 
 fpga_src := $(filter-out fpga/src/ariane_shell.sv \
                          fpga/src/rocket_shell.sv \
+                         fpga/src/boom_shell.sv \
                          fpga/src/bootram.sv, $(wildcard fpga/src/*.sv)) \
             $(wildcard fpga/src/apb_uart/src/*.sv) \
             $(wildcard fpga/src/ariane-ethernet/*.sv) \
@@ -770,6 +778,12 @@ rocket: $(ariane_pkg) $(util) $(src) $(fpga_src) $(rocket_src)
 	@echo "[FPGA] Generate Bitstream"
 	make -C fpga BOARD=$(BOARD) XILINX_PART=$(XILINX_PART) XILINX_BOARD=$(XILINX_BOARD) CPU="rocket" CLK_PERIOD_NS="20"
 
+boom: $(ariane_pkg) $(util) $(src) $(fpga_src) $(boom_src)
+	@echo "[FPGA] Generate sources"
+	@echo read_verilog -sv {$(ariane_pkg) $(filter-out $(fpga_filter), $(util) $(src)) $(fpga_src) $(open_src) $(boom_src)} > fpga/scripts/add_sources.tcl
+	@echo "[FPGA] Generate Bitstream"
+	make -C fpga BOARD=$(BOARD) XILINX_PART=$(XILINX_PART) XILINX_BOARD=$(XILINX_BOARD) CPU="boom" CLK_PERIOD_NS="20"
+
 nexys4_ddr_ariane:
 	make ariane BOARD="nexys4_ddr" XILINX_PART="xc7a100tcsg324-1" XILINX_BOARD="digilentinc.com:nexys4_ddr:part0:1.1"
 
@@ -788,8 +802,14 @@ genesys2_ariane:
 genesys2_rocket:
 	make rocket BOARD="genesys2" XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20"
 
+genesys2_boom:
+	make boom BOARD="genesys2" XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20"
+
 $(rocket_src):
 	make -C ../rocket-chip/vsim verilog
+
+$(boom_src):
+	make -C ../boom-template/verisim verilog
 
 fpga:
 	echo Use make ariane or make rocket, either could blow up ...
