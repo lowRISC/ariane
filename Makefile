@@ -805,11 +805,17 @@ genesys2_rocket:
 genesys2_boom:
 	make boom BOARD="genesys2" XILINX_PART="xc7k325tffg900-2" XILINX_BOARD="digilentinc.com:genesys2:part0:1.1" CLK_PERIOD_NS="20"
 
-$(rocket_src):
+$(rocket_src): ../rocket-chip/vsim/Makefile
 	make -C ../rocket-chip/vsim verilog
 
-$(boom_src):
+../rocket-chip/vsim/Makefile:
+	git clone -b ariane-nexys4ddr-compat https://github.com/lowRISC/rocket-chip --recursive ../rocket-chip
+
+$(boom_src): ../boom-template/verisim/Makefile
 	make -C ../boom-template/verisim verilog
+
+../boom-template/verisim/Makefile:
+	git clone https://github.com/riscv-boom/boom-template.git --recursive ../boom-template
 
 fpga:
 	echo Use make ariane or make rocket, either could blow up ...
