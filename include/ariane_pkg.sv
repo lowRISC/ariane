@@ -425,7 +425,7 @@ package ariane_pkg;
     localparam int unsigned DCACHE_INDEX_WIDTH = 12;  // in bit
     localparam int unsigned DCACHE_TAG_WIDTH   = 44;  // in bit
     localparam int unsigned DCACHE_LINE_WIDTH  = 128; // in bit
-    localparam int unsigned DCACHE_SET_ASSOC   = 8;
+    localparam int unsigned DCACHE_SET_ASSOC   = 4;
 `endif
 
     // ---------------
