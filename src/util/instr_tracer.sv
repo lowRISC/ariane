@@ -12,13 +12,14 @@
 // Date: 16.05.2017
 // Description: Instruction Tracer Main Class
 
-`ifndef VERILATOR
+`ifdef UVM
 //pragma translate_off
 import uvm_pkg::*;
 `include "uvm_macros.svh"
 `include "ex_trace_item.svh"
 `include "instr_trace_item.svh"
 //pragma translate_on
+`endif
 
 module instr_tracer (
   instr_tracer_if   tracer_if,
@@ -187,21 +188,27 @@ module instr_tracer (
 
   // pragma translate_off
   function void printInstr(ariane_pkg::scoreboard_entry_t sbe, logic [31:0] instr, logic [63:0] result, logic [63:0] paddr, riscv::priv_lvl_t priv_lvl, logic debug_mode, ariane_pkg::bp_resolve_t bp);
+`ifdef UVM
     automatic instr_trace_item iti = new ($time, clk_ticks, sbe, instr, gp_reg_file, fp_reg_file, result, paddr, priv_lvl, debug_mode, bp);
     // print instruction to console
     automatic string print_instr = iti.printInstr();
+`endif     
     if (ariane_pkg::ENABLE_SPIKE_COMMIT_LOG && !debug_mode) begin
       $fwrite(commit_log, riscv::spikeCommitLog(sbe.pc, priv_lvl, instr, sbe.rd, result, ariane_pkg::is_rd_fpr(sbe.op)));
     end
+`ifdef UVM
     uvm_report_info( "Tracer",  print_instr, UVM_HIGH);
     $fwrite(f, {print_instr, "\n"});
+`endif
   endfunction
 
   function void printException(logic [63:0] pc, logic [63:0] cause, logic [63:0] tval);
+`ifdef UVM
     automatic ex_trace_item eti = new (pc, cause, tval);
     automatic string print_ex = eti.printException();
     uvm_report_info( "Tracer",  print_ex, UVM_HIGH);
     $fwrite(f, {print_ex, "\n"});
+`endif
   endfunction
 
   function void close();
@@ -222,4 +229,3 @@ module instr_tracer (
   // pragma translate_on
 
 endmodule : instr_tracer
-`endif
